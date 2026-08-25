@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
 import { addTeamMember, getDashboard, listTeam, updateCompany } from "@/lib/housefile/server";
+import { STRIPE } from "@/lib/housefile/stripe";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
 
@@ -108,7 +109,39 @@ function SettingsPage() {
         </Button>
       </form>
       <TeamSection />
+      <BillingSection />
     </div>
+  );
+}
+
+function BillingSection() {
+  const portal = STRIPE.billingPortal;
+  return (
+    <section className="space-y-3 border-t border-border pt-8">
+      <div>
+        <h2 className="font-display text-2xl font-medium tracking-tight">Billing</h2>
+        <p className="text-sm text-muted-foreground">
+          Shop subscription and extra seats. Cancel anytime — access continues through the paid
+          period.
+        </p>
+      </div>
+      {portal ? (
+        <Button asChild variant="outline">
+          <a href={portal} target="_blank" rel="noreferrer">
+            Cancel or manage subscription
+          </a>
+        </Button>
+      ) : (
+        <div className="space-y-2 rounded-xl bg-card p-4 text-sm shadow-[var(--shadow-border)]">
+          <p className="font-medium">Cancel or manage subscription</p>
+          <p className="text-muted-foreground">
+            Open the receipt email from Stripe (same address you used at checkout). Use{" "}
+            <span className="text-foreground">Manage subscription</span> or{" "}
+            <span className="text-foreground">Cancel plan</span> there.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 
