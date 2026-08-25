@@ -89,6 +89,7 @@
     font-family: var(--font-sans);
     background-image: radial-gradient(rgb(28 25 20 / 0.035) 0.6px, transparent 0.6px);
     background-size: 7px 7px;
+    overflow-x: hidden;
   }
   img {
     outline: 1px solid rgb(28 25 20 / 0.1);
