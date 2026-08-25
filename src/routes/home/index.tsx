@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getHousehold } from "@/lib/housefile/server";
 import { PROPERTY_ANNUAL, PROPERTY_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { STRIPE } from "@/lib/housefile/stripe";
 
 export const Route = createFileRoute("/home/")({ component: HomeDashboard });
 
@@ -14,6 +15,7 @@ function HomeDashboard() {
   if (q.isLoading) return <Skeleton className="h-48 w-full" />;
 
   const houses = q.data?.houses ?? [];
+  const portal = STRIPE.billingPortal;
 
   return (
     <div className="space-y-8">
@@ -77,6 +79,28 @@ function HomeDashboard() {
           ))}
         </div>
       )}
+
+      <section className="rounded-xl border border-border bg-card/40 p-5">
+        <h2 className="font-display text-xl font-medium tracking-tight">Billing</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cancel a property plan or update the card. Access continues through the paid period.
+        </p>
+        <div className="mt-4">
+          {portal ? (
+            <Button asChild variant="outline">
+              <a href={portal} target="_blank" rel="noreferrer">
+                Cancel or manage subscription
+              </a>
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Open the receipt email from Stripe (the address used at checkout). Choose{" "}
+              <span className="text-foreground">Manage subscription</span> or{" "}
+              <span className="text-foreground">Cancel plan</span>.
+            </p>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
