@@ -7,12 +7,8 @@ export const STRIPE = {
   shopMonthly: "https://buy.stripe.com/dRm5kCa2p2OTgYOghK8AE07",
   shopAnnual: "https://buy.stripe.com/dRm14m7Uh4X137YfdG8AE06",
   seatMonthly: "https://buy.stripe.com/7sYcN4b6tdtxdMC3uY8AE05",
-  /**
-   * Stripe Customer Portal login link.
-   * Stripe Dashboard → Settings → Billing → Customer portal → copy login link.
-   * Leave empty until configured; UI falls back to receipt-email instructions.
-   */
-  billingPortal: "",
+  /** Stripe Customer Portal — cancel, update card, invoices */
+  billingPortal: "https://billing.stripe.com/p/login/4gM00icax759aAq3uY8AE00",
 } as const;
 
 export function homeownerCheckout(tier: "standard" | "pro", cadence: "monthly" | "annual") {
