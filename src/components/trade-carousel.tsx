@@ -39,7 +39,7 @@ export function TradeCarousel() {
   }
 
   return (
-    <section className="border-t border-border">
+    <section className="border-t border-border overflow-x-hidden">
       <div className="mx-auto max-w-6xl px-5 py-12">
         <div className="flex items-end justify-between gap-3">
           <p className="font-display text-2xl font-medium tracking-tight">Estimating Made Easy</p>
@@ -54,7 +54,7 @@ export function TradeCarousel() {
         </div>
         <div
           ref={scroller}
-          className="mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="mt-6 -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {WORK_TYPES.map((work) => {
             const face = TRADE_FACE[work.id] ?? TRADE_FACE.paint;
