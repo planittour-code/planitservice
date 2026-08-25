@@ -61,25 +61,31 @@ export function PublicHeader({
 }
 
 export function PageFooter({ shop = false }: { shop?: boolean }) {
+  const year = new Date().getFullYear();
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          {shop
-            ? "Know the house before you start talking."
-            : "Use the same software as your contractor."}
-        </span>
-        <nav className="flex flex-wrap gap-x-4 gap-y-1">
-          <Link to="/" hash="pricing" className="hover:text-foreground">
-            Homeowner pricing
-          </Link>
-          <Link to="/shop" className="hover:text-foreground">
-            For contractors
-          </Link>
-          <Link to="/login" className="hover:text-foreground">
-            Sign in
-          </Link>
-        </nav>
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            {shop
+              ? "Know the house before you start talking."
+              : "Use the same software as your contractor."}
+          </span>
+          <nav className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link to="/" hash="pricing" className="hover:text-foreground">
+              Homeowner pricing
+            </Link>
+            <Link to="/shop" className="hover:text-foreground">
+              For contractors
+            </Link>
+            <Link to="/login" className="hover:text-foreground">
+              Sign in
+            </Link>
+          </nav>
+        </div>
+        <p className="text-xs text-muted-foreground/80">
+          © {year} PlanitService. All rights reserved.
+        </p>
       </div>
     </footer>
   );
