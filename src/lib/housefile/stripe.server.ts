@@ -14,14 +14,22 @@ export function getStripe(): Stripe {
 
 /** Map plan kind -> Stripe Price id (Dashboard → Product → Price). */
 export function priceIdFor(kind: CheckoutKind): string {
+  // Live catalog defaults (override with env for test mode or new prices)
   const map: Record<CheckoutKind, string> = {
-    standard_monthly: process.env.STRIPE_PRICE_STANDARD_MONTHLY ?? "",
-    standard_annual: process.env.STRIPE_PRICE_STANDARD_ANNUAL ?? "",
-    pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY ?? "",
-    pro_annual: process.env.STRIPE_PRICE_PRO_ANNUAL ?? "",
-    shop_monthly: process.env.STRIPE_PRICE_SHOP_MONTHLY ?? "",
-    shop_annual: process.env.STRIPE_PRICE_SHOP_ANNUAL ?? "",
-    seat_monthly: process.env.STRIPE_PRICE_SEAT_MONTHLY ?? "",
+    standard_monthly:
+      process.env.STRIPE_PRICE_STANDARD_MONTHLY?.trim() || "price_1U84eaA3tQnfBXBTvY1wUgHn",
+    standard_annual:
+      process.env.STRIPE_PRICE_STANDARD_ANNUAL?.trim() || "price_1U84fYA3tQnfBXBTe0TgpXgd",
+    pro_monthly:
+      process.env.STRIPE_PRICE_PRO_MONTHLY?.trim() || "price_1U84jMA3tQnfBXBTngBaqlfo",
+    pro_annual:
+      process.env.STRIPE_PRICE_PRO_ANNUAL?.trim() || "price_1U84k4A3tQnfBXBT8kRJMgGH",
+    shop_monthly:
+      process.env.STRIPE_PRICE_SHOP_MONTHLY?.trim() || "price_1U84ntA3tQnfBXBTLOOhheMh",
+    shop_annual:
+      process.env.STRIPE_PRICE_SHOP_ANNUAL?.trim() || "price_1U84obA3tQnfBXBTHrOLzQ6m",
+    seat_monthly:
+      process.env.STRIPE_PRICE_SEAT_MONTHLY?.trim() || "price_1U84pZA3tQnfBXBT68DvtKj0",
   };
   const id = map[kind]?.trim();
   if (!id) {
