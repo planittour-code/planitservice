@@ -11,7 +11,6 @@ import {
   SHOP_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
-import { STRIPE } from "@/lib/housefile/stripe";
 import type { AddressTease } from "@/lib/housefile/types";
 
 export const Route = createFileRoute("/shop")({ component: HomePage });
@@ -19,7 +18,7 @@ export const Route = createFileRoute("/shop")({ component: HomePage });
 function HomePage() {
   const [tease, setTease] = useState<AddressTease | null>(null);
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <PublicHeader home="/shop">
         <Button asChild variant="ghost" className="hidden sm:inline-flex">
           <a href="#pricing">Pricing</a>
@@ -57,7 +56,9 @@ function HomePage() {
               </div>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button asChild size="lg">
-                  <a href={STRIPE.shopMonthly}>Open a shop</a>
+                  <Link to="/login" search={{ next: "/app/onboard" }}>
+                    Open a shop
+                  </Link>
                 </Button>
                 <Button
                   asChild
@@ -162,20 +163,15 @@ function HomePage() {
                   size="lg"
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <a href={STRIPE.shopMonthly}>Open a shop</a>
+                  <Link to="/login" search={{ next: "/app/onboard" }}>
+                    Open a shop
+                  </Link>
                 </Button>
               </div>
-              <p className="mt-3 text-center text-xs opacity-80">
-                <a href={STRIPE.shopAnnual} className="underline underline-offset-2">
-                  Pay ${dollars(SHOP_ANNUAL)} for the year
-                </a>
-                {" · "}
-                <a href={STRIPE.seatMonthly} className="underline underline-offset-2">
-                  Extra seat ${dollars(SEAT_MONTHLY)}/month
-                </a>
-              </p>
               <p className="mt-3 text-center text-xs opacity-70">
-                The File you open is theirs. They keep it for ${dollars(PROPERTY_MONTHLY)} a month.
+                After sign-in, checkout runs on planitservice.com via Stripe Checkout (not Payment
+                Links). The File you open is theirs — they keep it for ${dollars(PROPERTY_MONTHLY)} a
+                month.
               </p>
             </div>
           </div>
