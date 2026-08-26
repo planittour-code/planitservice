@@ -8,7 +8,6 @@ import {
   PRO_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
-import { STRIPE } from "@/lib/housefile/stripe";
 
 export const Route = createFileRoute("/")({ component: HomeownerSite });
 
@@ -44,7 +43,7 @@ function HomeownerSite() {
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg">
-                <a href={STRIPE.standardMonthly}>Start a house record</a>
+                <Link to="/home/add">Start a house record</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-0 bg-card text-foreground">
                 <Link to="/house/$token" params={{ token: "maple-14" }}>
@@ -103,12 +102,16 @@ function HomeownerSite() {
                   <li>Transfer the record at sale or at death</li>
                 </ul>
                 <Button asChild className="mt-8 w-full">
-                  <a href={STRIPE.standardMonthly}>Start Standard</a>
+                  <Link to="/home/add">Start Standard</Link>
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  <a href={STRIPE.standardAnnual} className="underline underline-offset-2">
-                    Pay ${dollars(PROPERTY_ANNUAL)} for the year
-                  </a>
+                  <Link
+                    to="/home/add"
+                    search={{ tier: "standard" }}
+                    className="underline underline-offset-2"
+                  >
+                    Or pay ${dollars(PROPERTY_ANNUAL)} for the year
+                  </Link>
                 </p>
               </article>
               <article className="rounded-xl bg-primary p-6 text-primary-foreground shadow-[var(--shadow-border)] sm:p-8">
@@ -129,12 +132,18 @@ function HomeownerSite() {
                   asChild
                   className="mt-8 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <a href={STRIPE.proMonthly}>Start Pro</a>
+                  <Link to="/home/add" search={{ tier: "pro" }}>
+                    Start Pro
+                  </Link>
                 </Button>
                 <p className="mt-3 text-center text-xs opacity-80">
-                  <a href={STRIPE.proAnnual} className="underline underline-offset-2">
-                    Pay ${dollars(PRO_ANNUAL)} for the year
-                  </a>
+                  <Link
+                    to="/home/add"
+                    search={{ tier: "pro" }}
+                    className="underline underline-offset-2"
+                  >
+                    Or pay ${dollars(PRO_ANNUAL)} for the year
+                  </Link>
                 </p>
               </article>
             </div>
