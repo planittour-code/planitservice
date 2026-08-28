@@ -12,7 +12,7 @@ import { WizardSteps } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { applyPriceBook, linesNeedingBookCost, pickKey, slotsForWork, STARTER_BOOK } from "@/lib/housefile/book";
+import { applyPriceBook, linesNeedingBookCost, pickKey, proposedCostKey, slotsForWork, STARTER_BOOK } from "@/lib/housefile/book";
 import { money } from "@/lib/housefile/format";
 import {
   WORK_BY_ID,
@@ -122,6 +122,12 @@ function NewQuote() {
   });
 
   useEffect(() => {
+    if (!user) return;
+    setHomeownerName((n) => n || user.displayName || "");
+    setHomeownerEmail((e) => e || user.primaryEmail || "");
+  }, [user?.id, user?.displayName, user?.primaryEmail]);
+
+  useEffect(() => {
     const rfp = rfpQ.data?.rfp;
     if (!rfp) return;
     setAddressLine(rfp.address_line);
@@ -135,8 +141,13 @@ function NewQuote() {
 
   useEffect(() => {
     if (propertyId || !search.address || !dash.data) return;
-    const needle = search.address.trim().toLowerCase();
-    const hit = dash.data.properties.find((p) => p.address_line.toLowerCase() === needle);
+    const needle = normalizeStreet(search.address);
+    const hit = dash.data.properties.find(
+      (p) =>
+        normalizeStreet(p.address_line) === needle ||
+        normalizeStreet(p.address_line).startsWith(needle) ||
+        needle.startsWith(normalizeStreet(p.address_line)),
+    );
     if (hit) setPropertyId(hit.id);
   }, [dash.data, search.address, propertyId]);
 
@@ -195,6 +206,20 @@ function NewQuote() {
   const addressReady = Boolean(
     propertyId || (homeownerName.trim() && homeownerEmail.trim() && addressLine.trim()),
   );
+  const sendBlockers = (() => {
+    const issues: string[] = [];
+    if (user && !propertyId) {
+      if (!addressLine.trim()) issues.push("Street address");
+      if (!homeownerName.trim()) issues.push("Homeowner name");
+      if (!homeownerEmail.trim()) issues.push("Homeowner email");
+    }
+    if (work && !takeoffReady(work, takeoff)) issues.push("Finish the measurements");
+    if (missingBookCost.length > 0 && !proposedReady) {
+      issues.push("Enter a cost for each product that has none in the book");
+    }
+    return issues;
+  })();
+  const canSend = !user || (addressReady && sendBlockers.length === 0);
 
   function needShop(run: () => void) {
     if (user) {
@@ -397,10 +422,53 @@ function NewQuote() {
             house file. {homeownerName || existing?.homeowner_name || "The homeowner"} can revise
             colors and optional work.
           </p>
-          {role === "sales" && missingBookCost.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              A cost is missing from the book. The owner has to approve the number before the
-              homeowner sees this quote.
+          {!propertyId && (
+            <div className="grid gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:grid-cols-2">
+              <p className="text-sm text-muted-foreground sm:col-span-2">
+                Who should receive this estimate? We need a name and email to send it.
+              </p>
+              <Field label="Homeowner" value={homeownerName} onChange={setHomeownerName} />
+              <Field
+                label="Email"
+                value={homeownerEmail}
+                onChange={setHomeownerEmail}
+                type="email"
+              />
+            </div>
+          )}
+          {missingBookCost.length > 0 && (
+            <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+              <p className="text-sm text-muted-foreground">
+                {role === "sales"
+                  ? "A cost is missing from the book. The owner has to approve the number before the homeowner sees this quote."
+                  : "Enter a cost for each product that is not in the book. Sending writes it into the book."}
+              </p>
+              {missingBookCost.map((line) =>
+                line.bookId ? (
+                  <div key={line.bookId} className="space-y-1.5">
+                    <Label htmlFor={`send-cost-${line.bookId}`}>
+                      {line.name} cost ({line.unit})
+                    </Label>
+                    <Input
+                      id={`send-cost-${line.bookId}`}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="any"
+                      placeholder="What the yard will charge"
+                      value={takeoff[proposedCostKey(line.bookId)] ?? ""}
+                      onChange={(e) =>
+                        setTakeoff((s) => ({ ...s, [proposedCostKey(line.bookId!)]: e.target.value }))
+                      }
+                    />
+                  </div>
+                ) : null,
+              )}
+            </div>
+          )}
+          {sendBlockers.length > 0 && (
+            <p className="text-sm text-destructive">
+              Need {sendBlockers.join(", ").toLowerCase()} before this can go out.
             </p>
           )}
           <p className="font-display text-3xl font-medium tabular-nums">{money(total)}</p>
@@ -410,15 +478,7 @@ function NewQuote() {
             </Button>
             <Button
               type="button"
-              disabled={
-                user
-                  ? create.isPending ||
-                    !workId ||
-                    !addressReady ||
-                    !takeoffReady(work, takeoff) ||
-                    (missingBookCost.length > 0 && !proposedReady)
-                  : false
-              }
+              disabled={user ? create.isPending || !canSend : false}
               onClick={() => needShop(() => create.mutate())}
             >
               {create.isPending
@@ -447,6 +507,24 @@ function guestBook() {
     company_id: "guest",
     active: true,
   }));
+}
+
+function normalizeStreet(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[.,]/g, "")
+    .replace(/\b(northwest|northeast|southwest|southeast)\b/g, (m) =>
+      m === "northwest" ? "nw" : m === "northeast" ? "ne" : m === "southwest" ? "sw" : "se",
+    )
+    .replace(/\b(street|st)\b/g, "st")
+    .replace(/\b(road|rd)\b/g, "rd")
+    .replace(/\b(drive|dr)\b/g, "dr")
+    .replace(/\b(avenue|ave)\b/g, "ave")
+    .replace(/\b(court|ct)\b/g, "ct")
+    .replace(/\b(lane|ln)\b/g, "ln")
+    .replace(/\b(boulevard|blvd)\b/g, "blvd")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function Field({
