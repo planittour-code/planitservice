@@ -120,7 +120,7 @@ export function TakeoffForm({
           </div>
         )}
       </div>
-      <QuotePreview lines={lines} total={total} showCost />
+      <QuotePreview lines={lines} total={total} showCost sticky />
     </div>
   );
 }
@@ -129,16 +129,23 @@ export function QuotePreview({
   lines,
   total,
   showCost = false,
+  sticky = false,
 }: {
   lines: QuoteLine[];
   total: number;
   showCost?: boolean;
+  sticky?: boolean;
 }) {
   const costTotal = lines
     .filter((l) => l.included && l.qty > 0 && l.unit_cost != null)
     .reduce((s, l) => s + l.qty * (l.unit_cost ?? 0), 0);
   return (
-    <aside className="order-first h-fit rounded-xl bg-card p-4 shadow-[var(--shadow-border)] lg:sticky lg:top-24 lg:order-none">
+    <aside
+      className={cn(
+        "relative z-0 h-fit rounded-xl bg-card p-4 shadow-[var(--shadow-border)]",
+        sticky && "order-first lg:sticky lg:top-24 lg:z-10 lg:order-none",
+      )}
+    >
       <p className="text-xs tracking-wide text-muted-foreground uppercase">This quote</p>
       <p className="font-display text-3xl font-medium tabular-nums">{money(total)}</p>
       {showCost && costTotal > 0 && (
