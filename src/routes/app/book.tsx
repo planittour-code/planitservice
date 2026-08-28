@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
   listPriceBook,
   upsertPriceBookItem,
 } from "@/lib/housefile/server";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/book")({ component: PriceBookPage });
 
@@ -30,6 +31,19 @@ function PriceBookPage() {
   const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<Partial<PriceBookItem> | "new" | null>(null);
   const [csv, setCsv] = useState("");
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const id = window.setTimeout(() => {
+      const field = editorRef.current?.querySelector<HTMLElement>(
+        "input:not([type=hidden]), select, textarea",
+      );
+      field?.focus();
+    }, 280);
+    return () => window.clearTimeout(id);
+  }, [editing]);
 
   const items = useMemo(() => {
     const list = (q.data?.items ?? []).filter((i) => i.active !== false);
@@ -105,6 +119,7 @@ function PriceBookPage() {
   });
 
   const owner = q.data?.role === "owner";
+  const editingId = editing && editing !== "new" ? editing.id : undefined;
 
   return (
     <div className="space-y-8">
@@ -152,13 +167,15 @@ function PriceBookPage() {
       />
 
       {editing && owner && (
-        <BookForm
-          key={editing === "new" ? "new" : editing.id}
-          initial={editing === "new" ? null : editing}
-          pending={save.isPending}
-          onCancel={() => setEditing(null)}
-          onSave={(row) => save.mutate(row)}
-        />
+        <div ref={editorRef} id="book-editor" className="scroll-mt-6">
+          <BookForm
+            key={editing === "new" ? "new" : editing.id}
+            initial={editing === "new" ? null : editing}
+            pending={save.isPending}
+            onCancel={() => setEditing(null)}
+            onSave={(row) => save.mutate(row)}
+          />
+        </div>
       )}
 
       <div className="space-y-6">
@@ -169,7 +186,10 @@ function PriceBookPage() {
               {rows.map((item) => (
                 <li
                   key={item.id}
-                  className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className={cn(
+                    "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
+                    editingId === item.id && "bg-muted/70 ring-1 ring-inset ring-ring",
+                  )}
                 >
                   <div>
                     <p className="font-medium">{bookLabel(item)}</p>
@@ -192,7 +212,12 @@ function PriceBookPage() {
                   </div>
                   {owner && (
                     <div className="flex gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => setEditing(item)}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditing(item)}
+                      >
                         Edit
                       </Button>
                       <Button
@@ -310,12 +335,16 @@ function BookForm({
     return list;
   }
 
+  const heading = initial?.id
+    ? `Editing ${bookLabel(initial as PriceBookItem)}`
+    : "New product";
+
   return (
     <form
       className="grid gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:grid-cols-2"
       onSubmit={(e) => {
         e.preventDefault();
-        const list = check();
+        check();
         if (blockingPriceIssues({ slot, cost: parseMoney(cost), sell: parseMoney(sell) }).length) {
           return;
         }
@@ -335,6 +364,7 @@ function BookForm({
         });
       }}
     >
+      <p className="font-display text-lg font-medium sm:col-span-2">{heading}</p>
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="slot">Slot</Label>
         <select
