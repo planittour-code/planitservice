@@ -12,6 +12,7 @@ export type EstimateLine = {
   qty: string;
   cost: string;
   price: string;
+  photos: string[];
 };
 
 type Starter = {
@@ -117,6 +118,7 @@ export function seedEstimateLines(
       qty: row.qty ?? "",
       cost: "",
       price: "",
+      photos: [],
     };
     return item ? applyBookToLine({ ...base, description: row.description }, item) : base;
   });
@@ -131,6 +133,7 @@ export function blankEstimateLine(): EstimateLine {
     qty: "1",
     cost: "",
     price: "",
+    photos: [],
   };
 }
 
@@ -149,6 +152,9 @@ export function parseEstimateLines(raw: string | undefined): EstimateLine[] {
         qty: String(r.qty ?? ""),
         cost: String(r.cost ?? ""),
         price: String(r.price ?? ""),
+        photos: Array.isArray(r.photos)
+          ? r.photos.filter((p): p is string => typeof p === "string" && p.startsWith("data:image/"))
+          : [],
       };
     });
   } catch {
@@ -188,6 +194,7 @@ export function applyBookToLine(line: EstimateLine, item: PriceBookItem | undefi
     description,
     cost: item.cost != null ? String(item.cost) : line.cost,
     price: item.sell != null ? String(item.sell) : item.cost != null ? String(item.cost) : line.price,
+    photos: line.photos ?? [],
   };
 }
 
@@ -197,6 +204,16 @@ export function estimateLineReady(line: EstimateLine): boolean {
 
 export function estimateReady(lines: EstimateLine[]): boolean {
   return lines.some(estimateLineReady);
+}
+
+export function estimatePhotos(lines: EstimateLine[]): { caption: string; src: string }[] {
+  const out: { caption: string; src: string }[] = [];
+  for (const line of lines) {
+    for (const src of line.photos ?? []) {
+      if (src.startsWith("data:image/")) out.push({ caption: line.item.trim() || "Line photo", src });
+    }
+  }
+  return out;
 }
 
 export function toQuoteLines(lines: EstimateLine[], book: PriceBookItem[]): QuoteLine[] {

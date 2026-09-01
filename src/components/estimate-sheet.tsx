@@ -7,10 +7,12 @@ import {
   type EstimateLine,
 } from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
+import { compressImage } from "@/lib/housefile/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 export function EstimateSheet({
   book,
@@ -36,6 +38,21 @@ export function EstimateSheet({
       return;
     }
     onChange(lines.map((l) => (l.id === id ? applyBookToLine(l, items.find((b) => b.id === bookId)) : l)));
+  }
+
+  async function addPhotos(id: string, files: FileList | null) {
+    if (!files?.length) return;
+    const row = lines.find((l) => l.id === id);
+    if (!row) return;
+    try {
+      const added: string[] = [];
+      for (const file of Array.from(files).slice(0, 8)) {
+        added.push(await compressImage(file, 1000));
+      }
+      patch(id, { photos: [...(row.photos ?? []), ...added] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not read photo");
+    }
   }
 
   return (
@@ -79,7 +96,7 @@ export function EstimateSheet({
               </select>
               <Input
                 value={row.item}
-                onChange={(e) => patch(row.id, { item: e.target.value, bookId: row.bookId && e.target.value !== row.item ? row.bookId : row.bookId })}
+                onChange={(e) => patch(row.id, { item: e.target.value })}
                 placeholder="Item name"
               />
             </div>
@@ -94,25 +111,51 @@ export function EstimateSheet({
               />
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <NumField
-                label="Quantity"
-                value={row.qty}
-                onChange={(v) => patch(row.id, { qty: v })}
-              />
-              <NumField
-                label="Cost"
-                value={row.cost}
-                onChange={(v) => patch(row.id, { cost: v })}
-              />
-              <NumField
-                label="Price"
-                value={row.price}
-                onChange={(v) => patch(row.id, { price: v })}
-              />
+              <NumField label="Quantity" value={row.qty} onChange={(v) => patch(row.id, { qty: v })} />
+              <NumField label="Cost" value={row.cost} onChange={(v) => patch(row.id, { cost: v })} />
+              <NumField label="Price" value={row.price} onChange={(v) => patch(row.id, { price: v })} />
               <div className="space-y-1.5">
                 <Label>Amount</Label>
                 <p className="flex h-11 items-center tabular-nums">{money(lineAmount(row))}</p>
               </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label>Photos</Label>
+                <label className="inline-flex min-h-9 cursor-pointer items-center rounded-md bg-background px-3 text-sm shadow-[var(--shadow-border)]">
+                  Add photos
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    onChange={(e) => {
+                      void addPhotos(row.id, e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              {(row.photos ?? []).length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {row.photos.map((src, i) => (
+                    <div key={`${row.id}-ph-${i}`} className="relative overflow-hidden rounded-lg bg-muted">
+                      <img src={src} alt="" className="aspect-square w-full object-cover" />
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 rounded bg-background/90 px-2 text-xs"
+                        onClick={() =>
+                          patch(row.id, { photos: row.photos.filter((_, idx) => idx !== i) })
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No photos on this line yet.</p>
+              )}
             </div>
           </div>
         ))}

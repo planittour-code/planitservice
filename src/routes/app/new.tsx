@@ -401,9 +401,7 @@ function NewQuote() {
       {step === 3 && work && (
         <div className="space-y-5">
           <TakeoffForm
-            workId={work.id}
-            workName={work.name}
-            blurb={work.blurb}
+            work={work}
             paintScope={takeoff.paint_scope}
             inputs={takeoff}
             onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}

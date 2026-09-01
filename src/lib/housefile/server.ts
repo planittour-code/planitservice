@@ -7,6 +7,7 @@ import { num, slugToken } from "./format";
 import { parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
   ESTIMATE_KEY,
+  estimatePhotos,
   estimateReady,
   parseEstimateLines,
   toQuoteLines,
@@ -763,6 +764,17 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
         )
       `;
     }
+
+    for (const photo of estimatePhotos(estimate)) {
+      await sql`
+        insert into property_photos (id, property_id, src, caption, category, uploaded_by)
+        values (
+          ${crypto.randomUUID()}, ${property.id}, ${photo.src},
+          ${photo.caption}, ${"job"}, ${"contractor"}
+        )
+      `;
+    }
+
     if (role === "owner") {
       await writeProposedCostsToBook(sql, company.id, priced, takeoff);
     }
