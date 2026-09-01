@@ -20,6 +20,7 @@ import {
   estimateReady,
   estimateTotal,
   parseEstimateLines,
+  seedEstimateLines,
   serializeEstimateLines,
   toQuoteLines,
 } from "@/lib/housefile/estimate-lines";
@@ -163,18 +164,18 @@ function NewQuote() {
 
   useEffect(() => {
     if (!work) return;
-    const facts = user ? (house.data?.facts ?? {}) : usingDemo ? MAPLE_DEMO.facts : {};
-    const seeded = defaultsFor(work, facts);
-    if (search.template === "tmpl_ext_paint") seeded.paint_scope = "exterior";
     const items = user ? (bookQ.data?.items ?? []) : guestBook();
-    for (const slot of slotsForWork(work.id, seeded)) {
-      const key = pickKey(slot.id);
-      if (seeded[key]) continue;
-      const first = items.find((b) => b.slot === slot.id && b.active !== false);
-      if (first) seeded[key] = first.id;
-    }
-    setTakeoff(seeded);
-  }, [work?.id, house.data?.property.id, bookQ.data?.items.length]);
+    const scope = search.template === "tmpl_ext_paint" ? "exterior" : "interior";
+    setTakeoff((prev) => {
+      const sameJob = prev.__work === work.id && prev.paint_scope === (work.id === "paint" ? scope : prev.paint_scope);
+      if (sameJob && prev[ESTIMATE_KEY]) return prev;
+      return {
+        __work: work.id,
+        paint_scope: work.id === "paint" ? scope : "",
+        [ESTIMATE_KEY]: serializeEstimateLines(seedEstimateLines(work.id, items, scope)),
+      };
+    });
+  }, [work?.id, bookQ.data?.items.length, search.template]);
 
   const book = user ? (bookQ.data?.items ?? []) : guestBook();
   const role = user ? (bookQ.data?.role ?? dash.data?.role ?? "owner") : "owner";
@@ -227,12 +228,7 @@ function NewQuote() {
       if (!homeownerName.trim()) issues.push("Homeowner name");
       if (!homeownerEmail.trim()) issues.push("Homeowner email");
     }
-    if (!estimateReady(estimate) && work && !takeoffReady(work, takeoff)) {
-      issues.push("Add a line item or finish the measurements");
-    }
-    if (missingBookCost.length > 0 && !proposedReady && !estimateReady(estimate)) {
-      issues.push("Enter a cost for each product that has none in the book");
-    }
+    if (!estimate.some((l) => l.item.trim())) issues.push("Add a line item");
     return issues;
   })();
   const canSend = !user || (addressReady && sendBlockers.length === 0);
@@ -405,21 +401,19 @@ function NewQuote() {
       {step === 3 && work && (
         <div className="space-y-5">
           <TakeoffForm
-            work={work}
+            workId={work.id}
+            workName={work.name}
+            blurb={work.blurb}
+            paintScope={takeoff.paint_scope}
             inputs={takeoff}
             onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
             book={book}
-            role={role}
           />
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => setStep(2)}>
               Back
             </Button>
-            <Button
-              type="button"
-              disabled={!estimateReady(estimate) && !takeoffReady(work, takeoff)}
-              onClick={() => setStep(4)}
-            >
+            <Button type="button" onClick={() => setStep(4)}>
               Review quote
             </Button>
           </div>

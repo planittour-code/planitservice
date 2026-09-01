@@ -1,76 +1,66 @@
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { EstimateSheet } from "@/components/estimate-sheet";
-import {
-  applyPriceBook,
-  type PriceBookItem,
-} from "@/lib/housefile/book";
+import { Label } from "@/components/ui/label";
+import type { PriceBookItem } from "@/lib/housefile/book";
 import {
   ESTIMATE_KEY,
   blankEstimateLine,
   parseEstimateLines,
+  seedEstimateLines,
   serializeEstimateLines,
 } from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
-import {
-  buildQuote,
-  fieldVisible,
-  nInput,
-  quoteTotal,
-  suggestedSquares,
-  type QuoteLine,
-  type TakeoffField,
-  type WorkType,
-} from "@/lib/housefile/quote";
-import type { ShopRole } from "@/lib/housefile/types";
+import type { QuoteLine } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
 
 export function TakeoffForm({
-  work,
+  workId,
+  workName,
+  blurb,
+  paintScope,
   inputs,
   onChange,
   book,
 }: {
-  work: WorkType;
+  workId: string;
+  workName: string;
+  blurb: string;
+  paintScope?: string;
   inputs: Record<string, string>;
   onChange: (key: string, value: string) => void;
   book: PriceBookItem[];
-  role: ShopRole;
 }) {
-  const generated = applyPriceBook(buildQuote(work.id, inputs), book, inputs);
-  const total = quoteTotal(generated);
-  const squares = work.id === "roof" ? suggestedSquares(inputs) : 0;
   const estimate = parseEstimateLines(inputs[ESTIMATE_KEY]);
-  const rows = estimate.length > 0 ? estimate : [blankEstimateLine()];
+  const rows = estimate.length > 0 ? estimate : seedEstimateLines(workId, book, paintScope);
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-5">
-        <p className="text-muted-foreground">{work.blurb}</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {work.fields.filter((field) => fieldVisible(field, inputs)).map((field) => (
-            <TakeoffInput
-              key={field.key}
-              field={field}
-              value={inputs[field.key] ?? ""}
-              onChange={(v) => onChange(field.key, v)}
-            />
-          ))}
-        </div>
-        {work.id === "roof" && nInput(inputs, "roof_squares") <= 0 && squares > 0 && (
-          <p className="text-sm text-muted-foreground">
-            Estimated {squares} squares from footprint and pitch. Enter a measured count to lock it.
-          </p>
-        )}
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-3xl font-medium tracking-tight">{workName}</h1>
+        <p className="text-muted-foreground">{blurb}</p>
       </div>
+      {workId === "paint" && (
+        <div className="space-y-1.5 max-w-xs">
+          <Label htmlFor="paint-scope">Where</Label>
+          <select
+            id="paint-scope"
+            value={paintScope === "exterior" ? "exterior" : "interior"}
+            onChange={(e) => {
+              const scope = e.target.value;
+              onChange("paint_scope", scope);
+              onChange(ESTIMATE_KEY, serializeEstimateLines(seedEstimateLines(workId, book, scope)));
+            }}
+            className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none"
+          >
+            <option value="interior">Interior</option>
+            <option value="exterior">Exterior</option>
+          </select>
+        </div>
+      )}
       <EstimateSheet
         book={book}
-        lines={rows}
+        lines={rows.length ? rows : [blankEstimateLine()]}
         onChange={(next) => onChange(ESTIMATE_KEY, serializeEstimateLines(next))}
       />
-      {generated.length > 0 && estimate.length === 0 && (
-        <QuotePreview lines={generated} total={total} showCost />
-      )}
     </div>
   );
 }
@@ -107,80 +97,11 @@ export function QuotePreview({
             key={l.name}
             className={cn("flex justify-between gap-3", !l.included && "text-muted-foreground")}
           >
-            <span>
-              {l.name}
-              {l.optional && !l.included ? " (off)" : ""}
-              {l.needsCost ? " · needs cost" : ""}
-            </span>
+            <span>{l.name}</span>
             <span className="tabular-nums">{l.included ? money(l.qty * l.unit_price) : "—"}</span>
           </li>
         ))}
       </ul>
     </aside>
-  );
-}
-
-function TakeoffInput({
-  field,
-  value,
-  onChange,
-}: {
-  field: TakeoffField;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const id = `to-${field.key}`;
-  if (field.kind === "toggle") {
-    const on = value === "yes" || value === "true" || value === "1";
-    return (
-      <label className="flex min-h-11 items-center gap-3 rounded-lg bg-card px-3 py-2 shadow-[var(--shadow-border)] sm:col-span-2">
-        <input
-          id={id}
-          type="checkbox"
-          checked={on}
-          onChange={(e) => onChange(e.target.checked ? "yes" : "no")}
-          className="size-4"
-        />
-        <span>
-          <span className="block text-sm font-medium">{field.label}</span>
-          <span className="block text-xs text-muted-foreground">{field.hint}</span>
-        </span>
-      </label>
-    );
-  }
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>
-        {field.label}
-        {field.unit ? ` (${field.unit})` : ""}
-        {field.required ? " *" : ""}
-      </Label>
-      {field.kind === "select" ? (
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        >
-          {(field.options ?? []).map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <Input
-          id={id}
-          type={field.kind === "number" ? "number" : "text"}
-          inputMode={field.kind === "number" ? "decimal" : "text"}
-          step={field.kind === "number" ? "any" : undefined}
-          min={field.kind === "number" ? 0 : undefined}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
-      <p className="text-xs text-muted-foreground">{field.hint}</p>
-    </div>
   );
 }
