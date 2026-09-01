@@ -33,6 +33,23 @@ export const authEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
 /** The upstream providers to render sign-in buttons for. */
 export { GROK_PROVIDERS };
 
+/**
+ * Google/X go through auth.grok.me, which only allows callbacks on
+ * `*.grok-sandbox.com` and `*.grok.me`. A custom domain like planitservice.com
+ * gets "Invalid redirect URI". Email/password is this app's own Better Auth
+ * and works on any host.
+ */
+export function grokOauthOnThisHost() {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.endsWith(".grok-sandbox.com") ||
+    host.endsWith(".grok.me")
+  );
+}
+
 // ── Live-preview bearer token ────────────────────────────────────────────────
 // The embedded preview iframe has partitioned cookies, so we keep the session's
 // bearer token in sessionStorage and attach it to every Better Auth request (and

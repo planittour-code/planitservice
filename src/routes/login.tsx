@@ -5,7 +5,7 @@ import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { GROK_PROVIDERS, authClient, authEnabled, grokOauthOnThisHost, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { safeNextPath } from "@/lib/housefile/invite";
 
@@ -115,22 +115,25 @@ function Login() {
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">
           {authEnabled ? (
             <div className="space-y-3">
-              {GROK_PROVIDERS.map((p) => (
-                <Button
-                  key={p.providerId}
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => signIn(p.providerId, { callbackURL: after })}
-                >
-                  Continue with {p.label}
-                </Button>
-              ))}
-              <div className="flex items-center gap-3 py-2">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">or email</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
+              {grokOauthOnThisHost() &&
+                GROK_PROVIDERS.map((p) => (
+                  <Button
+                    key={p.providerId}
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => signIn(p.providerId, { callbackURL: after })}
+                  >
+                    Continue with {p.label}
+                  </Button>
+                ))}
+              {grokOauthOnThisHost() && (
+                <div className="flex items-center gap-3 py-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-muted-foreground">or email</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+              )}
               <form className="space-y-3" onSubmit={(e) => void onEmail(e)}>
                 {mode === "up" && (
                   <div className="space-y-1.5">
