@@ -5,6 +5,12 @@ import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv
 import { FIELD_CATALOG } from "./fields";
 import { num, slugToken } from "./format";
 import { parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
+import {
+  ESTIMATE_KEY,
+  estimateReady,
+  parseEstimateLines,
+  toQuoteLines,
+} from "./estimate-lines";
 import { buildQuote, factsFromTakeoff, workForTemplate, WORK_BY_ID } from "./quote";
 import type {
   AddressTease,
@@ -640,13 +646,21 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       select * from price_book where company_id = ${company.id} and active = true
     `;
     const book = bookRows.map(hydrateBook);
-    const priced = work ? applyPriceBook(buildQuote(work.id, takeoff), book, takeoff) : [];
+    const estimate = parseEstimateLines(takeoff[ESTIMATE_KEY]);
+    const priced = estimateReady(estimate)
+      ? toQuoteLines(estimate, book)
+      : work
+        ? applyPriceBook(buildQuote(work.id, takeoff), book, takeoff)
+        : [];
     const catalogMissing = priced.filter((l) => {
       if (!l.bookId || !l.included) return false;
       const item = book.find((b) => b.id === l.bookId);
       return Boolean(item && item.cost == null);
     });
-    if (catalogMissing.some((l) => !String(takeoff[`cost_${l.bookId}`] ?? "").trim())) {
+    if (
+      !estimateReady(estimate) &&
+      catalogMissing.some((l) => !String(takeoff[`cost_${l.bookId}`] ?? "").trim())
+    ) {
       throw new Error("Enter a cost for each product that does not have one.");
     }
 

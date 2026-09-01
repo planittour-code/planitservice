@@ -12,7 +12,17 @@ import { WizardSteps } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EstimateSheet } from "@/components/estimate-sheet";
 import { applyPriceBook, linesNeedingBookCost, pickKey, proposedCostKey, slotsForWork, STARTER_BOOK } from "@/lib/housefile/book";
+import {
+  ESTIMATE_KEY,
+  blankEstimateLine,
+  estimateReady,
+  estimateTotal,
+  parseEstimateLines,
+  serializeEstimateLines,
+  toQuoteLines,
+} from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
 import {
   WORK_BY_ID,
@@ -168,11 +178,15 @@ function NewQuote() {
 
   const book = user ? (bookQ.data?.items ?? []) : guestBook();
   const role = user ? (bookQ.data?.role ?? dash.data?.role ?? "owner") : "owner";
+  const estimate = parseEstimateLines(takeoff[ESTIMATE_KEY]);
   const lines = useMemo(
-    () => (work ? applyPriceBook(buildQuote(work.id, takeoff), book, takeoff) : []),
+    () => {
+      if (estimateReady(estimate)) return toQuoteLines(estimate, book);
+      return work ? applyPriceBook(buildQuote(work.id, takeoff), book, takeoff) : [];
+    },
     [work?.id, takeoff, book],
   );
-  const total = quoteTotal(lines);
+  const total = estimateReady(estimate) ? estimateTotal(estimate) : quoteTotal(lines);
   const missingBookCost = linesNeedingBookCost(lines, book);
   const proposedReady = missingBookCost.every((l) =>
     String(takeoff[`cost_${l.bookId}`] ?? "").trim(),
@@ -213,8 +227,10 @@ function NewQuote() {
       if (!homeownerName.trim()) issues.push("Homeowner name");
       if (!homeownerEmail.trim()) issues.push("Homeowner email");
     }
-    if (work && !takeoffReady(work, takeoff)) issues.push("Finish the measurements");
-    if (missingBookCost.length > 0 && !proposedReady) {
+    if (!estimateReady(estimate) && work && !takeoffReady(work, takeoff)) {
+      issues.push("Add a line item or finish the measurements");
+    }
+    if (missingBookCost.length > 0 && !proposedReady && !estimateReady(estimate)) {
       issues.push("Enter a cost for each product that has none in the book");
     }
     return issues;
@@ -399,7 +415,11 @@ function NewQuote() {
             <Button type="button" variant="ghost" onClick={() => setStep(2)}>
               Back
             </Button>
-            <Button type="button" disabled={!takeoffReady(work, takeoff)} onClick={() => setStep(4)}>
+            <Button
+              type="button"
+              disabled={!estimateReady(estimate) && !takeoffReady(work, takeoff)}
+              onClick={() => setStep(4)}
+            >
               Review quote
             </Button>
           </div>
@@ -416,9 +436,18 @@ function NewQuote() {
                 : `${addressLine}, ${city}, ${state} ${zip} · ${homeownerName}`}
             </p>
           </div>
-          <QuotePreview lines={lines} total={total} showCost />
+          <EstimateSheet
+            book={book}
+            lines={estimate.length ? estimate : [blankEstimateLine()]}
+            onChange={(next) =>
+              setTakeoff((s) => ({ ...s, [ESTIMATE_KEY]: serializeEstimateLines(next) }))
+            }
+          />
+          {lines.length > 0 && !estimateReady(estimate) && (
+            <QuotePreview lines={lines} total={total} showCost />
+          )}
           <p className="text-sm text-muted-foreground">
-            Sending writes these quantities into a first draft and copies the measurements onto the
+            Sending writes these line items into a first draft and copies the measurements onto the
             house file. {homeownerName || existing?.homeowner_name || "The homeowner"} can revise
             colors and optional work.
           </p>

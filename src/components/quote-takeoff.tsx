@@ -1,13 +1,16 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EstimateSheet } from "@/components/estimate-sheet";
 import {
   applyPriceBook,
-  bookLabel,
-  pickKey,
-  proposedCostKey,
-  slotsForWork,
   type PriceBookItem,
 } from "@/lib/housefile/book";
+import {
+  ESTIMATE_KEY,
+  blankEstimateLine,
+  parseEstimateLines,
+  serializeEstimateLines,
+} from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
 import {
   buildQuote,
@@ -27,7 +30,6 @@ export function TakeoffForm({
   inputs,
   onChange,
   book,
-  role,
 }: {
   work: WorkType;
   inputs: Record<string, string>;
@@ -35,13 +37,14 @@ export function TakeoffForm({
   book: PriceBookItem[];
   role: ShopRole;
 }) {
-  const lines = applyPriceBook(buildQuote(work.id, inputs), book, inputs);
-  const total = quoteTotal(lines);
+  const generated = applyPriceBook(buildQuote(work.id, inputs), book, inputs);
+  const total = quoteTotal(generated);
   const squares = work.id === "roof" ? suggestedSquares(inputs) : 0;
-  const slots = slotsForWork(work.id, inputs);
+  const estimate = parseEstimateLines(inputs[ESTIMATE_KEY]);
+  const rows = estimate.length > 0 ? estimate : [blankEstimateLine()];
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">
+    <div className="space-y-8">
       <div className="space-y-5">
         <p className="text-muted-foreground">{work.blurb}</p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -59,68 +62,15 @@ export function TakeoffForm({
             Estimated {squares} squares from footprint and pitch. Enter a measured count to lock it.
           </p>
         )}
-        {slots.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-sm font-medium">Products from the price book</p>
-            {slots.map((slot) => {
-              const options = book.filter((b) => b.active !== false && b.slot === slot.id);
-              const picked = inputs[pickKey(slot.id)] ?? options[0]?.id ?? "";
-              const item = options.find((o) => o.id === picked);
-              return (
-                <div key={slot.id} className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor={`book-${slot.id}`}>{slot.label}</Label>
-                  {options.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nothing in the book for this yet. The owner adds it under Price book.
-                    </p>
-                  ) : (
-                    <select
-                      id={`book-${slot.id}`}
-                      value={picked}
-                      onChange={(e) => onChange(pickKey(slot.id), e.target.value)}
-                      className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    >
-                      {options.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {bookLabel(o)}
-                          {o.cost == null ? " — no cost" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {item && item.cost != null && (
-                    <p className="text-xs text-muted-foreground">
-                      Cost {money(item.cost)} / {item.unit}
-                      {item.sell != null ? ` · sell ${money(item.sell)}` : ""}
-                    </p>
-                  )}
-                  {item && item.cost == null && (
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`cost-${item.id}`}>Cost for this quote ({item.unit})</Label>
-                      <Input
-                        id={`cost-${item.id}`}
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step="any"
-                        placeholder="What the yard will charge"
-                        value={inputs[proposedCostKey(item.id)] ?? ""}
-                        onChange={(e) => onChange(proposedCostKey(item.id), e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {role === "owner"
-                          ? "This writes into the book when you send."
-                          : "The owner has to approve this number before the homeowner sees the quote."}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
-      <QuotePreview lines={lines} total={total} showCost sticky />
+      <EstimateSheet
+        book={book}
+        lines={rows}
+        onChange={(next) => onChange(ESTIMATE_KEY, serializeEstimateLines(next))}
+      />
+      {generated.length > 0 && estimate.length === 0 && (
+        <QuotePreview lines={generated} total={total} showCost />
+      )}
     </div>
   );
 }
