@@ -205,19 +205,13 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
             zip={tease.zip}
           />
         )}
-        {!tease.found ? (
-          <div className="absolute inset-0 grid place-items-center bg-ink/50 px-3">
-            <p className="font-display text-center text-[clamp(1rem,4.2vw,1.85rem)] font-semibold leading-none text-primary-foreground">
-              No information for this property on record.
-            </p>
-          </div>
-        ) : (
-          <div className="absolute inset-0 grid place-items-center bg-ink/50 px-3">
-            <p className="font-display text-center text-[clamp(0.95rem,3.2vw,1.65rem)] font-semibold leading-none whitespace-nowrap text-primary-foreground">
-              There are {tease.factCount ?? tease.facts.length} of {tease.totalCount ?? FIELD_CATALOG.length} details on the property record.
-            </p>
-          </div>
-        )}
+        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-ink/50 px-4">
+          <p className="font-display max-w-lg text-center text-[clamp(1.05rem,3.4vw,1.7rem)] font-semibold leading-tight text-balance text-primary-foreground">
+            {tease.found
+              ? `There are ${tease.factCount ?? tease.facts.length} of ${tease.totalCount ?? FIELD_CATALOG.length} details on the property record.`
+              : "No information for this property on record."}
+          </p>
+        </div>
       </div>
       <div className="space-y-5 p-5">
         <div>
