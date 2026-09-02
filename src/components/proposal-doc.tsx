@@ -389,6 +389,7 @@ function OptionGroup({
             </span>
             <button
               type="button"
+              data-preview-ok
               className="mt-1 text-sm text-primary underline-offset-2 hover:underline"
               onClick={() => setOpen((v) => !v)}
             >

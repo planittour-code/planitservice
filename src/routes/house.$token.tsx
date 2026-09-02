@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Completeness,
   FactsPanel,
@@ -11,9 +11,11 @@ import {
 } from "@/components/house-panels";
 import { EstimateGroups, HomeownerHeader } from "@/components/homeowner-chrome";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
+import { SampleLock } from "@/components/sample-lock";
 import { FileNav } from "@/components/site-chrome";
 import { Wordmark } from "@/components/logo";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isSampleHouseToken } from "@/lib/housefile/sample";
 import { getHouseByToken } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/house/$token")({
@@ -59,18 +61,14 @@ function HousePage() {
 
   const file = q.data;
   const p = file.property;
+  const sample = isSampleHouseToken(token) || isSampleHouseToken(p.share_token);
   const hero = file.photos.find((ph) => ph.category === "exterior") ?? file.photos[0];
   const latest = file.proposals.find(
     (pr) => pr.status !== "completed" && pr.status !== "pending" && pr.status !== "draft",
   );
 
-  return (
-    <div className="min-h-screen bg-background">
-      <HomeownerHeader
-        houseToken={p.share_token}
-        estimateToken={latest?.share_token}
-        company={file.company.name}
-      />
+  const body = (
+    <>
       {hero && (
         <div className="mx-auto max-w-3xl px-5 pt-6">
           <img
@@ -81,6 +79,15 @@ function HousePage() {
         </div>
       )}
       <main className="hf-rise mx-auto max-w-3xl space-y-10 px-5 py-8">
+        {sample && (
+          <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
+            This is a sample File. Look through it. To keep a record of your own house,{" "}
+            <Link to="/start" className="underline underline-offset-2">
+              start a house record
+            </Link>
+            .
+          </p>
+        )}
         <header id="file" className="space-y-4">
           <p className="text-sm tracking-wide text-muted-foreground uppercase">The File</p>
           <h1 className="font-display text-4xl font-medium tracking-tight">{p.address_line}</h1>
@@ -105,14 +112,24 @@ function HousePage() {
             </p>
           </div>
           <RfpList houseToken={p.share_token} />
-          <RfpForm
-            houseToken={p.share_token}
-            addressLine={p.address_line}
-            city={p.city}
-            state={p.state}
-            zip={p.zip}
-            homeownerName={p.homeowner_name}
-          />
+          {sample ? (
+            <p className="text-sm text-muted-foreground">
+              Requests are off on the sample.{" "}
+              <Link to="/start" className="underline underline-offset-2">
+                Start a house record
+              </Link>{" "}
+              to put a job on the market.
+            </p>
+          ) : (
+            <RfpForm
+              houseToken={p.share_token}
+              addressLine={p.address_line}
+              city={p.city}
+              state={p.state}
+              zip={p.zip}
+              homeownerName={p.homeowner_name}
+            />
+          )}
         </section>
 
         <SectionRule />
@@ -132,6 +149,17 @@ function HousePage() {
           <FactsPanel file={file} mode="homeowner" token={token} onChanged={() => q.refetch()} />
         </div>
       </main>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <HomeownerHeader
+        houseToken={p.share_token}
+        estimateToken={latest?.share_token}
+        company={file.company.name}
+      />
+      {sample ? <SampleLock>{body}</SampleLock> : body}
     </div>
   );
 }

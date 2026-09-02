@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { HomeownerHeader } from "@/components/homeowner-chrome";
 import { Wordmark } from "@/components/logo";
 import { ProposalDoc } from "@/components/proposal-doc";
+import { SampleLock } from "@/components/sample-lock";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isSampleHouseToken } from "@/lib/housefile/sample";
 import { getProposalByToken } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/p/$token")({
@@ -63,6 +65,7 @@ function PublicProposal() {
   }
 
   const bundle = q.data;
+  const sample = isSampleHouseToken(bundle.property.share_token);
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,7 +75,13 @@ function PublicProposal() {
         company={bundle.company.name}
       />
       <main className="hf-rise mx-auto max-w-3xl px-4 py-6 pb-28 sm:px-5 sm:py-8 sm:pb-24">
-        <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />
+        {sample ? (
+          <SampleLock>
+            <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />
+          </SampleLock>
+        ) : (
+          <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />
+        )}
       </main>
     </div>
   );
