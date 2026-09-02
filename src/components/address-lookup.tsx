@@ -1,14 +1,15 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { StreetView } from "@/components/street-view";
 import { QuoteTypePicker } from "@/components/quote-type";
+import { ShopExplainer, ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { formatLine, houseNumber } from "@/lib/housefile/geocode";
-import { captureQuoteLead, peekHouseByAddress, suggestAddresses } from "@/lib/housefile/server";
+import { captureQuoteLead, getDashboard, peekHouseByAddress, suggestAddresses } from "@/lib/housefile/server";
 import type { AddressTease } from "@/lib/housefile/types";
 
 const GHOST_FACTS = [
@@ -163,6 +164,13 @@ export function AddressLookup({ onTease }: { onTease?: (tease: AddressTease) => 
 export function TeaseCard({ tease }: { tease: AddressTease }) {
   const { user } = useCurrentUserState();
   const navigate = useNavigate();
+  const dash = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: () => getDashboard(),
+    enabled: Boolean(user),
+    retry: false,
+  });
+  const payingShop = Boolean(user && dash.data?.company.onboarded_at);
   const facts = tease.found && tease.facts.length ? tease.facts : GHOST_FACTS;
   const place = [tease.city, tease.state, tease.zip].filter(Boolean).join(" ");
 
@@ -178,27 +186,32 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
         found: tease.found,
       },
     });
-    if (user) {
-      void navigate({ to: "/app/new", search });
-      return;
-    }
-    void navigate({ to: "/open" });
+    void navigate({ to: "/app/new", search });
   }
 
   return (
     <aside className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-      {tease.photo ? (
-        <img src={tease.photo} alt="" className="aspect-[16/9] w-full object-cover" />
-      ) : (
-        <StreetView
-          lat={tease.lat}
-          lng={tease.lng}
-          address={tease.address}
-          city={tease.city}
-          state={tease.state}
-          zip={tease.zip}
-        />
-      )}
+      <div className="relative">
+        {tease.photo ? (
+          <img src={tease.photo} alt="" className="aspect-[16/9] w-full object-cover" />
+        ) : (
+          <StreetView
+            lat={tease.lat}
+            lng={tease.lng}
+            address={tease.address}
+            city={tease.city}
+            state={tease.state}
+            zip={tease.zip}
+          />
+        )}
+        {!tease.found && (
+          <div className="absolute inset-0 grid place-items-center bg-ink/50 px-3">
+            <p className="font-display text-center text-[clamp(1rem,4.2vw,1.85rem)] font-semibold leading-none text-primary-foreground">
+              No information for this property on record.
+            </p>
+          </div>
+        )}
+      </div>
       <div className="space-y-5 p-5">
         <div>
           <p className="text-xs tracking-wide text-muted-foreground uppercase">
@@ -208,51 +221,41 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
           {place ? <p className="text-sm text-muted-foreground">{place}</p> : null}
         </div>
 
-        {tease.found && !user ? (
-          <div className="space-y-3">
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              This property already has a House File. Specs from prior work stay with the address.
-              Open a shop to load the record and quote from it.
-            </p>
-            <Button asChild className="min-h-12 w-full">
-              <Link to="/open">See the File — open a shop</Link>
-            </Button>
-          </div>
-        ) : (
+        {payingShop ? (
           <QuoteTypePicker
             onPick={pickTrade}
-            title="What quote do you need to build?"
-            hint={
-              tease.found
-                ? "A painter may have opened this File. A roof still needs its own takeoff. Pick the trade to start the estimate."
-                : "Pick the trade. This quote opens the File for the next shop that looks it up."
-            }
+            title="Do you want to start an Estimate for this property?"
+            hint="Pick the trade. This quote writes to the File for the next shop that looks it up."
           />
+        ) : (
+          <div className="space-y-5">
+            <ShopExplainer />
+            <ShopSignupForm />
+          </div>
         )}
 
-        <dl className="grid grid-cols-2 gap-3 text-sm">
-          {facts.map((f) => (
-            <div key={f.key}>
-              <dt className="text-xs tracking-wide text-muted-foreground uppercase">{f.label}</dt>
-              <dd className="font-medium">{f.value}</dd>
-            </div>
-          ))}
-        </dl>
-        {tease.found && tease.jobs.length > 0 && (
-          <ul className="space-y-1 text-sm">
-            {tease.jobs.map((j) => (
-              <li key={j.title} className="flex justify-between gap-3">
-                <span>{j.title}</span>
-                <span className="text-muted-foreground">{j.year}</span>
-              </li>
-            ))}
-          </ul>
+        {tease.found && (
+          <>
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              {facts.map((f) => (
+                <div key={f.key}>
+                  <dt className="text-xs tracking-wide text-muted-foreground uppercase">{f.label}</dt>
+                  <dd className="font-medium">{f.value}</dd>
+                </div>
+              ))}
+            </dl>
+            {tease.jobs.length > 0 && (
+              <ul className="space-y-1 text-sm">
+                {tease.jobs.map((j) => (
+                  <li key={j.title} className="flex justify-between gap-3">
+                    <span>{j.title}</span>
+                    <span className="text-muted-foreground">{j.year}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
-
-        <p className="rounded-lg bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
-          Colors, products, measurements, and warranties stay with the shop. The tease is what a
-          prospect gets. A paying shop loads the rest.
-        </p>
       </div>
     </aside>
   );
