@@ -234,6 +234,8 @@ export type AddressTease = {
   photo: string | null;
   facts: { key: string; label: string; value: string }[];
   jobs: { title: string; year: string }[];
+  factCount?: number;
+  totalCount?: number;
 };
 
 export type HomeownerPlan = "basic" | "plus";

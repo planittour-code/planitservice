@@ -8,6 +8,7 @@ import { ShopExplainer, ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { formatLine, houseNumber } from "@/lib/housefile/geocode";
 import { captureQuoteLead, getDashboard, peekHouseByAddress, suggestAddresses } from "@/lib/housefile/server";
 import type { AddressTease } from "@/lib/housefile/types";
@@ -204,10 +205,16 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
             zip={tease.zip}
           />
         )}
-        {!tease.found && (
+        {!tease.found ? (
           <div className="absolute inset-0 grid place-items-center bg-ink/50 px-3">
             <p className="font-display text-center text-[clamp(1rem,4.2vw,1.85rem)] font-semibold leading-none text-primary-foreground">
               No information for this property on record.
+            </p>
+          </div>
+        ) : (
+          <div className="absolute inset-0 grid place-items-center bg-ink/50 px-3">
+            <p className="font-display text-center text-[clamp(0.95rem,3.2vw,1.65rem)] font-semibold leading-none whitespace-nowrap text-primary-foreground">
+              There are {tease.factCount ?? tease.facts.length} of {tease.totalCount ?? FIELD_CATALOG.length} details on the property record.
             </p>
           </div>
         )}

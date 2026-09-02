@@ -1187,6 +1187,8 @@ export const peekHouseByAddress = createServerFn({ method: "GET" })
         title: j.title,
         year: String(new Date(j.completed_at).getFullYear()),
       })),
+      factCount: factRows.filter((f) => String(f.value ?? "").trim()).length,
+      totalCount: FIELD_CATALOG.length,
     };
   });
 
@@ -1205,6 +1207,8 @@ function emptyTease(query: string, hit?: AddressHit): AddressTease {
     photo: null,
     facts: [],
     jobs: [],
+    factCount: 0,
+    totalCount: FIELD_CATALOG.length,
   };
 }
 
