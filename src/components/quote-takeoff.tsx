@@ -68,6 +68,8 @@ export function TakeoffForm({
         book={book}
         lines={rows.length ? rows : [blankEstimateLine()]}
         onChange={(next) => onChange(ESTIMATE_KEY, serializeEstimateLines(next))}
+        workId={work.id}
+        paintScope={paintScope}
       />
       {measureFields.length > 0 && (
         <div className="space-y-3">

@@ -434,6 +434,8 @@ function NewQuote() {
             onChange={(next) =>
               setTakeoff((s) => ({ ...s, [ESTIMATE_KEY]: serializeEstimateLines(next) }))
             }
+            workId={work.id}
+            paintScope={takeoff.paint_scope}
           />
           {lines.length > 0 && !estimateReady(estimate) && (
             <QuotePreview lines={lines} total={total} showCost />
