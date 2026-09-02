@@ -718,6 +718,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
             color: item.color,
             warranty_years: item.warranty_years,
             warranty_terms: item.warranty_terms,
+            option_id: item.optionId ?? null,
           }))
         : tItems.map((item) => ({
             sort_order: item.sort_order,
@@ -736,18 +737,20 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
             color: item.color,
             warranty_years: item.warranty_years,
             warranty_terms: item.warranty_terms,
+            option_id: null,
           }));
     for (const item of itemsToWrite) {
       await sql`
         insert into proposal_items (
           id, proposal_id, sort_order, name, description, qty, unit, unit_price, unit_cost,
           included, optional, category, manufacturer, product_name, sku, color,
-          warranty_years, warranty_terms
+          warranty_years, warranty_terms, option_id
         ) values (
           ${crypto.randomUUID()}, ${proposalId}, ${item.sort_order}, ${item.name}, ${item.description},
           ${item.qty}, ${item.unit}, ${item.unit_price}, ${item.unit_cost},
           ${item.included}, ${item.optional}, ${item.category}, ${item.manufacturer},
-          ${item.product_name}, ${item.sku}, ${item.color}, ${item.warranty_years}, ${item.warranty_terms}
+          ${item.product_name}, ${item.sku}, ${item.color}, ${item.warranty_years}, ${item.warranty_terms},
+          ${item.option_id}
         )
       `;
     }

@@ -34,6 +34,7 @@ export type QuoteLine = {
   bookId?: string;
   unit_cost?: number | null;
   needsCost?: boolean;
+  optionId?: string;
 };
 
 export type WorkType = {

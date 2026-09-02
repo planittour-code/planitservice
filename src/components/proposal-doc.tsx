@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { optionLabel } from "@/lib/housefile/estimate-lines";
 import { money, shortDate } from "@/lib/housefile/format";
 import {
   acceptProposalPublic,
@@ -112,7 +113,7 @@ export function ProposalDoc({
       )}
 
       <ul className="space-y-3">
-        {items.map((item) => (
+        {items.filter((item) => !item.option_id).map((item) => (
           <ProposalLine
             key={item.id}
             item={item}
@@ -123,6 +124,13 @@ export function ProposalDoc({
           />
         ))}
       </ul>
+      <OptionGroups
+        items={items}
+        mode={mode}
+        token={proposal.share_token}
+        locked={locked}
+        onChanged={onChanged}
+      />
 
       {mode === "contractor" && !locked && <AddLine proposalId={proposal.id} onChanged={onChanged} />}
 
@@ -299,17 +307,129 @@ function ContractorMeta({
   );
 }
 
+function OptionGroups({
+  items,
+  mode,
+  token,
+  locked,
+  onChanged,
+}: {
+  items: ProposalItem[];
+  mode: "homeowner" | "contractor";
+  token: string;
+  locked: boolean;
+  onChanged: () => void;
+}) {
+  const groups = new Map<string, ProposalItem[]>();
+  for (const item of items) {
+    if (!item.option_id) continue;
+    const list = groups.get(item.option_id) ?? [];
+    list.push(item);
+    groups.set(item.option_id, list);
+  }
+  if (groups.size === 0) return null;
+  return (
+    <div className="space-y-3">
+      <h2 className="font-display text-xl font-medium">Optional work</h2>
+      {[...groups.entries()].map(([id, rows]) => (
+        <OptionGroup
+          key={id}
+          optionId={id}
+          items={rows}
+          mode={mode}
+          token={token}
+          locked={locked}
+          onChanged={onChanged}
+        />
+      ))}
+    </div>
+  );
+}
+
+function OptionGroup({
+  optionId,
+  items,
+  mode,
+  token,
+  locked,
+  onChanged,
+}: {
+  optionId: string;
+  items: ProposalItem[];
+  mode: "homeowner" | "contractor";
+  token: string;
+  locked: boolean;
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const included = items.every((i) => i.included);
+  const amount = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
+  const full = items.reduce((sum, i) => sum + i.qty * i.unit_price, 0);
+  async function toggle(on: boolean) {
+    for (const item of items) {
+      await reviseProposalPublic({ data: { token, itemId: item.id, included: on } });
+    }
+    onChanged();
+  }
+  return (
+    <div className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 size-4"
+            checked={included}
+            disabled={locked || mode !== "homeowner"}
+            onChange={(e) => void toggle(e.target.checked)}
+          />
+          <span>
+            <span className="block font-medium">{optionLabel(optionId)}</span>
+            <span className="block text-sm text-muted-foreground">
+              {items.length} line{items.length === 1 ? "" : "s"}
+            </span>
+            <button
+              type="button"
+              className="mt-1 text-sm text-primary underline-offset-2 hover:underline"
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? "Hide details" : "See details"}
+            </button>
+          </span>
+        </label>
+        <p className="font-medium tabular-nums">{money(included ? amount : full)}</p>
+      </div>
+      {open && (
+        <ul className="mt-4 space-y-3 border-l-2 border-border pl-4">
+          {items.map((item) => (
+            <ProposalLine
+              key={item.id}
+              item={item}
+              mode={mode}
+              token={token}
+              locked={locked}
+              hideInclude
+              onChanged={onChanged}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ProposalLine({
   item,
   mode,
   token,
   locked,
+  hideInclude = false,
   onChanged,
 }: {
   item: ProposalItem;
   mode: "homeowner" | "contractor";
   token: string;
   locked: boolean;
+  hideInclude?: boolean;
   onChanged: () => void;
 }) {
   const [note, setNote] = useState(item.homeowner_note ?? "");
@@ -354,7 +474,7 @@ function ProposalLine({
 
       {mode === "homeowner" && !locked && (
         <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
-          {item.optional && (
+          {item.optional && !hideInclude && (
             <label className="flex min-h-11 items-center gap-2 text-sm">
               <input
                 type="checkbox"

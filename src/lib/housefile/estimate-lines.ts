@@ -288,6 +288,16 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
   return [];
 }
 
+export function optionLabel(id: string): string {
+  for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "porch"]) {
+    for (const scope of ["interior", "exterior"]) {
+      const hit = optionsFor(workId, scope).find((o) => o.id === id);
+      if (hit) return hit.label;
+    }
+  }
+  return "Optional work";
+}
+
 export function linesForOption(
   option: EstimateOption,
   book: PriceBookItem[],
@@ -428,7 +438,7 @@ export function toQuoteLines(lines: EstimateLine[], book: PriceBookItem[]): Quot
       qty: num(line.qty),
       unit: item?.unit || "ea",
       unit_price: num(line.price),
-      optional: false,
+      optional: Boolean(line.optionId),
       included: num(line.qty) > 0 && String(line.price).trim() !== "",
       category: item?.trade || "quote",
       manufacturer: item?.manufacturer ?? null,
@@ -440,6 +450,7 @@ export function toQuoteLines(lines: EstimateLine[], book: PriceBookItem[]): Quot
       bookId: item?.id,
       unit_cost: cost,
       needsCost: cost == null,
+      optionId: line.optionId,
     };
   });
 }
