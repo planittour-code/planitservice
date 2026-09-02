@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { HomeownerHeader } from "@/components/homeowner-chrome";
 import { Wordmark } from "@/components/logo";
 import { ProposalDoc } from "@/components/proposal-doc";
@@ -18,8 +18,14 @@ export const Route = createFileRoute("/p/$token")({
       return { kind: "missing" as const };
     }
   },
-  component: PublicProposal,
+  component: PublicProposalFrame,
 });
+
+function PublicProposalFrame() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname.includes("/accepted")) return <Outlet />;
+  return <PublicProposal />;
+}
 
 function PublicProposal() {
   const { token } = Route.useParams();

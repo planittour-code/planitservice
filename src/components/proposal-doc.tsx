@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -59,20 +60,15 @@ export function ProposalDoc({
   onChanged,
 }: {
   bundle: ProposalBundle;
-  mode: "homeowner" | "contractor";
+  mode: "homeowner" | "contractor" | "accepted";
   onChanged: () => void;
 }) {
-  const { proposal, items, messages, property, company, house } = bundle;
-  const locked = proposal.status === "completed";
-  const canAccept =
-    mode === "homeowner" && proposal.status !== "accepted" && proposal.status !== "completed";
+  const navigate = useNavigate();
+  const { proposal, items, property, company, house } = bundle;
+  const locked = proposal.status === "completed" || mode === "accepted";
   const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
-
-  async function accept() {
-    await acceptProposalPublic({ data: { token: proposal.share_token } });
-    toast.success("Estimate accepted");
-    onChanged();
-  }
+  const openLines = items.filter((i) => i.included && !lineSettled(i));
+  const readyToStart = openLines.length === 0 && items.some((i) => i.included);
 
   return (
     <article className="space-y-8">
@@ -167,10 +163,6 @@ export function ProposalDoc({
 
       <ProposalTotals items={items} showCost={mode === "contractor"} />
 
-      {canAccept && (
-        <AcceptEstimate total={includedTotal} onAccept={() => void accept()} sticky />
-      )}
-
       {mode === "contractor" && !locked && (
         <>
           <SectionRule />
@@ -180,34 +172,57 @@ export function ProposalDoc({
         </>
       )}
 
-      <section className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-sm tracking-wide text-muted-foreground uppercase">Current Estimate</p>
-            <h2 className="font-display text-2xl font-medium tracking-tight">{statusHeadline(proposal.status)}</h2>
+      {mode === "homeowner" && (
+        <div className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm tracking-wide text-muted-foreground uppercase">Agreement</p>
+              <p className="text-sm text-muted-foreground">
+                {readyToStart
+                  ? "Every line is accepted. Start work to sign the estimate."
+                  : `${openLines.length} line${openLines.length === 1 ? "" : "s"} still need Accept.`}
+              </p>
+            </div>
+            <p className="font-display text-2xl font-medium tabular-nums">{money(includedTotal)}</p>
           </div>
-          <p className="font-display text-3xl font-medium tabular-nums">{money(includedTotal)}</p>
+          <Button
+            className="min-h-12 w-full"
+            disabled={!readyToStart}
+            data-preview-ok
+            onClick={async () => {
+              if (!readyToStart) return;
+              try {
+                if (proposal.status !== "accepted" && proposal.status !== "completed") {
+                  await acceptProposalPublic({ data: { token: proposal.share_token } });
+                }
+              } catch {
+                /* sample or already accepted */
+              }
+              void navigate({
+                to: "/p/$token/accepted",
+                params: { token: proposal.share_token },
+              });
+            }}
+          >
+            Start Work
+          </Button>
         </div>
-        <ol className="space-y-3">
-          {estimateHistory(bundle).map((event) => (
-            <li key={event.id} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-sm font-medium">{event.title}</p>
-                <time className="text-xs text-muted-foreground">{shortDate(event.when)}</time>
-              </div>
-              {event.body ? <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{event.body}</p> : null}
-            </li>
-          ))}
-        </ol>
-        {!locked && (
-          <MessageForm
-            mode={mode}
-            proposalId={proposal.id}
-            token={proposal.share_token}
-            onChanged={onChanged}
-          />
-        )}
-      </section>
+      )}
+
+      {mode === "accepted" ? (
+        <section className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+            <p className="text-sm tracking-wide text-muted-foreground uppercase">Homeowner</p>
+            <p className="font-medium">{property.homeowner_name}</p>
+            <p className="text-sm text-muted-foreground">Accepted the estimate. Work may begin.</p>
+          </div>
+          <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+            <p className="text-sm tracking-wide text-muted-foreground uppercase">Contractor</p>
+            <p className="font-medium">{company.name}</p>
+            <p className="text-sm text-muted-foreground">Estimate from {company.name}.</p>
+          </div>
+        </section>
+      ) : null}
 
       {mode === "homeowner" && company.terms ? (
         <section className="space-y-2">
@@ -234,84 +249,8 @@ export function ProposalDoc({
           </Button>
         </div>
       )}
-
-      {canAccept && (
-        <AcceptEstimate total={includedTotal} onAccept={() => void accept()} sticky />
-      )}
     </article>
   );
-}
-
-function AcceptEstimate({
-  total,
-  onAccept,
-  sticky,
-}: {
-  total: number;
-  onAccept: () => void;
-  sticky?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col gap-3 rounded-xl bg-primary px-5 py-4 text-primary-foreground shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between",
-        sticky && "sticky bottom-0 z-20 -mx-5 rounded-none px-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-3 sm:mx-0 sm:rounded-xl sm:px-5 sm:pb-4",
-      )}
-    >
-      <div>
-        <p className="text-sm opacity-90">If this is right, accept it. The shop will schedule the work.</p>
-        <p className="font-display text-2xl font-medium tabular-nums">{money(total)}</p>
-      </div>
-      <Button variant="secondary" className="min-h-12 w-full sm:w-auto" onClick={onAccept}>
-        Accept this estimate
-      </Button>
-    </div>
-  );
-}
-
-function statusHeadline(status: ProposalBundle["proposal"]["status"]) {
-  switch (status) {
-    case "accepted":
-      return "Accepted";
-    case "completed":
-      return "Work complete";
-    case "pending":
-      return "Waiting on shop approval";
-    case "revised":
-      return "Revised — waiting on acceptance";
-    case "sent":
-      return "Sent — waiting on acceptance";
-    default:
-      return "Draft in the shop";
-  }
-}
-
-function estimateHistory(bundle: ProposalBundle) {
-  const { proposal, messages } = bundle;
-  const events: { id: string; when: string; title: string; body?: string }[] = [
-    { id: "opened", when: proposal.created_at, title: "Estimate opened" },
-  ];
-  if (proposal.sent_at) {
-    events.push({ id: "sent", when: proposal.sent_at, title: "Sent to the homeowner" });
-  }
-  for (const m of messages) {
-    events.push({
-      id: m.id,
-      when: m.created_at,
-      title:
-        m.author_role === "homeowner"
-          ? `${m.author_name} asked for a change`
-          : `${m.author_name} updated the estimate`,
-      body: m.body,
-    });
-  }
-  if (proposal.accepted_at) {
-    events.push({ id: "accepted", when: proposal.accepted_at, title: "Estimate accepted" });
-  }
-  if (proposal.status === "completed") {
-    events.push({ id: "done", when: proposal.accepted_at ?? proposal.created_at, title: "Marked complete" });
-  }
-  return events.sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
 }
 
 function estimateHeroSrc(bundle: ProposalBundle) {

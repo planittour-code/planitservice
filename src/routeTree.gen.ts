@@ -40,6 +40,7 @@ import { Route as ShopOpenRouteImport } from './routes/shop.open'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AppPropertiesIdRouteImport } from './routes/app/properties.$id'
 import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
+import { Route as PTokenAcceptedRouteImport } from './routes/p.$token.accepted'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -196,6 +197,11 @@ const AppProposalsIdRoute = AppProposalsIdRouteImport.update({
   path: '/proposals/$id',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const PTokenAcceptedRoute = PTokenAcceptedRouteImport.update({
+  id: '/accepted',
+  path: '/accepted',
+  getParentRoute: () => PTokenRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -221,7 +227,7 @@ export interface FileRoutesByFullPath {
   '/home/add': typeof HomeAddRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/p/$token': typeof PTokenRoute
+  '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/shop/open': typeof ShopOpenRoute
   '/app/': typeof AppIndexRoute
@@ -229,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
+  '/p/$token/accepted': typeof PTokenAcceptedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -252,7 +259,7 @@ export interface FileRoutesByTo {
   '/home/add': typeof HomeAddRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/p/$token': typeof PTokenRoute
+  '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/shop/open': typeof ShopOpenRoute
   '/app': typeof AppIndexRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
+  '/p/$token/accepted': typeof PTokenAcceptedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -286,7 +294,7 @@ export interface FileRoutesById {
   '/home/add': typeof HomeAddRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/p/$token': typeof PTokenRoute
+  '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/shop/open': typeof ShopOpenRoute
   '/app/': typeof AppIndexRoute
@@ -294,6 +302,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
+  '/p/$token/accepted': typeof PTokenAcceptedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/app/properties/$id'
     | '/app/proposals/$id'
+    | '/p/$token/accepted'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -360,6 +370,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/app/properties/$id'
     | '/app/proposals/$id'
+    | '/p/$token/accepted'
   id:
     | '__root__'
     | '/'
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/app/properties/$id'
     | '/app/proposals/$id'
+    | '/p/$token/accepted'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -409,7 +421,7 @@ export interface RootRouteChildren {
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
-  PTokenRoute: typeof PTokenRoute
+  PTokenRoute: typeof PTokenRouteWithChildren
   RfpTokenRoute: typeof RfpTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -633,6 +645,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProposalsIdRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/p/$token/accepted': {
+      id: '/p/$token/accepted'
+      path: '/accepted'
+      fullPath: '/p/$token/accepted'
+      preLoaderRoute: typeof PTokenAcceptedRouteImport
+      parentRoute: typeof PTokenRoute
+    }
   }
 }
 
@@ -704,6 +723,17 @@ const ShopRouteChildren: ShopRouteChildren = {
 
 const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
 
+interface PTokenRouteChildren {
+  PTokenAcceptedRoute: typeof PTokenAcceptedRoute
+}
+
+const PTokenRouteChildren: PTokenRouteChildren = {
+  PTokenAcceptedRoute: PTokenAcceptedRoute,
+}
+
+const PTokenRouteWithChildren =
+  PTokenRoute._addFileChildren(PTokenRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
@@ -718,7 +748,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
-  PTokenRoute: PTokenRoute,
+  PTokenRoute: PTokenRouteWithChildren,
   RfpTokenRoute: RfpTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
