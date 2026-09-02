@@ -32,7 +32,7 @@ function HomeRecord() {
   const done = useMutation({
     mutationFn: (taskId: string) => completeMaintenance({ data: { taskId } }),
     onSuccess: () => {
-      toast.success("Logged. Next due date is on the File.");
+      toast.success("Logged. Next due date is on the Property Record.");
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not log"),
@@ -58,7 +58,7 @@ function HomeRecord() {
       )}
       <header className="space-y-2">
         <p className="text-sm tracking-wide text-muted-foreground uppercase">
-          {plan?.tier === "pro" ? "Pro File" : "House File"}
+          {plan?.tier === "pro" ? "Pro Property Record" : "Property Record"}
           {plan ? ` · ${plan.cadence}` : ""}
         </p>
         <h1 className="font-display text-4xl font-medium tracking-tight">{p.address_line}</h1>
@@ -111,13 +111,13 @@ function HomeRecord() {
       <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
 
       <section className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
-        <h2 className="font-display text-xl font-medium">Transfer this File</h2>
+        <h2 className="font-display text-xl font-medium">Transfer this Property Record</h2>
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
       </section>
 
       {plan?.tier !== "pro" ? (
         <p className="text-sm text-muted-foreground">
-          Pro puts an RFP on the market and lets a property manager see the File and the bids.{" "}
+          Pro puts an RFP on the market and lets a property manager see the Property Record and the bids.{" "}
           <Link to="/home/add" search={{ tier: "pro" }} className="underline">
             Open the next property as Pro
           </Link>
@@ -170,7 +170,7 @@ function TransferForm({
       }}
     >
       <p className="text-sm text-muted-foreground">
-        The File moves with the house. They sign in with this email and take the record.
+        The Property Record moves with the house. They sign in with this email and take the record.
       </p>
       <div className="space-y-1.5">
         <Label htmlFor="to">New owner email</Label>

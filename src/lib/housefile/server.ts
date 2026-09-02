@@ -1065,7 +1065,7 @@ export const addPhotoContractor = createServerFn({ method: "POST" })
     const count = await sql<{ c: number }>`
       select count(*)::int as c from property_photos where property_id = ${data.propertyId}
     `;
-    if (num(count[0]?.c) >= 12) throw new Error("This house file already has 12 photos");
+    if (num(count[0]?.c) >= 12) throw new Error("This Property Record already has 12 photos");
     await sql`
       insert into property_photos (id, property_id, src, caption, category, uploaded_by)
       values (
@@ -1314,7 +1314,7 @@ export const getHouseByToken = createServerFn({ method: "GET" })
     const rows = await sql<Property>`
       select * from properties where share_token = ${token} or invite_token = ${token} limit 1
     `;
-    if (!rows[0]) throw new Error("House file not found");
+    if (!rows[0]) throw new Error("Property Record not found");
     if (token === rows[0].invite_token && rows[0].invite_status !== "claimed") {
       await sql`update properties set invite_status = ${"claimed"} where id = ${rows[0].id}`;
       rows[0].invite_status = "claimed";
@@ -1343,7 +1343,7 @@ export const upsertFactPublic = createServerFn({ method: "POST" })
     const rows = await sql<Property>`
       select * from properties where share_token = ${data.token} or invite_token = ${data.token} limit 1
     `;
-    if (!rows[0]) throw new Error("House file not found");
+    if (!rows[0]) throw new Error("Property Record not found");
     const value = data.value.trim();
     if (!FIELD_CATALOG.some((f) => f.key === data.fieldKey)) throw new Error("Unknown field");
     if (!value) {
@@ -1368,12 +1368,12 @@ export const addPhotoPublic = createServerFn({ method: "POST" })
     const rows = await sql<Property>`
       select * from properties where share_token = ${data.token} or invite_token = ${data.token} limit 1
     `;
-    if (!rows[0]) throw new Error("House file not found");
+    if (!rows[0]) throw new Error("Property Record not found");
     if (!data.src.startsWith("data:image/")) throw new Error("Invalid photo");
     const count = await sql<{ c: number }>`
       select count(*)::int as c from property_photos where property_id = ${rows[0].id}
     `;
-    if (num(count[0]?.c) >= 12) throw new Error("This house file already has 12 photos");
+    if (num(count[0]?.c) >= 12) throw new Error("This Property Record already has 12 photos");
     await sql`
       insert into property_photos (id, property_id, src, caption, category, uploaded_by)
       values (
@@ -1920,7 +1920,7 @@ export const createRfp = createServerFn({ method: "POST" })
       `;
       property = found[0] ?? null;
       if (property && property.homeowner_user_id && property.homeowner_user_id !== context.userId) {
-        throw new Error("This File belongs to another household.");
+        throw new Error("This Property Record belongs to another household.");
       }
       if (property && !property.homeowner_user_id) {
         await sql`
@@ -2231,7 +2231,7 @@ export const claimPropertyTransfer = createServerFn({ method: "POST" })
     if (!rows[0]) throw new Error("Transfer not found");
     const mine = session?.email?.toLowerCase();
     if (mine && mine !== rows[0].to_email) {
-      throw new Error("Sign in with the email this File was sent to.");
+      throw new Error("Sign in with the email this Property Record was sent to.");
     }
     await sql`
       update properties set homeowner_user_id = ${context.userId} where id = ${rows[0].property_id}

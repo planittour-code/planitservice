@@ -14,13 +14,13 @@ export function ShopExplainer() {
         <p className="font-display text-2xl font-medium tracking-tight">Open a shop</p>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           First to quote wins more jobs. Accuracy makes it count. Search the address, quote from the
-          last job on the File, and send the number while you talk — or before you roll the truck.
+          last job on the Property Record, and send the number while you talk — or before you roll the truck.
         </p>
       </div>
       <ul className="space-y-2 text-sm text-muted-foreground">
-        <li>Know before you go — specs from the last job, if a File exists.</li>
+        <li>Know before you go — specs from the last job, if a Property Record exists.</li>
         <li>Quote from your book — supplier APIs, a spreadsheet, or numbers you type.</li>
-        <li>The File brings them back. Repeat work is why you built it.</li>
+        <li>The Property Record brings them back. Repeat work is why you built it.</li>
       </ul>
       <p className="text-sm">
         ${dollars(SHOP_MONTHLY)}/month or ${dollars(SHOP_ANNUAL)}/year. Extra seats $

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { GROK_PROVIDERS, authClient, authEnabled, grokOauthOnThisHost, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { safeNextPath } from "@/lib/housefile/invite";
+import { useAudience } from "@/lib/housefile/use-audience";
 
 const searchSchema = z.object({
   invite: z.string().optional(),
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const search = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
+  const { audience } = useAudience();
   const homeowner = Boolean(search.invite) || search.role === "homeowner";
   const after = search.invite
     ? `/invite/${search.invite}`
@@ -61,6 +63,9 @@ function Login() {
       );
     }
     if (homeowner || next === "/home" || next === "/my" || search.next === "/my") {
+      return <Navigate to="/home" />;
+    }
+    if (audience.paying && audience.kind === "homeowner") {
       return <Navigate to="/home" />;
     }
     return <Navigate to="/app" />;
@@ -108,8 +113,8 @@ function Login() {
           </h1>
           <p className="max-w-md text-muted-foreground">
             {homeowner
-              ? "Jobs, warranties, and maintenance at the address. Add another property when you need to. Pro hands the File to the next owner."
-              : "Pick the template. Enter while you talk. Price from the book. Send the estimate before you leave. The File is how they call you back."}
+              ? "Jobs, warranties, and maintenance at the address. Add another property when you need to. Pro hands the Property Record to the next owner."
+              : "Pick the template. Enter while you talk. Price from the book. Send the estimate before you leave. The Property Record is how they call you back."}
           </p>
         </div>
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">

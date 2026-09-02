@@ -23,7 +23,7 @@ export function OpenShopDialog({
             Open a shop to quote {label}.
           </Dialog.Title>
           <Dialog.Description className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            You can look around. Sending a number, saving a File, and the price book are for shops.
+            You can look around. Sending a number, saving a Property Record, and the price book are for shops.
           </Dialog.Description>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button asChild className="flex-1">

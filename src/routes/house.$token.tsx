@@ -50,7 +50,7 @@ function HousePage() {
       <main className="grid min-h-screen place-items-center bg-background px-5">
         <div className="max-w-md space-y-3 text-center">
           <Wordmark />
-          <h1 className="font-display text-2xl font-medium">House file not found</h1>
+          <h1 className="font-display text-2xl font-medium">Property Record not found</h1>
           <p className="text-sm text-muted-foreground">
             This link may be wrong. Ask the contractor to send it again.
           </p>
@@ -81,15 +81,15 @@ function HousePage() {
       <main className="hf-rise mx-auto max-w-3xl space-y-10 px-5 py-8">
         {sample && (
           <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
-            This is a sample File. Look through it. To keep a record of your own house,{" "}
+            This is a sample Property Record. Look through it. To keep a record of your own house,{" "}
             <Link to="/start" className="underline underline-offset-2">
-              start a house record
+              start a Property Record
             </Link>
             .
           </p>
         )}
         <header id="file" className="space-y-4">
-          <p className="text-sm tracking-wide text-muted-foreground uppercase">The File</p>
+          <p className="text-sm tracking-wide text-muted-foreground uppercase">The Property Record</p>
           <h1 className="font-display text-4xl font-medium tracking-tight">{p.address_line}</h1>
           <p className="text-muted-foreground">
             {p.city}, {p.state} {p.zip}
@@ -116,7 +116,7 @@ function HousePage() {
             <p className="text-sm text-muted-foreground">
               Requests are off on the sample.{" "}
               <Link to="/start" className="underline underline-offset-2">
-                Start a house record
+                Start a Property Record
               </Link>{" "}
               to put a job on the market.
             </p>

@@ -12,7 +12,7 @@ export function invitationLetter(input: {
 
 I opened a house account for ${input.address} and started a first draft.
 
-Your house file — jobs, photos, paint colors, and warranties:
+Your property record — jobs, photos, paint colors, and warranties:
 ${input.inviteUrl}
 ${proposal}
 You can revise the draft, add photos, and fill in the missing house data so the next quote is easier.
@@ -21,7 +21,7 @@ ${input.company}`;
 }
 
 export function invitationSubject(company: string, address: string) {
-  return `${company} opened a house file for ${address}`;
+  return `${company} opened a property record for ${address}`;
 }
 
 export function safeNextPath(path: string | undefined, fallback = "/app") {

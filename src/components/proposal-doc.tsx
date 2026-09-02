@@ -236,12 +236,12 @@ export function ProposalDoc({
       {mode === "contractor" && proposal.status !== "completed" && proposal.status !== "pending" && (
         <div className="flex flex-col gap-3 rounded-xl bg-muted px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            When the work is done, mark it complete. Colors, products, and warranties copy into the house file.
+            When the work is done, mark it complete. Colors, products, and warranties copy into the property record.
           </p>
           <Button
             onClick={async () => {
               await completeProposal({ data: { proposalId: proposal.id } });
-              toast.success("Job written into the house file");
+              toast.success("Job written into the property record");
               onChanged();
             }}
           >

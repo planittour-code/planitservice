@@ -118,7 +118,7 @@ export function RfpForm({
           rows={5}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Squares, pitch, access, product you want named on the File."
+          placeholder="Squares, pitch, access, product you want named on the Property Record."
         />
       </div>
       <div className="space-y-1.5">

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createHomeProperty } from "@/lib/housefile/server";
-import { startCheckout } from "@/lib/housefile/stripe-billing";
 import {
   PROPERTY_ANNUAL,
   PROPERTY_MONTHLY,
@@ -15,7 +14,7 @@ import {
   PRO_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
-import { homeownerKind } from "@/lib/housefile/stripe";
+import { homeownerCheckout } from "@/lib/housefile/stripe";
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
@@ -45,25 +44,15 @@ function AddProperty() {
         : PROPERTY_MONTHLY;
 
   const save = useMutation({
-    mutationFn: async () => {
-      const created = await createHomeProperty({
+    mutationFn: () =>
+      createHomeProperty({
         data: { addressLine: address, city, state, zip, cadence, tier },
-      });
-      const checkout = await startCheckout({
-        data: {
-          kind: homeownerKind(tier, cadence),
-          propertyId: created.propertyId,
-          successPath: "/home",
-          cancelPath: "/home/add",
-        },
-      });
-      return checkout;
+      }),
+    onSuccess: () => {
+      toast.success("Property Record opened. Continue to payment.");
+      window.location.href = homeownerCheckout(tier, cadence);
     },
-    onSuccess: ({ url }) => {
-      toast.success("File opened. Continue to secure checkout.");
-      window.location.href = url;
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not start checkout"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
   });
 
   return (
@@ -71,7 +60,7 @@ function AddProperty() {
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Add a property</h1>
         <p className="mt-2 text-muted-foreground">
-          One File per address. ${dollars(price)} {cadence === "annual" ? "this year" : "per month"}.
+          One Property Record per address. ${dollars(price)} {cadence === "annual" ? "this year" : "per month"}.
         </p>
       </div>
       <form
@@ -102,7 +91,7 @@ function AddProperty() {
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Plan</legend>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Choice on={tier === "standard"} title="Standard" body="File, share link, transfer" onClick={() => setTier("standard")} />
+            <Choice on={tier === "standard"} title="Standard" body="Property Record, share link, transfer" onClick={() => setTier("standard")} />
             <Choice on={tier === "pro"} title="Pro" body="RFPs and property manager access" onClick={() => setTier("pro")} />
           </div>
         </fieldset>
@@ -124,7 +113,7 @@ function AddProperty() {
           </div>
         </fieldset>
         <Button type="submit" className="w-full" disabled={save.isPending}>
-          {save.isPending ? "Starting checkout…" : `Continue to checkout · $${dollars(price)}`}
+          {save.isPending ? "Opening Property Record…" : `Start this Property Record · $${dollars(price)}`}
         </Button>
       </form>
     </div>

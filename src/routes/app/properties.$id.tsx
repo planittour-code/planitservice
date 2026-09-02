@@ -47,7 +47,7 @@ function PropertyPage() {
             onPick={(workId) => {
               void navigate({ to: "/app/new", search: { property: p.id, work: workId } });
             }}
-            hint="This File is a start, not the whole house. Pick the trade you are quoting — a painter’s File will not price a roof."
+            hint="This Property Record is a start, not the whole house. Pick the trade you are quoting — a painter’s record will not price a roof."
           />
         </div>
         <Completeness filled={file.filledCount} total={file.totalCount} />
@@ -58,7 +58,7 @@ function PropertyPage() {
               New quote for this house
             </Link>
           </Button>
-          <CopyLink path={housePath} label="Copy house file link" />
+          <CopyLink path={housePath} label="Copy property record link" />
         </div>
         <details className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
           <summary className="cursor-pointer font-medium">Invitation to {p.homeowner_name}</summary>

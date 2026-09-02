@@ -21,7 +21,7 @@ const STEPS = [
 ];
 
 const DEFAULT_AGREEMENT =
-  "This estimate is for the work listed at this address. Colors, products, and measurements stay on the House File so the next job is easier.";
+  "This estimate is for the work listed at this address. Colors, products, and measurements stay on the Property Record so the next job is easier.";
 
 const DEFAULT_TERMS =
   "This estimate is valid for 30 days. Work begins after written approval. Changes in scope are quoted separately. Payment is due as stated on the estimate. Warranties follow the manufacturer and the labor terms on each line.";

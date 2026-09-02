@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PaidLanding } from "@/components/paid-landing";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { PaidLanding } from "@/components/paid-landing";
 import { Button } from "@/components/ui/button";
 import {
   PROPERTY_ANNUAL,
@@ -36,17 +36,17 @@ function HomeownerSite() {
               Use the same software as your contractor
             </p>
             <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-6xl">
-              The house record that belongs to you.
+              The Property Record that belongs to you.
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-              You do not need a contractor to begin. Open a File. Put in the paint colors, the roof
+              You do not need a contractor to begin. Open a Property Record. Put in the paint colors, the roof
               year, the filter size, the last time the gutters were cleaned. When you need work,
               request bids from shops. If the shop uses PlanitService, the job writes itself onto
               the same record — products, warranties, and what was done.
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="min-h-12 w-full sm:w-auto">
-                <Link to="/start">Start a house record</Link>
+                <Link to="/start">Start a Property Record</Link>
               </Button>
               <Button
                 asChild
@@ -55,7 +55,7 @@ function HomeownerSite() {
                 className="min-h-12 w-full border-0 bg-card text-foreground sm:w-auto"
               >
                 <Link to="/house/$token" params={{ token: "maple-14" }}>
-                  See a sample File
+                  See a sample Property Record
                 </Link>
               </Button>
             </div>
@@ -79,7 +79,7 @@ function HomeownerSite() {
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-5 md:grid-cols-3">
             <Pillar
               kicker="Start it yourself"
-              title="You own the File from day one."
+              title="You own the Property Record from day one."
               body="Add the house. Write what you already know. Photos, products, warranties, the maintenance calendar. No shop has to invite you first."
             />
             <Pillar
@@ -90,7 +90,7 @@ function HomeownerSite() {
             <Pillar
               kicker="Work writes in"
               title="A PlanitService shop fills the gaps."
-              body="When you hire a contractor on PlanitService, the quote and the finished job land on your File. You keep the history. They do not take it with them."
+              body="When you hire a contractor on PlanitService, the quote and the finished job land on your Property Record. You keep the history. They do not take it with them."
             />
           </div>
         </section>
@@ -100,17 +100,17 @@ function HomeownerSite() {
             <Pillar
               kicker="Share it"
               title="One link. The right people."
-              body="Send the File to a buyer, another contractor, or a property manager. They see the house. They do not get to keep the login."
+              body="Send the Property Record to a buyer, another contractor, or a property manager. They see the house. They do not get to keep the login."
             />
             <Pillar
               kicker="More than one house"
               title="Every property, one household."
-              body="The place you live. The rental. A parent’s house. Each address is its own File. You manage them from one account."
+              body="The place you live. The rental. A parent’s house. Each address is its own Property Record. You manage them from one account."
             />
             <Pillar
               kicker="It outlasts you"
               title="Hand the record on."
-              body="Transfer the File at sale or when the house passes on. The next owner starts with history instead of a blank house."
+              body="Transfer the Property Record at sale or when the house passes on. The next owner starts with history instead of a blank house."
             />
           </div>
         </section>
@@ -122,7 +122,7 @@ function HomeownerSite() {
                 Pay to keep the record. Not to start talking.
               </h2>
               <p className="text-muted-foreground">
-                Standard is the File you own and share. Pro adds bids and a property manager on the
+                Standard is the Property Record you own and share. Pro adds bids and a property manager on the
                 same record. Either way, you can begin before a contractor ever knocks.
               </p>
             </div>
@@ -139,7 +139,7 @@ function HomeownerSite() {
                   or ${dollars(PROPERTY_ANNUAL)} a year per property
                 </p>
                 <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-                  <li>Build the File yourself — jobs, photos, products, warranties</li>
+                  <li>Build the Property Record yourself — jobs, photos, products, warranties</li>
                   <li>Keep maintenance in one place</li>
                   <li>Share a link with buyers or contractors</li>
                   <li>Transfer the record at sale or when the house passes on</li>
@@ -165,7 +165,7 @@ function HomeownerSite() {
                 <ul className="mt-6 space-y-2 text-sm">
                   <li>Everything in Standard</li>
                   <li>Request bids and put the job on the market</li>
-                  <li>Let a property manager see the File and the bids</li>
+                  <li>Let a property manager see the Property Record and the bids</li>
                 </ul>
                 <Button
                   asChild

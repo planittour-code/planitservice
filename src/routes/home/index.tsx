@@ -1,26 +1,16 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { toast } from "sonner";
 import { HouseCard } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getHousehold } from "@/lib/housefile/server";
 import { PROPERTY_ANNUAL, PROPERTY_MONTHLY, dollars } from "@/lib/housefile/pricing";
-import { startBillingPortal } from "@/lib/housefile/stripe-billing";
 
 export const Route = createFileRoute("/home/")({ component: HomeDashboard });
 
 function HomeDashboard() {
   const q = useQuery({ queryKey: ["household"], queryFn: () => getHousehold() });
-  const portal = useMutation({
-    mutationFn: () => startBillingPortal({ data: { returnPath: "/home" } }),
-    onSuccess: ({ url }) => {
-      window.location.href = url;
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not open billing"),
-  });
-
   if (q.isLoading) return <Skeleton className="h-48 w-full" />;
 
   const houses = q.data?.houses ?? [];
@@ -46,7 +36,7 @@ function HomeDashboard() {
           <CardContent className="space-y-3 py-10 text-center">
             <p className="font-medium">No properties on this account yet</p>
             <p className="text-sm text-muted-foreground">
-              Start a File, or open one a contractor already began.
+              Start a Property Record, or open one a contractor already began.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
@@ -65,7 +55,7 @@ function HomeDashboard() {
           {houses.map((h) => (
             <HouseCard
               key={h.id}
-              to={"/home/$id"}
+              to="/home/$id"
               params={{ id: h.id }}
               address={h.address_line}
               city={h.city}
@@ -87,23 +77,6 @@ function HomeDashboard() {
           ))}
         </div>
       )}
-
-      <section className="rounded-xl border border-border bg-card/40 p-5">
-        <h2 className="font-display text-xl font-medium tracking-tight">Billing</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Cancel a property plan or update the card. Access continues through the paid period.
-        </p>
-        <div className="mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={portal.isPending}
-            onClick={() => portal.mutate()}
-          >
-            {portal.isPending ? "Opening…" : "Cancel or manage subscription"}
-          </Button>
-        </div>
-      </section>
     </div>
   );
 }

@@ -128,7 +128,7 @@ export function PhotoGrid({
         });
       }
       setCaption("");
-      toast.success("Photo added to the house file");
+      toast.success("Photo added to the property record");
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not add photo");
@@ -218,7 +218,7 @@ export function PhotoGrid({
                 disabled={busy}
                 onClick={() => void commit(pending.file, caption, category)}
               >
-                {busy ? "Adding…" : "Add to house file"}
+                {busy ? "Adding…" : "Add to property record"}
               </Button>
               <Button
                 type="button"
@@ -265,7 +265,7 @@ export function FactsPanel({
       }
     },
     onSuccess: () => {
-      toast.success("House file updated");
+      toast.success("Property Record updated");
       onChanged();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
@@ -361,7 +361,7 @@ export function MissingFactsPreview({
       }
     },
     onSuccess: () => {
-      toast.success("House file updated");
+      toast.success("Property Record updated");
       onChanged();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
@@ -646,7 +646,7 @@ export function InvitationLetter({
           </Button>
           <CopyLink path={invitePath} label="Copy house account" />
           {proposalPath && <CopyLink path={proposalPath} label="Copy first draft" />}
-          <CopyLink path={housePath} label="Copy house file" />
+          <CopyLink path={housePath} label="Copy property record" />
         </div>
       </CardContent>
     </Card>

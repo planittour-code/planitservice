@@ -210,7 +210,7 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
       <div className="space-y-5 p-5">
         <div>
           <p className="text-xs tracking-wide text-muted-foreground uppercase">
-            {tease.found ? "A record is on file" : "No File yet"}
+            {tease.found ? "A record is on file" : "No Property Record yet"}
           </p>
           <p className="font-display text-xl font-medium">{tease.address}</p>
           {place ? <p className="text-sm text-muted-foreground">{place}</p> : null}
@@ -220,7 +220,7 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
           <QuoteTypePicker
             onPick={pickTrade}
             title="Do you want to start an Estimate for this property?"
-            hint="Pick the trade. This quote writes to the File for the next shop that looks it up."
+            hint="Pick the trade. This quote writes to the Property Record for the next shop that looks it up."
           />
         ) : (
           <div className="space-y-5">

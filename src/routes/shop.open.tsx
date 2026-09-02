@@ -34,13 +34,13 @@ function OpenShop() {
                 The first clean number wins the job.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                Look up the house. Quote from what is already on the File. Send the estimate while
+                Look up the house. Quote from what is already on the Property Record. Send the estimate while
                 you are still talking — or before anyone else leaves the shop.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
                 <li>Search the address before you roll the truck.</li>
                 <li>Price from your book — suppliers, a spreadsheet, or numbers you type.</li>
-                <li>Every quote starts the File. The next trade at that address is already yours.</li>
+                <li>Every quote starts the Property Record. The next trade at that address is already yours.</li>
               </ul>
             </div>
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
@@ -66,7 +66,7 @@ function OpenShop() {
               photo="/houses/maple-front.jpg"
               kicker="Know the walk"
               title="The last job is already written down."
-              body="Roof year, paint formula, gutter product. If a File exists, you are not guessing from the curb."
+              body="Roof year, paint formula, gutter product. If a Property Record exists, you are not guessing from the curb."
             />
             <Proof
               photo="/houses/maple-interior.jpg"
@@ -77,7 +77,7 @@ function OpenShop() {
             <Proof
               photo="/houses/maple-roof.jpg"
               kicker="Get called back"
-              title="Repeat work is why you built the File."
+              title="Repeat work is why you built the Property Record."
               body="The house keeps the record. The next trade looks it up and sees your shop was here first."
             />
           </div>
@@ -89,7 +89,7 @@ function OpenShop() {
               Ready when the phone rings.
             </h2>
             <p className="max-w-xl text-muted-foreground leading-relaxed">
-              Unlimited quotes. Unlimited House Files. The household is never the customer.
+              Unlimited quotes. Unlimited Property Records. The household is never the customer.
             </p>
             <Button asChild size="lg" className="min-h-12">
               <a href="#signup">Create the shop account</a>

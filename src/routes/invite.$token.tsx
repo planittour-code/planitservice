@@ -105,7 +105,7 @@ function InvitePage() {
           <p className="text-lg leading-relaxed text-muted-foreground">
             {open
               ? `${p.address_line}. Review the estimate, then accept it if it is right.`
-              : `Hi ${p.homeowner_name}. Jobs and warranties already here stay on the File.`}
+              : `Hi ${p.homeowner_name}. Jobs and warranties already here stay on the Property Record.`}
           </p>
           {claimed && (
             <p className="text-sm text-primary">This house is in your account. It will stay on My houses.</p>
@@ -122,7 +122,7 @@ function InvitePage() {
           )}
           <Button asChild size="lg" variant={open ? "outline" : "default"}>
             <Link to="/house/$token" params={{ token: p.share_token }}>
-              House File
+              Property Record
             </Link>
           </Button>
         </div>

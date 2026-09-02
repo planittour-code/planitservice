@@ -17,7 +17,7 @@ function MarketPage() {
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Marketplace</h1>
         <p className="mt-2 max-w-xl text-muted-foreground">
-          Homeowners on Pro put work on the market. Quote from the File when you can — or start
+          Homeowners on Pro put work on the market. Quote from the Property Record when you can — or start
           one.
         </p>
       </div>

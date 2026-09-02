@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export function QuoteTypePicker({
   onPick,
   title = "What are you quoting?",
-  hint = "The File is often a start. A painter may have opened it. A roof still needs its own takeoff.",
+  hint = "The Property Record is often a start. A painter may have opened it. A roof still needs its own takeoff.",
 }: {
   onPick: (workId: string) => void;
   title?: string;

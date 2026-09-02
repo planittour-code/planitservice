@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { PaidLanding } from "@/components/paid-landing";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { PaidLanding } from "@/components/paid-landing";
 import { AddressLookup, TeaseCard } from "@/components/address-lookup";
 import { TradeCarousel } from "@/components/trade-carousel";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ function ShopFrame() {
 function HomePage() {
   const [tease, setTease] = useState<AddressTease | null>(null);
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       <PaidLanding prefer="contractor" />
       <PublicHeader home="/shop">
         <Button asChild variant="ghost" className="hidden sm:inline-flex">
@@ -59,9 +59,7 @@ function HomePage() {
               </div>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button asChild size="lg">
-                  <Link to="/shop/open">
-                    Open a shop
-                  </Link>
+                  <Link to="/shop/open">Open a shop</Link>
                 </Button>
                 <Button
                   asChild
@@ -156,7 +154,7 @@ function HomePage() {
               </p>
               <ul className="mt-6 space-y-2 text-sm">
                 <li>Search the address before you roll</li>
-                <li>Quote from the last job on the File</li>
+                <li>Quote from the last job on the Property Record</li>
                 <li>Jump the line — send it while you talk</li>
                 <li>The next trade is already yours</li>
               </ul>
@@ -166,15 +164,14 @@ function HomePage() {
                   size="lg"
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <Link to="/shop/open">
-                    Open a shop
-                  </Link>
+                  <Link to="/shop/open">Open a shop</Link>
                 </Button>
               </div>
+              <p className="mt-3 text-center text-xs opacity-80">
+                Annual is ${dollars(SHOP_ANNUAL)}. Extra seats ${dollars(SEAT_MONTHLY)}/month.
+              </p>
               <p className="mt-3 text-center text-xs opacity-70">
-                After sign-in, checkout runs on planitservice.com via Stripe Checkout (not Payment
-                Links). The File you open is theirs — they keep it for ${dollars(PROPERTY_MONTHLY)} a
-                month.
+                The Property Record you open is theirs. They keep it for ${dollars(PROPERTY_MONTHLY)} a month.
               </p>
             </div>
           </div>

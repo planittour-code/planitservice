@@ -53,13 +53,13 @@ function ProposalPage() {
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild variant="ghost" size="sm">
           <Link to="/app/properties/$id" params={{ id: bundle.property.id }}>
-            House file
+            Property Record
           </Link>
         </Button>
         {bundle.proposal.status !== "pending" && (
           <>
             <CopyLink path={`/p/${bundle.proposal.share_token}`} label="Copy homeowner link" />
-            <CopyLink path={`/house/${bundle.property.share_token}`} label="Copy house file" />
+            <CopyLink path={`/house/${bundle.property.share_token}`} label="Copy property record" />
           </>
         )}
       </div>

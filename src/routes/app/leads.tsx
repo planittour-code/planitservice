@@ -35,7 +35,7 @@ function LeadsPage() {
                   <p className="font-medium">{lead.address}</p>
                   <p className="text-sm text-muted-foreground">
                     {place || "—"}
-                    {lead.found ? " · File exists" : " · No File yet"}
+                    {lead.found ? " · Property Record exists" : " · No Property Record yet"}
                   </p>
                 </div>
                 <p className="text-sm">

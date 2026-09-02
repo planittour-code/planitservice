@@ -41,7 +41,7 @@ export function HomeownerHeader({
         ) : null}
         <NavItem to="/house/$token" params={{ token: houseToken }} hash="estimates" label="Estimates" />
         <NavItem to="/house/$token" params={{ token: houseToken }} hash="rfps" label="Requests" />
-        <NavItem to="/house/$token" params={{ token: houseToken }} hash="file" label="The File" />
+        <NavItem to="/house/$token" params={{ token: houseToken }} hash="file" label="The Property Record" />
       </nav>
     </header>
   );

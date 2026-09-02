@@ -17,7 +17,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "The house record that belongs to you. Start it yourself. Request bids. Keep the jobs, products, and warranties.",
+          "The Property Record that belongs to you. Start it yourself. Request bids. Keep the jobs, products, and warranties.",
       },
     ],
     links: [

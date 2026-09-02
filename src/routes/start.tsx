@@ -69,7 +69,7 @@ function StartHouseRecord() {
       <PublicHeader>
         <Button asChild variant="ghost" className="hidden sm:inline-flex">
           <Link to="/house/$token" params={{ token: "maple-14" }}>
-            Sample File
+            Sample Property Record
           </Link>
         </Button>
       </PublicHeader>
@@ -91,19 +91,19 @@ function StartHouseRecord() {
                 The house should remember what you already paid for.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                You do not wait on a shop to start the File. Write the roof year, the paint color,
+                You do not wait on a shop to start the Property Record. Write the roof year, the paint color,
                 the filter size. When a contractor quotes through PlanitService, that work lands on
                 the same record. Share it. Hand it on.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
-                <li>You own the File from day one — no contractor has to invite you first.</li>
+                <li>You own the Property Record from day one — no contractor has to invite you first.</li>
                 <li>Jobs, products, warranties, and maintenance live at the address.</li>
                 <li>Pro puts the next job in front of shops, or a property manager.</li>
               </ul>
             </div>
 
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
-              <p className="text-sm tracking-wide text-muted-foreground uppercase">Start a house record</p>
+              <p className="text-sm tracking-wide text-muted-foreground uppercase">Start a Property Record</p>
               <p className="mt-2 font-display text-3xl font-medium tracking-tight">
                 ${dollars(cadence === "annual" ? annual : monthly)}
                 <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">
@@ -161,11 +161,11 @@ function StartHouseRecord() {
                   <>
                     <li>Everything in Standard</li>
                     <li>Request bids and put the job on the market</li>
-                    <li>Let a property manager see the File and the bids</li>
+                    <li>Let a property manager see the Property Record and the bids</li>
                   </>
                 ) : (
                   <>
-                    <li>Build the File — jobs, photos, products, warranties</li>
+                    <li>Build the Property Record — jobs, photos, products, warranties</li>
                     <li>Share a link with buyers or contractors</li>
                     <li>Transfer the record at sale or when the house passes on</li>
                   </>
@@ -239,7 +239,7 @@ function StartHouseRecord() {
             <Proof
               photo="/houses/maple-front.jpg"
               kicker="Start it yourself"
-              title="You own the File from day one."
+              title="You own the Property Record from day one."
               body="Add the house. Write what you already know. No shop has to invite you first."
             />
             <Proof
@@ -252,7 +252,7 @@ function StartHouseRecord() {
               photo="/houses/maple-roof.jpg"
               kicker="Hand it on"
               title="The next owner starts with history."
-              body="Share a link. Transfer the record at sale or when the house passes on. The File stays with the address."
+              body="Share a link. Transfer the record at sale or when the house passes on. The Property Record stays with the address."
             />
           </div>
         </section>

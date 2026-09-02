@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-/** Sample File is read-only. Edits send the visitor to the matching signup. */
+/** Sample Property Record is read-only. Edits send the visitor to the matching signup. */
 export function SampleLock({
   children,
   to = "/start",

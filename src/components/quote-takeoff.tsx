@@ -79,7 +79,7 @@ export function TakeoffForm({
           {showMeasures && (
             <div className="grid gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:grid-cols-2">
               <p className="text-sm text-muted-foreground sm:col-span-2">
-                Optional. These write onto the house file. They do not price the lines.
+                Optional. These write onto the property record. They do not price the lines.
               </p>
               {measureFields.map((field) => (
                 <TakeoffInput
