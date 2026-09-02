@@ -74,7 +74,7 @@ function HomePage() {
               </div>
             </div>
             {tease && (
-              <div className="mx-auto mt-10 max-w-xl text-foreground">
+              <div className="mx-auto mt-10 max-w-6xl text-foreground">
                 <TeaseCard tease={tease} />
               </div>
             )}

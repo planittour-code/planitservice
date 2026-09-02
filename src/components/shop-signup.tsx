@@ -9,23 +9,20 @@ import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefil
 
 export function ShopExplainer() {
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="font-display text-2xl font-medium tracking-tight">Open a shop</p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          First to quote wins more jobs. Accuracy makes it count. Search the address, quote from the
-          last job on the Property Record, and send the number while you talk — or before you roll the truck.
-        </p>
-      </div>
-      <ul className="space-y-2 text-sm text-muted-foreground">
-        <li>Know before you go — specs from the last job, if a Property Record exists.</li>
-        <li>Quote from your book — supplier APIs, a spreadsheet, or numbers you type.</li>
-        <li>The Property Record brings them back. Repeat work is why you built it.</li>
-      </ul>
-      <p className="text-sm">
-        ${dollars(SHOP_MONTHLY)}/month or ${dollars(SHOP_ANNUAL)}/year. Extra seats $
-        {dollars(SEAT_MONTHLY)}/month.
+    <div className="space-y-5">
+      <p className="text-sm tracking-wide text-muted-foreground uppercase">For contractors</p>
+      <h2 className="font-display text-3xl font-medium tracking-tight text-balance md:text-4xl">
+        The first clean number wins the job.
+      </h2>
+      <p className="max-w-xl text-base leading-relaxed text-muted-foreground">
+        Look up the house. Quote from what is already on the Property Record. Send the estimate
+        while you are still talking — or before anyone else leaves the shop.
       </p>
+      <ul className="space-y-3 text-sm text-muted-foreground">
+        <li>Search the address before you roll the truck.</li>
+        <li>Price from your book — suppliers, a spreadsheet, or numbers you type.</li>
+        <li>Every quote starts the Property Record. The next trade at that address is already yours.</li>
+      </ul>
     </div>
   );
 }
@@ -65,7 +62,6 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
 
   return (
     <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
-      <p className="font-medium">{user ? "Continue shop setup" : "Create the shop account"}</p>
       {!user && (
         <>
           <div className="space-y-1.5">

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useAudience } from "@/lib/housefile/use-audience";
 import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { formatLine, houseNumber } from "@/lib/housefile/geocode";
+import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { captureQuoteLead, peekHouseByAddress, suggestAddresses } from "@/lib/housefile/server";
 import type { AddressTease } from "@/lib/housefile/types";
 
@@ -207,12 +208,12 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
           </p>
         </div>
       </div>
-      <div className="space-y-5 p-5">
+      <div className="space-y-6 bg-background p-5 sm:p-8">
         <div>
           <p className="text-xs tracking-wide text-muted-foreground uppercase">
-            {tease.found ? "A record is on file" : "No Property Record yet"}
+            {tease.found ? "A Property Record is here" : "No Property Record yet"}
           </p>
-          <p className="font-display text-xl font-medium">{tease.address}</p>
+          <p className="font-display text-2xl font-medium tracking-tight">{tease.address}</p>
           {place ? <p className="text-sm text-muted-foreground">{place}</p> : null}
         </div>
 
@@ -223,9 +224,22 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
             hint="Pick the trade. This quote writes to the Property Record for the next shop that looks it up."
           />
         ) : (
-          <div className="space-y-5">
+          <div className="grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-start">
             <ShopExplainer />
-            <ShopSignupForm />
+            <div className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-6">
+              <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a shop</p>
+              <p className="mt-2 font-display text-3xl font-medium tracking-tight">
+                ${dollars(SHOP_MONTHLY)}
+                <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                or ${dollars(SHOP_ANNUAL)} a year. Extra seats ${dollars(SEAT_MONTHLY)}/month. You pay
+                for the people who quote — not per house.
+              </p>
+              <div className="mt-5">
+                <ShopSignupForm />
+              </div>
+            </div>
           </div>
         )}
 
