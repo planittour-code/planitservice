@@ -839,16 +839,25 @@ export const getContractorProposal = createServerFn({ method: "GET" })
 
 export const updateProposalMeta = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { id: string; title: string; coverNote: string }) => input)
+  .validator((input: { id: string; title: string; coverNote: string; coverPhoto?: string | null }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const company = await companyFor(sql, context.userId, session?.email);
-    await sql`
-      update proposals set title = ${data.title.trim()}, cover_note = ${data.coverNote}
-      where id = ${data.id} and company_id = ${company.id}
-    `;
+    if (data.coverPhoto !== undefined) {
+      await sql`
+        update proposals
+        set title = ${data.title.trim()}, cover_note = ${data.coverNote}, cover_photo_src = ${data.coverPhoto}
+        where id = ${data.id} and company_id = ${company.id}
+      `;
+    } else {
+      await sql`
+        update proposals
+        set title = ${data.title.trim()}, cover_note = ${data.coverNote}
+        where id = ${data.id} and company_id = ${company.id}
+      `;
+    }
     return { ok: true as const };
   });
 

@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { optionLabel } from "@/lib/housefile/estimate-lines";
+import { StreetView } from "@/components/street-view";
+import { Mark } from "@/components/logo";
 import { money, shortDate } from "@/lib/housefile/format";
 import {
   acceptProposalPublic,
@@ -75,35 +76,46 @@ export function ProposalDoc({
 
   return (
     <article className="space-y-8">
-      <header className="space-y-3">
-        {company.logo_src ? (
-          <img
-            src={company.logo_src}
-            alt=""
-            className="h-12 w-auto max-w-[12rem] object-contain"
-          />
-        ) : null}
-        <p className="text-sm tracking-wide text-muted-foreground uppercase">
-          {mode === "homeowner" ? `Estimate from ${company.name}` : company.name}
-        </p>
-        <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
-          {proposal.title}
-        </h1>
-        <p className="text-muted-foreground">
-          {property.address_line}, {property.city}, {property.state} {property.zip}
-          {proposal.sent_at ? (
-            <>
-              <span className="mx-2">·</span>
-              Sent {shortDate(proposal.sent_at)}
-            </>
-          ) : null}
-        </p>
-        {proposal.cover_note && (
+      <header className="space-y-5">
+        <div>
+          <p className="font-display text-3xl font-medium tracking-tight md:text-4xl">
+            {property.homeowner_name}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            {property.address_line}, {property.city}, {property.state} {property.zip}
+          </p>
+        </div>
+
+        <EstimateHero bundle={bundle} />
+
+        <div className="flex items-center gap-3">
+          {company.logo_src ? (
+            <img
+              src={company.logo_src}
+              alt=""
+              className="size-14 shrink-0 rounded-lg object-contain shadow-[var(--shadow-border)]"
+            />
+          ) : (
+            <Mark className="size-14 shrink-0" />
+          )}
+          <div>
+            <p className="text-sm tracking-wide text-muted-foreground uppercase">
+              {mode === "homeowner" ? `Estimate from ${company.name}` : company.name}
+            </p>
+            <p className="font-medium">{proposal.title}</p>
+          </div>
+        </div>
+
+        {proposal.cover_note ? (
           <p className="max-w-2xl text-base leading-relaxed">{proposal.cover_note}</p>
-        )}
+        ) : null}
+
         {mode === "contractor" && (
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={proposal.status} />
+            {proposal.sent_at ? (
+              <span className="text-sm text-muted-foreground">Sent {shortDate(proposal.sent_at)}</span>
+            ) : null}
           </div>
         )}
       </header>
@@ -239,6 +251,34 @@ function AcceptEstimate({
   );
 }
 
+function estimateHeroSrc(bundle: ProposalBundle) {
+  return (
+    bundle.proposal.cover_photo_src ||
+    bundle.house.photos.find((p) => p.category === "exterior")?.src ||
+    bundle.house.photos[0]?.src ||
+    null
+  );
+}
+
+function EstimateHero({ bundle }: { bundle: ProposalBundle }) {
+  const src = estimateHeroSrc(bundle);
+  const p = bundle.property;
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={p.address_line}
+        className="aspect-[16/9] min-h-40 w-full rounded-xl object-cover shadow-[var(--shadow-border)]"
+      />
+    );
+  }
+  return (
+    <div className="overflow-hidden rounded-xl shadow-[var(--shadow-border)]">
+      <StreetView address={p.address_line} city={p.city} state={p.state} zip={p.zip} />
+    </div>
+  );
+}
+
 function ContractorMeta({
   bundle,
   onChanged,
@@ -248,7 +288,9 @@ function ContractorMeta({
 }) {
   const [title, setTitle] = useState(bundle.proposal.title);
   const [cover, setCover] = useState(bundle.proposal.cover_note ?? "");
+  const [photo, setPhoto] = useState<string | null>(bundle.proposal.cover_photo_src ?? null);
   const [drafting, setDrafting] = useState(false);
+  const photos = bundle.house.photos;
   return (
     <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
       <div className="space-y-1.5">
@@ -259,6 +301,37 @@ function ContractorMeta({
         <Label htmlFor="pc">Cover note</Label>
         <Textarea id="pc" value={cover} onChange={(e) => setCover(e.target.value)} rows={4} />
       </div>
+      <div className="space-y-2">
+        <Label>Featured photo</Label>
+        <p className="text-sm text-muted-foreground">
+          Shows at the top of the estimate. If you do not pick one, the map is used.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setPhoto(null)}
+            className={cn(
+              "min-h-11 rounded-md px-3 text-sm shadow-[var(--shadow-border)]",
+              photo === null ? "bg-primary text-primary-foreground" : "bg-card",
+            )}
+          >
+            Use the map
+          </button>
+          {photos.map((ph) => (
+            <button
+              key={ph.id}
+              type="button"
+              onClick={() => setPhoto(ph.src)}
+              className={cn(
+                "overflow-hidden rounded-md shadow-[var(--shadow-border)]",
+                photo === ph.src && "ring-2 ring-ring",
+              )}
+            >
+              <img src={ph.src} alt="" className="size-14 object-cover" />
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -266,7 +339,7 @@ function ContractorMeta({
           size="sm"
           onClick={async () => {
             await updateProposalMeta({
-              data: { id: bundle.proposal.id, title, coverNote: cover },
+              data: { id: bundle.proposal.id, title, coverNote: cover, coverPhoto: photo },
             });
             toast.success("Proposal updated");
             onChanged();

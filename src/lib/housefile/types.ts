@@ -101,6 +101,7 @@ export type Proposal = {
   title: string;
   status: ProposalStatus;
   cover_note: string | null;
+  cover_photo_src?: string | null;
   created_at: string;
   sent_at: string | null;
   accepted_at: string | null;
