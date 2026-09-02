@@ -4,18 +4,35 @@ import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { FIELD_CATALOG } from "@/lib/housefile/fields";
+import { useAudience } from "@/lib/housefile/use-audience";
 import { cn } from "@/lib/utils";
 
 export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/my" | "/home" | "/shop" }) {
   const { user, isPending } = useCurrentUserState();
+  const { audience } = useAudience();
   if (isPending) return <div className="h-11 w-24 animate-pulse rounded-md bg-muted" />;
   if (user) {
-    const label =
-      signedInTo === "/home" || signedInTo === "/my" ? "My houses" : signedInTo === "/shop" ? "Shop" : "Open shop";
+    const to = audience.paying
+      ? audience.kind === "homeowner"
+        ? "/home"
+        : "/app"
+      : audience.kind === "homeowner"
+        ? "/start"
+        : signedInTo === "/home" || signedInTo === "/my"
+          ? "/home"
+          : signedInTo === "/shop"
+            ? "/shop"
+            : "/open";
+    const label = audience.paying
+      ? audience.kind === "homeowner"
+        ? "My houses"
+        : "Shop"
+      : signedInTo === "/home" || signedInTo === "/my"
+        ? "My houses"
+        : "Open shop";
     return (
       <Button asChild>
-        <Link to={signedInTo}>{label}</Link>
+        <Link to={to}>{label}</Link>
       </Button>
     );
   }

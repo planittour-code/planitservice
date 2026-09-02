@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PaidLanding } from "@/components/paid-landing";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/")({ component: HomeownerSite });
 function HomeownerSite() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PaidLanding prefer="homeowner" />
       <PublicHeader>
         <Button asChild variant="ghost" className="hidden sm:inline-flex">
           <a href="#pricing">Pricing</a>

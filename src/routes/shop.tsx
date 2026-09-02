@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { PaidLanding } from "@/components/paid-landing";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { AddressLookup, TeaseCard } from "@/components/address-lookup";
 import { TradeCarousel } from "@/components/trade-carousel";
@@ -19,6 +20,7 @@ function HomePage() {
   const [tease, setTease] = useState<AddressTease | null>(null);
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <PaidLanding prefer="contractor" />
       <PublicHeader home="/shop">
         <Button asChild variant="ghost" className="hidden sm:inline-flex">
           <a href="#pricing">Pricing</a>

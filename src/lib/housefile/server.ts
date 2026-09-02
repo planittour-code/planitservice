@@ -2245,4 +2245,61 @@ export const claimPropertyTransfer = createServerFn({ method: "POST" })
     return { propertyId: rows[0].property_id };
   });
 
+export type Audience = {
+  signedIn: boolean;
+  kind: "guest" | "homeowner" | "contractor";
+  paying: boolean;
+  homePath: "/" | "/home" | "/app" | "/start" | "/open";
+};
+
+export const getAudience = createServerFn({ method: "GET" })
+  .middleware([optionalAuthMiddleware])
+  .handler(async ({ context }): Promise<Audience> => {
+    const userId = context.userId;
+    if (!userId) return { signedIn: false, kind: "guest", paying: false, homePath: "/" };
+    const sql = await getSql();
+    const owned = await sql<Company>`
+      select * from companies
+      where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
+      limit 1
+    `;
+    const member = owned[0]
+      ? []
+      : await sql<Company>`
+          select c.*
+          from company_members m
+          join companies c on c.id = m.company_id
+          where m.user_id = ${userId} and c.id <> ${HOUSEHOLD_COMPANY}
+          limit 1
+        `;
+    const shop = owned[0] ?? member[0] ?? null;
+    const contractorPaying = Boolean(shop?.onboarded_at);
+    const plans = await sql<{ status: string }>`
+      select pp.status
+      from property_plans pp
+      join properties p on p.id = pp.property_id
+      where p.homeowner_user_id = ${userId}
+    `;
+    const houseCount = await sql<{ c: number }>`
+      select count(*)::int as c from properties where homeowner_user_id = ${userId}
+    `;
+    const homeownerPaying =
+      plans.some((p) => p.status === "active" || p.status === "paid" || p.status === "trialing") ||
+      (houseCount[0]?.c ?? 0) > 0;
+
+    if (contractorPaying && !homeownerPaying) {
+      return { signedIn: true, kind: "contractor", paying: true, homePath: "/app" };
+    }
+    if (homeownerPaying && !contractorPaying) {
+      return { signedIn: true, kind: "homeowner", paying: true, homePath: "/home" };
+    }
+    if (contractorPaying && homeownerPaying) {
+      return { signedIn: true, kind: "contractor", paying: true, homePath: "/app" };
+    }
+    if (shop) {
+      return { signedIn: true, kind: "contractor", paying: false, homePath: "/open" };
+    }
+    return { signedIn: true, kind: "homeowner", paying: false, homePath: "/start" };
+  });
+
 

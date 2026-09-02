@@ -7,10 +7,10 @@ import { QuoteTypePicker } from "@/components/quote-type";
 import { ShopExplainer, ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { useAudience } from "@/lib/housefile/use-audience";
 import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { formatLine, houseNumber } from "@/lib/housefile/geocode";
-import { captureQuoteLead, getDashboard, peekHouseByAddress, suggestAddresses } from "@/lib/housefile/server";
+import { captureQuoteLead, peekHouseByAddress, suggestAddresses } from "@/lib/housefile/server";
 import type { AddressTease } from "@/lib/housefile/types";
 
 const GHOST_FACTS = [
@@ -163,15 +163,9 @@ export function AddressLookup({ onTease }: { onTease?: (tease: AddressTease) => 
 }
 
 export function TeaseCard({ tease }: { tease: AddressTease }) {
-  const { user } = useCurrentUserState();
+  const { audience } = useAudience();
   const navigate = useNavigate();
-  const dash = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: () => getDashboard(),
-    enabled: Boolean(user),
-    retry: false,
-  });
-  const payingShop = Boolean(user && dash.data?.company.onboarded_at);
+  const payingShop = audience.kind === "contractor" && audience.paying;
   const facts = tease.found && tease.facts.length ? tease.facts : GHOST_FACTS;
   const place = [tease.city, tease.state, tease.zip].filter(Boolean).join(" ");
 
