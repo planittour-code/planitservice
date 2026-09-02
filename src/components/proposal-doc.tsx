@@ -125,17 +125,36 @@ export function ProposalDoc({
       )}
 
       <ul className="space-y-3">
-        {items.filter((item) => !item.option_id).map((item) => (
+        {items.filter((item) => !item.option_id && !lineSettled(item)).map((item) => (
           <ProposalLine
             key={item.id}
             item={item}
             mode={mode}
             token={proposal.share_token}
+            proposalId={proposal.id}
             locked={locked}
             onChanged={onChanged}
           />
         ))}
       </ul>
+      {items.some((item) => !item.option_id && lineSettled(item)) ? (
+        <div className="space-y-3">
+          <h2 className="font-display text-xl font-medium">Accepted lines</h2>
+          <ul className="space-y-3">
+            {items.filter((item) => !item.option_id && lineSettled(item)).map((item) => (
+              <ProposalLine
+                key={item.id}
+                item={item}
+                mode={mode}
+                token={proposal.share_token}
+                proposalId={proposal.id}
+                locked={locked}
+                onChanged={onChanged}
+              />
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <OptionGroups
         items={items}
         mode={mode}
@@ -524,6 +543,7 @@ function OptionGroup({
               item={item}
               mode={mode}
               token={token}
+              proposalId={items[0]?.proposal_id ?? ""}
               locked={locked}
               hideInclude
               onChanged={onChanged}
@@ -535,10 +555,22 @@ function OptionGroup({
   );
 }
 
+function lineSettled(item: ProposalItem) {
+  return item.review_status === "accepted" || item.review_status === "change_accepted";
+}
+
+function reviewTag(status?: string | null) {
+  if (status === "change_review") return "Change Request in Review";
+  if (status === "change_accepted") return "Change Request Accepted";
+  if (status === "accepted") return "Accepted";
+  return null;
+}
+
 function ProposalLine({
   item,
   mode,
   token,
+  proposalId,
   locked,
   hideInclude = false,
   onChanged,
@@ -546,12 +578,66 @@ function ProposalLine({
   item: ProposalItem;
   mode: "homeowner" | "contractor";
   token: string;
+  proposalId: string;
   locked: boolean;
   hideInclude?: boolean;
   onChanged: () => void;
 }) {
+  const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState(item.homeowner_note ?? "");
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(item.name);
+  const [description, setDescription] = useState(item.description ?? "");
+  const [qty, setQty] = useState(String(item.qty));
+  const [price, setPrice] = useState(String(item.unit_price));
   const line = item.qty * item.unit_price;
+  const tag = reviewTag(item.review_status);
+
+  async function acceptLine() {
+    await reviseProposalPublic({
+      data: { token, itemId: item.id, reviewStatus: "accepted" },
+    });
+    toast.success("Line accepted");
+    onChanged();
+  }
+
+  async function saveNote() {
+    await reviseProposalPublic({
+      data: {
+        token,
+        itemId: item.id,
+        homeownerNote: note,
+        reviewStatus: "change_review",
+      },
+    });
+    toast.success("Change request sent");
+    setNoteOpen(false);
+    onChanged();
+  }
+
+  async function saveEdit() {
+    await upsertProposalItem({
+      data: {
+        proposalId,
+        itemId: item.id,
+        name,
+        description,
+        qty: Number(qty) || item.qty,
+        unit: item.unit,
+        unitPrice: Number(price) || item.unit_price,
+        optional: item.optional,
+        manufacturer: item.manufacturer ?? "",
+        productName: item.product_name ?? "",
+        color: item.color ?? "",
+        warrantyYears: item.warranty_years,
+        warrantyTerms: item.warranty_terms ?? "",
+      },
+    });
+    toast.success("Line updated");
+    setEditing(false);
+    onChanged();
+  }
+
   return (
     <li
       className={cn(
@@ -566,6 +652,11 @@ function ProposalLine({
             {item.optional && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 Optional
+              </span>
+            )}
+            {tag && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                {tag}
               </span>
             )}
           </div>
@@ -586,12 +677,15 @@ function ProposalLine({
               {item.warranty_years ? ` · ${item.warranty_years} yr` : ""} — {item.warranty_terms}
             </p>
           )}
+          {item.homeowner_note ? (
+            <p className="text-sm">Note: {item.homeowner_note}</p>
+          ) : null}
         </div>
         <p className="font-medium tabular-nums">{money(line)}</p>
       </div>
 
-      {mode === "homeowner" && !locked && (
-        <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+      {mode === "homeowner" && !locked && !lineSettled(item) && (
+        <div className="mt-3 space-y-3 border-t border-border pt-3">
           {item.optional && !hideInclude && (
             <label className="flex min-h-11 items-center gap-2 text-sm">
               <input
@@ -607,37 +701,53 @@ function ProposalLine({
               Include this line
             </label>
           )}
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={note}
-              placeholder={
-                item.color
-                  ? `Keep ${item.color}, or name a different color`
-                  : "Ask for a change on this line"
-              }
-              onChange={(e) => setNote(e.target.value)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={async () => {
-                await reviseProposalPublic({
-                  data: { token, itemId: item.id, homeownerNote: note },
-                });
-                toast.success("Note saved");
-                onChanged();
-              }}
-            >
-              Save note
-            </Button>
-          </div>
+          {noteOpen ? (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={note}
+                placeholder="What should change on this line"
+                onChange={(e) => setNote(e.target.value)}
+              />
+              <Button type="button" variant="outline" onClick={() => void saveNote()}>
+                Save note
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="button" className="min-h-11 flex-1" onClick={() => void acceptLine()}>
+                Accept
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 flex-1"
+                onClick={() => setNoteOpen(true)}
+              >
+                Add Note
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
-      {mode === "contractor" && item.homeowner_note && (
-        <p className="mt-3 rounded-md bg-muted px-3 py-2 text-sm">
-          Homeowner: {item.homeowner_note}
-        </p>
+      {mode === "contractor" && !locked && item.review_status === "change_review" && (
+        <div className="mt-3 space-y-3 border-t border-border pt-3">
+          {editing ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+              <Input value={qty} onChange={(e) => setQty(e.target.value)} />
+              <Input value={price} onChange={(e) => setPrice(e.target.value)} />
+              <Button type="button" onClick={() => void saveEdit()}>
+                Save line
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+              Edit line
+            </Button>
+          )}
+        </div>
       )}
     </li>
   );

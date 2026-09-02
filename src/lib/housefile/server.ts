@@ -890,6 +890,11 @@ export const upsertProposalItem = createServerFn({ method: "POST" })
     `;
     if (!owned[0]) throw new Error("Proposal not found");
     if (data.itemId) {
+      const current = await sql<ProposalItem>`
+        select * from proposal_items where id = ${data.itemId} and proposal_id = ${data.proposalId}
+      `;
+      const nextReview =
+        current[0]?.review_status === "change_review" ? "change_accepted" : current[0]?.review_status ?? null;
       await sql`
         update proposal_items set
           name = ${data.name.trim()},
@@ -902,11 +907,13 @@ export const upsertProposalItem = createServerFn({ method: "POST" })
           product_name = ${data.productName.trim() || null},
           color = ${data.color.trim() || null},
           warranty_years = ${data.warrantyYears},
-          warranty_terms = ${data.warrantyTerms.trim() || null}
+          warranty_terms = ${data.warrantyTerms.trim() || null},
+          review_status = ${nextReview}
         where id = ${data.itemId} and proposal_id = ${data.proposalId}
       `;
       return { id: data.itemId };
     }
+
     const max = await sql<{ m: number }>`
       select coalesce(max(sort_order), 0)::int as m from proposal_items where proposal_id = ${data.proposalId}
     `;
@@ -1383,6 +1390,7 @@ export const reviseProposalPublic = createServerFn({ method: "POST" })
       itemId: string;
       included?: boolean;
       homeownerNote?: string;
+      reviewStatus?: string;
     }) => input,
   )
   .handler(async ({ data }) => {
@@ -1397,9 +1405,11 @@ export const reviseProposalPublic = createServerFn({ method: "POST" })
       items[0].optional && typeof data.included === "boolean" ? data.included : items[0].included;
     const note =
       data.homeownerNote !== undefined ? data.homeownerNote.trim() || null : items[0].homeowner_note;
+    const review =
+      data.reviewStatus !== undefined ? data.reviewStatus : items[0].review_status ?? null;
     await sql`
       update proposal_items
-      set included = ${Boolean(included)}, homeowner_note = ${note}
+      set included = ${Boolean(included)}, homeowner_note = ${note}, review_status = ${review}
       where id = ${data.itemId}
     `;
     if (rows[0].status === "sent") {

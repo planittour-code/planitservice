@@ -130,6 +130,7 @@ export type ProposalItem = {
   warranty_terms: string | null;
   homeowner_note: string | null;
   option_id?: string | null;
+  review_status?: string | null;
 };
 
 export type ProposalMessage = {
