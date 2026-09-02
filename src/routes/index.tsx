@@ -29,24 +29,29 @@ function HomeownerSite() {
             className="absolute inset-0 size-full object-cover outline-none"
           />
           <div className="absolute inset-0 bg-ink/55" />
-          <div className="relative mx-auto max-w-3xl space-y-6 px-5 py-16 text-center md:py-24">
+          <div className="relative mx-auto max-w-3xl space-y-6 px-4 py-16 text-center sm:px-5 md:py-24">
             <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
-              Use the same software as your contractor
+              You start it. You own it.
             </p>
             <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-6xl">
-              The service history of the house you live in.
+              The house record that belongs to you.
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-              When a Contractor provides a quote through PlanitService, you can add the details to a
-              record for your home. This record can keep the jobs, products, warranties, and the
-              maintenance details for your property — all in one place. You can share it with
-              potential Buyers, Contractors, or even a Property Manager.
+              You do not need a contractor to begin. Open a File. Put in the paint colors, the roof
+              year, the filter size, the last time the gutters were cleaned. When you need work,
+              request bids from shops. If the shop uses PlanitService, the job writes itself onto
+              the same record — products, warranties, and what was done.
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button asChild size="lg">
+              <Button asChild size="lg" className="min-h-12 w-full sm:w-auto">
                 <Link to="/start">Start a house record</Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-0 bg-card text-foreground">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="min-h-12 w-full border-0 bg-card text-foreground sm:w-auto"
+              >
                 <Link to="/house/$token" params={{ token: "maple-14" }}>
                   See a sample File
                 </Link>
@@ -56,33 +61,67 @@ function HomeownerSite() {
         </section>
 
         <section className="border-t border-border bg-card/40">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-3">
+          <div className="mx-auto max-w-3xl space-y-4 px-4 py-12 text-center sm:px-5">
+            <h2 className="font-display text-3xl font-medium tracking-tight">
+              Stop hunting for the last receipt.
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              The next buyer will ask what is on the roof. The next painter will ask what color is
+              on the trim. The next property manager will ask when the HVAC was serviced. That
+              answer should live at the address — not in a text thread you already deleted.
+            </p>
+          </div>
+        </section>
+
+        <section className="border-t border-border">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-5 md:grid-cols-3">
             <Pillar
-              kicker="The record"
-              title="What was done, and with what."
-              body="Colors, shingles, filters, warranties. Written when the shop quotes — kept at the address, not in a drawer."
+              kicker="Start it yourself"
+              title="You own the File from day one."
+              body="Add the house. Write what you already know. Photos, products, warranties, the maintenance calendar. No shop has to invite you first."
             />
             <Pillar
-              kicker="The upkeep"
-              title="Maintenance across every property."
-              body="Filters, gutters, alarms, the water heater. Due dates live on the File. One household. One to many houses."
+              kicker="Ask for bids"
+              title="Put the work in front of shops."
+              body="Pro lets you write a request and send it to the market. Estimates come back against the house you already documented — not a clipboard on the lawn."
             />
             <Pillar
-              kicker="The handoff"
-              title="The File survives the owner."
-              body="Share a link. Transfer the record at sale or at death. The next owner starts with history, not a blank house."
+              kicker="Work writes in"
+              title="A PlanitService shop fills the gaps."
+              body="When you hire a contractor on PlanitService, the quote and the finished job land on your File. You keep the history. They do not take it with them."
+            />
+          </div>
+        </section>
+
+        <section className="border-t border-border bg-card/40">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-5 md:grid-cols-3">
+            <Pillar
+              kicker="Share it"
+              title="One link. The right people."
+              body="Send the File to a buyer, another contractor, or a property manager. They see the house. They do not get to keep the login."
+            />
+            <Pillar
+              kicker="More than one house"
+              title="Every property, one household."
+              body="The place you live. The rental. A parent’s house. Each address is its own File. You manage them from one account."
+            />
+            <Pillar
+              kicker="It outlasts you"
+              title="Hand the record on."
+              body="Transfer the File at sale or when the house passes on. The next owner starts with history instead of a blank house."
             />
           </div>
         </section>
 
         <section id="pricing" className="border-t border-border">
-          <div className="mx-auto max-w-6xl space-y-10 px-5 py-16">
-            <div className="mx-auto max-w-2xl text-center space-y-3">
+          <div className="mx-auto max-w-6xl space-y-10 px-4 py-16 sm:px-5">
+            <div className="mx-auto max-w-2xl space-y-3 text-center">
               <h2 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
-                Pay for the house, not the clutter.
+                Pay to keep the record. Not to start talking.
               </h2>
               <p className="text-muted-foreground">
-                Each property is its own File. Add a vacation house, a rental, a parent’s place.
+                Standard is the File you own and share. Pro adds bids and a property manager on the
+                same record. Either way, you can begin before a contractor ever knocks.
               </p>
             </div>
             <div className="grid gap-6 md:grid-cols-2">
@@ -98,21 +137,18 @@ function HomeownerSite() {
                   or ${dollars(PROPERTY_ANNUAL)} a year per property
                 </p>
                 <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-                  <li>Build the House File — jobs, photos, products, warranties</li>
-                  <li>Share the details with a link</li>
-                  <li>Transfer the record at sale or at death</li>
+                  <li>Build the File yourself — jobs, photos, products, warranties</li>
+                  <li>Keep maintenance in one place</li>
+                  <li>Share a link with buyers or contractors</li>
+                  <li>Transfer the record at sale or when the house passes on</li>
                 </ul>
-                <Button asChild className="mt-8 w-full">
-                  <Link to="/start" search={{ tier: "standard" }}>Start Standard</Link>
+                <Button asChild className="mt-8 min-h-12 w-full">
+                  <Link to="/start" search={{ tier: "standard" }}>
+                    Start Standard
+                  </Link>
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  <Link
-                    to="/start"
-                    search={{ tier: "standard" }}
-                    className="underline underline-offset-2"
-                  >
-                    Or pay ${dollars(PROPERTY_ANNUAL)} for the year
-                  </Link>
+                  Then pick monthly or pay ${dollars(PROPERTY_ANNUAL)} for the year
                 </p>
               </article>
               <article className="rounded-xl bg-primary p-6 text-primary-foreground shadow-[var(--shadow-border)] sm:p-8">
@@ -126,25 +162,19 @@ function HomeownerSite() {
                 <p className="mt-2 text-sm opacity-80">or ${dollars(PRO_ANNUAL)} a year per property</p>
                 <ul className="mt-6 space-y-2 text-sm">
                   <li>Everything in Standard</li>
-                  <li>Build an RFP and put the job on the market</li>
-                  <li>Delegate to a property manager — they see the File and the bids</li>
+                  <li>Request bids and put the job on the market</li>
+                  <li>Let a property manager see the File and the bids</li>
                 </ul>
                 <Button
                   asChild
-                  className="mt-8 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                  className="mt-8 min-h-12 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <Link to="/home/add" search={{ tier: "pro" }}>
+                  <Link to="/start" search={{ tier: "pro" }}>
                     Start Pro
                   </Link>
                 </Button>
                 <p className="mt-3 text-center text-xs opacity-80">
-                  <Link
-                    to="/start"
-                    search={{ tier: "pro" }}
-                    className="underline underline-offset-2"
-                  >
-                    Or pay ${dollars(PRO_ANNUAL)} for the year
-                  </Link>
+                  Then pick monthly or pay ${dollars(PRO_ANNUAL)} for the year
                 </p>
               </article>
             </div>

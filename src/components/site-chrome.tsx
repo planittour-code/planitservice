@@ -67,7 +67,7 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
         <span>
           {shop
             ? "Know the house before you start talking."
-            : "Use the same software as your contractor."}
+            : "You start the record. You keep it."}
         </span>
         <nav className="flex flex-wrap gap-x-4 gap-y-1">
           <Link to="/" hash="pricing" className="hover:text-foreground">

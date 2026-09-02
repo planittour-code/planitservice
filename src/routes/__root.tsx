@@ -17,7 +17,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Use the same software as your contractor. The service history of the house you live in.",
+          "The house record that belongs to you. Start it yourself. Request bids. Keep the jobs, products, and warranties.",
       },
     ],
     links: [
