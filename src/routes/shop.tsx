@@ -23,11 +23,6 @@ function HomePage() {
         <Button asChild variant="ghost" className="hidden sm:inline-flex">
           <a href="#pricing">Pricing</a>
         </Button>
-        <Button asChild variant="ghost" className="hidden sm:inline-flex">
-          <Link to="/p/$token" params={{ token: "maple-paint-draft" }}>
-            Sample quote
-          </Link>
-        </Button>
         <AuthSlot />
       </PublicHeader>
 
