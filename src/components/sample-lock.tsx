@@ -7,7 +7,7 @@ export function SampleLock({
   to = "/start",
 }: {
   children: ReactNode;
-  to?: "/start" | "/open";
+  to?: "/start" | "/shop/open";
 }) {
   const navigate = useNavigate();
   return (

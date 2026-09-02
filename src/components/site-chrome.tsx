@@ -22,7 +22,7 @@ export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/my" 
           ? "/home"
           : signedInTo === "/shop"
             ? "/shop"
-            : "/open";
+            : "/shop/open";
     const label = audience.paying
       ? audience.kind === "homeowner"
         ? "My houses"

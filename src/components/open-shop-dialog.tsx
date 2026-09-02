@@ -27,7 +27,7 @@ export function OpenShopDialog({
           </Dialog.Description>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button asChild className="flex-1">
-              <Link to="/login" search={{ next }}>
+              <Link to="/shop/open">
                 Open a shop
               </Link>
             </Button>

@@ -2258,7 +2258,7 @@ export type Audience = {
   signedIn: boolean;
   kind: "guest" | "homeowner" | "contractor";
   paying: boolean;
-  homePath: "/" | "/home" | "/app" | "/start" | "/open";
+  homePath: "/" | "/home" | "/app" | "/start" | "/shop/open";
 };
 
 export const getAudience = createServerFn({ method: "GET" })
@@ -2306,7 +2306,7 @@ export const getAudience = createServerFn({ method: "GET" })
       return { signedIn: true, kind: "contractor", paying: true, homePath: "/app" };
     }
     if (shop) {
-      return { signedIn: true, kind: "contractor", paying: false, homePath: "/open" };
+      return { signedIn: true, kind: "contractor", paying: false, homePath: "/shop/open" };
     }
     return { signedIn: true, kind: "homeowner", paying: false, homePath: "/start" };
   });

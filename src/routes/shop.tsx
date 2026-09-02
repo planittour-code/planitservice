@@ -53,7 +53,7 @@ function HomePage() {
               </div>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button asChild size="lg">
-                  <Link to="/open">
+                  <Link to="/shop/open">
                     Open a shop
                   </Link>
                 </Button>
@@ -160,7 +160,7 @@ function HomePage() {
                   size="lg"
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <Link to="/open">
+                  <Link to="/shop/open">
                     Open a shop
                   </Link>
                 </Button>
