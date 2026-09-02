@@ -51,7 +51,7 @@ function HomePage() {
               </div>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button asChild size="lg">
-                  <Link to="/login" search={{ next: "/app/onboard" }}>
+                  <Link to="/open">
                     Open a shop
                   </Link>
                 </Button>
@@ -158,7 +158,7 @@ function HomePage() {
                   size="lg"
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <Link to="/login" search={{ next: "/app/onboard" }}>
+                  <Link to="/open">
                     Open a shop
                   </Link>
                 </Button>
