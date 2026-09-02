@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createHomeProperty } from "@/lib/housefile/server";
+import { startCheckout } from "@/lib/housefile/stripe-billing";
 import {
   PROPERTY_ANNUAL,
   PROPERTY_MONTHLY,
@@ -14,7 +15,7 @@ import {
   PRO_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
-import { homeownerCheckout } from "@/lib/housefile/stripe";
+import { homeownerKind } from "@/lib/housefile/stripe";
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
@@ -44,15 +45,25 @@ function AddProperty() {
         : PROPERTY_MONTHLY;
 
   const save = useMutation({
-    mutationFn: () =>
-      createHomeProperty({
+    mutationFn: async () => {
+      const created = await createHomeProperty({
         data: { addressLine: address, city, state, zip, cadence, tier },
-      }),
-    onSuccess: () => {
-      toast.success("Property Record opened. Continue to payment.");
-      window.location.href = homeownerCheckout(tier, cadence);
+      });
+      const checkout = await startCheckout({
+        data: {
+          kind: homeownerKind(tier, cadence),
+          propertyId: created.propertyId,
+          successPath: "/home",
+          cancelPath: "/home/add",
+        },
+      });
+      return checkout;
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
+    onSuccess: ({ url }) => {
+      toast.success("Property Record opened. Continue to secure checkout.");
+      window.location.href = url;
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not start checkout"),
   });
 
   return (
@@ -113,7 +124,7 @@ function AddProperty() {
           </div>
         </fieldset>
         <Button type="submit" className="w-full" disabled={save.isPending}>
-          {save.isPending ? "Opening Property Record…" : `Start this Property Record · $${dollars(price)}`}
+          {save.isPending ? "Starting checkout…" : `Continue to checkout · $${dollars(price)}`}
         </Button>
       </form>
     </div>

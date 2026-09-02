@@ -12,9 +12,19 @@ import { WizardSteps } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EstimateSheet } from "@/components/estimate-sheet";
 import { applyPriceBook, linesNeedingBookCost, pickKey, proposedCostKey, slotsForWork, STARTER_BOOK } from "@/lib/housefile/book";
+import {
+  ESTIMATE_KEY,
+  blankEstimateLine,
+  estimateReady,
+  estimateTotal,
+  parseEstimateLines,
+  seedEstimateLines,
+  serializeEstimateLines,
+  toQuoteLines,
+} from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
-import { applyLinePrices, defaultRates, priceKey } from "@/lib/housefile/rates";
 import {
   WORK_BY_ID,
   buildQuote,
@@ -32,7 +42,6 @@ import {
   getQuoteHouse,
   getRfpByToken,
   listPriceBook,
-  listShopRates,
   standardizeAddress,
 } from "@/lib/housefile/server";
 
@@ -75,11 +84,6 @@ function NewQuote() {
   const bookQ = useQuery({
     queryKey: ["price-book"],
     queryFn: () => listPriceBook(),
-    enabled: Boolean(user),
-  });
-  const ratesQ = useQuery({
-    queryKey: ["shop-rates"],
-    queryFn: () => listShopRates(),
     enabled: Boolean(user),
   });
   const [step, setStep] = useState(search.work ? 3 : 1);
@@ -160,37 +164,30 @@ function NewQuote() {
 
   useEffect(() => {
     if (!work) return;
-    const facts = user ? (house.data?.facts ?? {}) : usingDemo ? MAPLE_DEMO.facts : {};
-    const seeded = defaultsFor(work, facts);
-    if (search.template === "tmpl_ext_paint") seeded.paint_scope = "exterior";
     const items = user ? (bookQ.data?.items ?? []) : guestBook();
-    for (const slot of slotsForWork(work.id, seeded)) {
-      const key = pickKey(slot.id);
-      if (seeded[key]) continue;
-      const first = items.find((b) => b.slot === slot.id && b.active !== false);
-      if (first) seeded[key] = first.id;
-    }
-    setTakeoff(seeded);
-  }, [work?.id, house.data?.property.id, bookQ.data?.items.length]);
+    const scope = search.template === "tmpl_ext_paint" ? "exterior" : "interior";
+    setTakeoff((prev) => {
+      const sameJob = prev.__work === work.id && prev.paint_scope === (work.id === "paint" ? scope : prev.paint_scope);
+      if (sameJob && prev[ESTIMATE_KEY]) return prev;
+      return {
+        __work: work.id,
+        paint_scope: work.id === "paint" ? scope : "",
+        [ESTIMATE_KEY]: serializeEstimateLines(seedEstimateLines(work.id, items, scope)),
+      };
+    });
+  }, [work?.id, bookQ.data?.items.length, search.template]);
 
   const book = user ? (bookQ.data?.items ?? []) : guestBook();
-  const rates = user
-    ? Object.fromEntries((ratesQ.data?.rates ?? []).map((r) => [r.key, r.amount]))
-    : defaultRates();
-  const hours = Object.fromEntries(
-    (ratesQ.data?.rates ?? [])
-      .filter((r) => r.hoursPerUnit != null)
-      .map((r) => [r.key, r.hoursPerUnit as number]),
-  );
   const role = user ? (bookQ.data?.role ?? dash.data?.role ?? "owner") : "owner";
+  const estimate = parseEstimateLines(takeoff[ESTIMATE_KEY]);
   const lines = useMemo(
-    () =>
-      work
-        ? applyLinePrices(applyPriceBook(buildQuote(work.id, takeoff, rates, hours), book, takeoff), takeoff)
-        : [],
-    [work?.id, takeoff, book, ratesQ.data?.rates],
+    () => {
+      if (estimateReady(estimate)) return toQuoteLines(estimate, book);
+      return work ? applyPriceBook(buildQuote(work.id, takeoff), book, takeoff) : [];
+    },
+    [work?.id, takeoff, book],
   );
-  const total = quoteTotal(lines);
+  const total = estimateReady(estimate) ? estimateTotal(estimate) : quoteTotal(lines);
   const missingBookCost = linesNeedingBookCost(lines, book);
   const proposedReady = missingBookCost.every((l) =>
     String(takeoff[`cost_${l.bookId}`] ?? "").trim(),
@@ -231,10 +228,7 @@ function NewQuote() {
       if (!homeownerName.trim()) issues.push("Homeowner name");
       if (!homeownerEmail.trim()) issues.push("Homeowner email");
     }
-    if (work && !takeoffReady(work, takeoff)) issues.push("Finish the measurements");
-    if (missingBookCost.length > 0 && !proposedReady) {
-      issues.push("Enter a cost for each product that has none in the book");
-    }
+    if (!estimate.some((l) => l.item.trim())) issues.push("Add a line item");
     return issues;
   })();
   const canSend = !user || (addressReady && sendBlockers.length === 0);
@@ -274,7 +268,7 @@ function NewQuote() {
         <h1 className="font-display text-3xl font-medium tracking-tight">The quote is ready.</h1>
         <p className="text-muted-foreground">
           {sent.homeownerName} can open it without a password. The measurements you just took are on
-          the property record for the next job.
+          the Property Record for the next job.
         </p>
         <InvitationLetter
           email={sent.homeownerEmail}
@@ -293,7 +287,7 @@ function NewQuote() {
           </Button>
           <Button asChild variant="outline">
             <Link to="/app/properties/$id" params={{ id: sent.propertyId }}>
-              Open the property record
+              Open the Property Record
             </Link>
           </Button>
           <Button asChild variant="ghost">
@@ -408,19 +402,16 @@ function NewQuote() {
         <div className="space-y-5">
           <TakeoffForm
             work={work}
+            paintScope={takeoff.paint_scope}
             inputs={takeoff}
             onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
             book={book}
-            role={role}
-            rates={rates}
-            hours={hours}
-            laborRate={rates.labor_rate ?? 65}
           />
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => setStep(2)}>
               Back
             </Button>
-            <Button type="button" disabled={!takeoffReady(work, takeoff)} onClick={() => setStep(4)}>
+            <Button type="button" onClick={() => setStep(4)}>
               Review quote
             </Button>
           </div>
@@ -437,18 +428,20 @@ function NewQuote() {
                 : `${addressLine}, ${city}, ${state} ${zip} · ${homeownerName}`}
             </p>
           </div>
-          <QuotePreview
-            lines={lines}
-            total={total}
-            showCost
-            laborRate={rates.labor_rate ?? 65}
-            onPriceChange={(name, value) =>
-              setTakeoff((s) => ({ ...s, [priceKey(name)]: value }))
+          <EstimateSheet
+            book={book}
+            lines={estimate.length ? estimate : [blankEstimateLine()]}
+            onChange={(next) =>
+              setTakeoff((s) => ({ ...s, [ESTIMATE_KEY]: serializeEstimateLines(next) }))
             }
+            workId={work.id}
+            paintScope={takeoff.paint_scope}
           />
-          <div className="relative z-10 space-y-5">
+          {lines.length > 0 && !estimateReady(estimate) && (
+            <QuotePreview lines={lines} total={total} showCost />
+          )}
           <p className="text-sm text-muted-foreground">
-            Sending writes these quantities into a first draft and copies the measurements onto the
+            Sending writes these line items into a first draft and copies the measurements onto the
             property record. {homeownerName || existing?.homeowner_name || "The homeowner"} can revise
             colors and optional work.
           </p>
@@ -517,7 +510,6 @@ function NewQuote() {
                   ? "Send for approval"
                   : "Send this quote"}
             </Button>
-          </div>
           </div>
         </div>
       )}

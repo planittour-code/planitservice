@@ -1,5 +1,4 @@
 import { FIELD_BY_KEY, type FieldDef } from "./fields";
-import { hoursOf, rateOf } from "./rates";
 
 export type TakeoffKind = "number" | "text" | "select" | "toggle";
 
@@ -35,9 +34,6 @@ export type QuoteLine = {
   bookId?: string;
   unit_cost?: number | null;
   needsCost?: boolean;
-  rateKey?: string;
-  why?: string;
-  hours?: number;
   optionId?: string;
 };
 
@@ -312,13 +308,7 @@ function money(n: number) {
   return Math.round(n * 100) / 100;
 }
 
-let hoursByKey: Record<string, number> = {};
-
 function line(partial: Omit<QuoteLine, "optional" | "included" | "manufacturer" | "product_name" | "sku" | "color" | "warranty_years" | "warranty_terms"> & Partial<QuoteLine>): QuoteLine {
-  const hoursPer = partial.rateKey ? hoursOf(hoursByKey, partial.rateKey) : null;
-  const hours =
-    partial.hours ??
-    (hoursPer != null && partial.qty > 0 ? Math.round(partial.qty * hoursPer * 10) / 10 : undefined);
   return {
     optional: false,
     included: true,
@@ -331,14 +321,7 @@ function line(partial: Omit<QuoteLine, "optional" | "included" | "manufacturer" 
     ...partial,
     qty: money(partial.qty),
     unit_price: money(partial.unit_price),
-    hours,
   };
-}
-
-type Rates = Record<string, number>;
-
-function R(rates: Rates | undefined, key: string, fallback?: number) {
-  return rateOf(rates, key, fallback);
 }
 
 function wallSf(floorSf: number, stories: number, ceilingFt: number) {
@@ -412,28 +395,22 @@ export function defaultsFor(work: WorkType, facts: Record<string, string> = {}):
   return out;
 }
 
-export function buildQuote(
-  workId: string,
-  inputs: Record<string, string>,
-  rates?: Rates,
-  hours?: Record<string, number>,
-): QuoteLine[] {
-  hoursByKey = hours ?? {};
+export function buildQuote(workId: string, inputs: Record<string, string>): QuoteLine[] {
   switch (workId) {
     case "paint":
-      return inputs.paint_scope === "exterior" ? quoteExterior(inputs, rates) : quoteInterior(inputs, rates);
+      return inputs.paint_scope === "exterior" ? quoteExterior(inputs) : quoteInterior(inputs);
     case "roof":
-      return quoteRoof(inputs, rates);
+      return quoteRoof(inputs);
     case "windows":
-      return quoteWindows(inputs, rates);
+      return quoteWindows(inputs);
     case "gutters":
-      return quoteGutters(inputs, rates);
+      return quoteGutters(inputs);
     case "siding":
-      return quoteSiding(inputs, rates);
+      return quoteSiding(inputs);
     case "deck":
-      return quoteDeck(inputs, rates);
+      return quoteDeck(inputs);
     case "porch":
-      return quotePorch(inputs, rates);
+      return quotePorch(inputs);
     default:
       return [];
   }
@@ -443,7 +420,7 @@ export function quoteTotal(lines: QuoteLine[]) {
   return lines.filter((l) => l.included && l.qty > 0).reduce((s, l) => s + l.qty * l.unit_price, 0);
 }
 
-function quoteInterior(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quoteInterior(inputs: Record<string, string>): QuoteLine[] {
   const sf = nInput(inputs, "square_feet");
   const rooms = Math.max(1, nInput(inputs, "room_count", 4));
   const ceil = nInput(inputs, "ceiling_height", 8);
@@ -452,9 +429,7 @@ function quoteInterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
   const color = inputs.interior_paint_main || "SW 7029 Agreeable Gray";
   const trimColor = inputs.interior_trim_paint || "SW Extra White, satin";
   const walls = Math.round(wallSf(sf, stories, ceil));
-  const prepBase = R(rates, "paint_prep", 180);
-  const prep = prepBase + sf * 0.12 + (livedIn ? 90 : 0) + (stories >= 1.5 ? 60 : 0);
-  const wallRate = ceil >= 9 ? R(rates, "paint_walls_tall", 2.05) : R(rates, "paint_walls", 1.9);
+  const prep = 180 + sf * 0.12 + (livedIn ? 90 : 0) + (stories >= 1.5 ? 60 : 0);
   const lines: QuoteLine[] = [
     line({
       name: "Protect, mask, and move",
@@ -465,18 +440,14 @@ function quoteInterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
       unit: "ls",
       unit_price: Math.max(220, prep),
       category: "prep",
-      rateKey: "paint_prep",
-      why: `Base ${money(prepBase)} + house size and occupancy.`,
     }),
     line({
       name: "Walls — two coats",
       description: `${walls.toLocaleString()} sf of wall at ${ceil} ft ceilings across ${rooms} rooms.`,
       qty: walls,
       unit: "sf",
-      unit_price: wallRate,
+      unit_price: ceil >= 9 ? 2.05 : 1.9,
       category: "paint",
-      rateKey: ceil >= 9 ? "paint_walls_tall" : "paint_walls",
-      why: `${money(wallRate)} / sf from the shop rate.`,
       manufacturer: "Sherwin-Williams",
       product_name: "Cashmere",
       sku: color.includes("SW") ? color.split(" ").slice(0, 2).join(" ") : null,
@@ -491,10 +462,8 @@ function quoteInterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
         description: "Flat white, same rooms.",
         qty: sf,
         unit: "sf",
-        unit_price: R(rates, "paint_ceilings", 0.85),
+        unit_price: 0.85,
         category: "paint",
-        rateKey: "paint_ceilings",
-        why: `${money(R(rates, "paint_ceilings", 0.85))} / sf from the shop rate.`,
         manufacturer: "Sherwin-Williams",
         product_name: "ProMar 200",
         color: "Ceiling Bright White",
@@ -508,10 +477,8 @@ function quoteInterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
         description: "Doors, casing, and base. Satin.",
         qty: rooms,
         unit: "room",
-        unit_price: R(rates, "paint_trim", 95),
+        unit_price: 95,
         category: "paint",
-        rateKey: "paint_trim",
-        why: `${money(R(rates, "paint_trim", 95))} / room from the shop rate.`,
         manufacturer: "Sherwin-Williams",
         product_name: "Emerald Urethane",
         color: trimColor,
@@ -526,11 +493,10 @@ function quoteInterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
       description: "Doors and frames, two coats. New pulls not included.",
       qty: 1,
       unit: "ls",
-      unit_price: R(rates, "paint_cabinets", 1800),
+      unit_price: 1800,
       optional: true,
       included: onInput(inputs, "include_cabinets", false),
       category: "paint",
-      rateKey: "paint_cabinets",
       manufacturer: "Sherwin-Williams",
       product_name: "Emerald Urethane",
       color,
@@ -541,7 +507,7 @@ function quoteInterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
   return lines.filter((l) => l.qty > 0);
 }
 
-function quoteExterior(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quoteExterior(inputs: Record<string, string>): QuoteLine[] {
   const sf = nInput(inputs, "square_feet");
   const stories = Math.max(1, nInput(inputs, "stories", 1));
   const siding = inputs.siding_type || "Wood clapboard";
@@ -560,22 +526,16 @@ function quoteExterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
       description: `${siding}. Failed film, open joints, spot prime.${livedIn ? " Lived-in house." : ""}`,
       qty: 1,
       unit: "ls",
-      unit_price: Math.max(
-        480,
-        R(rates, "paint_ext_prep", 320) + painted * prepRate + (livedIn ? 120 : 0) + (stories >= 2 ? 180 : 0),
-      ),
+      unit_price: Math.max(480, 320 + painted * prepRate + (livedIn ? 120 : 0) + (stories >= 2 ? 180 : 0)),
       category: "prep",
-      rateKey: "paint_ext_prep",
-      why: `Base ${money(R(rates, "paint_ext_prep", 320))} plus siding, occupancy, and stories.`,
     }),
     line({
       name: "Body",
       description: `Two coats, spray and back-brush. About ${painted.toLocaleString()} sf of elevation.`,
       qty: painted,
       unit: "sf",
-      unit_price: bodyRate || R(rates, "paint_ext_body", 2.15),
+      unit_price: bodyRate,
       category: "paint",
-      rateKey: "paint_ext_body",
       manufacturer: "Sherwin-Williams",
       product_name: "Duration Exterior",
       color: bodyColor,
@@ -587,9 +547,8 @@ function quoteExterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
       description: "Two coats, brush and roll.",
       qty: Math.max(1, Math.round(painted * 0.18)),
       unit: "sf",
-      unit_price: R(rates, "paint_ext_trim", 2.4),
+      unit_price: 2.4,
       category: "paint",
-      rateKey: "paint_ext_trim",
       manufacturer: "Sherwin-Williams",
       product_name: "Duration Exterior",
       color: trimColor,
@@ -601,9 +560,8 @@ function quoteExterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
       description: "Sand, prime, two coats.",
       qty: 1,
       unit: "ea",
-      unit_price: R(rates, "paint_door", 220),
+      unit_price: 220,
       category: "paint",
-      rateKey: "paint_door",
       manufacturer: "Sherwin-Williams",
       product_name: "Emerald Urethane",
       sku: "SW 2801",
@@ -616,25 +574,20 @@ function quoteExterior(inputs: Record<string, string>, rates?: Rates): QuoteLine
       description: "Hardware, punch, final walk.",
       qty: 1,
       unit: "ls",
-      unit_price: R(rates, "paint_closeout", 180),
+      unit_price: 180,
       category: "closeout",
-      rateKey: "paint_closeout",
     }),
   ];
 }
 
-function quoteRoof(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quoteRoof(inputs: Record<string, string>): QuoteLine[] {
   const squares = roofSquaresFrom(inputs);
   const layers = Math.max(1, nInput(inputs, "roof_layers", 1));
   const pitch = inputs.roof_pitch || "6/12";
   const steep = pitch.startsWith("8") ? 1.18 : pitch.startsWith("4") ? 1 : 1.08;
   const stories = nInput(inputs, "stories", 1);
   const access = stories >= 2 ? 1.08 : 1;
-  const tearKey = layers === 2 ? "roof_tearoff_2" : "roof_tearoff";
-  const tearBase = R(rates, tearKey, layers === 2 ? 130 : 90);
-  const tear = tearBase * steep * access;
-  const steepWhy = steep === 1 ? "" : ` · ${pitch} ×${steep}`;
-  const accessWhy = access === 1 ? "" : " · two-story +8%";
+  const tear = (layers === 2 ? 130 : 90) * steep * access;
   const shingle = 300 * steep;
   return [
     line({
@@ -644,18 +597,14 @@ function quoteRoof(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
       unit: "sq",
       unit_price: tear,
       category: "tearoff",
-      rateKey: tearKey,
-      why: `${money(tearBase)} / sq shop rate${steepWhy}${accessWhy}.`,
     }),
     line({
       name: "Ice and water shield",
       description: "Eaves, valleys, penetrations.",
       qty: 1,
       unit: "ls",
-      unit_price: Math.max(420, squares * R(rates, "roof_ice_water", 24)),
+      unit_price: Math.max(420, squares * 24),
       category: "underlayment",
-      rateKey: "roof_ice_water",
-      why: `Greater of $420 or squares × ${money(R(rates, "roof_ice_water", 24))}.`,
       manufacturer: "CertainTeed",
       product_name: "WinterGuard",
       warranty_years: 25,
@@ -666,10 +615,8 @@ function quoteRoof(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
       description: "Full deck.",
       qty: squares,
       unit: "sq",
-      unit_price: R(rates, "roof_underlay", 20),
+      unit_price: 20,
       category: "underlayment",
-      rateKey: "roof_underlay",
-      why: `${money(R(rates, "roof_underlay", 20))} / sq from the shop rate.`,
       manufacturer: "GAF",
       product_name: "FeltBuster",
     }),
@@ -692,9 +639,8 @@ function quoteRoof(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
       description: "Hip and ridge, intake as needed.",
       qty: 1,
       unit: "ls",
-      unit_price: Math.max(380, squares * R(rates, "roof_ridge", 18)),
+      unit_price: Math.max(380, squares * 18),
       category: "vent",
-      rateKey: "roof_ridge",
       manufacturer: "GAF",
       product_name: "TimberTex / Cobra",
       color: "Charcoal",
@@ -706,29 +652,25 @@ function quoteRoof(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
       description: "Drip edge, step, pipe boots.",
       qty: 1,
       unit: "ls",
-      unit_price: Math.max(280, squares * R(rates, "roof_flashing", 14)),
+      unit_price: Math.max(280, squares * 14),
       category: "flashing",
-      rateKey: "roof_flashing",
     }),
     line({
       name: "Permit, dumpster, closeout",
       description: "City permit and final photos.",
       qty: 1,
       unit: "ls",
-      unit_price: R(rates, "roof_permit", 410) + (stories >= 2 ? 90 : 0),
+      unit_price: 410 + (stories >= 2 ? 90 : 0),
       category: "closeout",
-      rateKey: "roof_permit",
-      why: `${money(R(rates, "roof_permit", 410))} shop rate${stories >= 2 ? " + $90 two-story" : ""}.`,
     }),
   ].filter((l) => l.qty > 0);
 }
 
-function quoteGutters(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quoteGutters(inputs: Record<string, string>): QuoteLine[] {
   const lf = nInput(inputs, "gutter_lf");
   const downs = Math.max(1, nInput(inputs, "downspout_count", 4));
   const stories = nInput(inputs, "stories", 1);
-  const hangKey = stories >= 2 ? "gutter_hang_2" : "gutter_hang";
-  const hang = R(rates, hangKey, stories >= 2 ? 14 : 12);
+  const hang = stories >= 2 ? 14 : 12;
   const color = inputs.exterior_trim_paint || "White";
   const spec = inputs.gutter_type || "6-inch aluminum";
   const guards = onInput(inputs, "include_guards", true);
@@ -738,10 +680,8 @@ function quoteGutters(inputs: Record<string, string>, rates?: Rates): QuoteLine[
       description: "Haul-off included.",
       qty: 1,
       unit: "ls",
-      unit_price: R(rates, "gutter_demo_base", 180) + lf * R(rates, "gutter_demo", 0.7),
+      unit_price: 180 + lf * 0.7,
       category: "demo",
-      rateKey: "gutter_demo",
-      why: `${money(R(rates, "gutter_demo_base", 180))} lump + ${money(R(rates, "gutter_demo", 0.7))} / lf.`,
     }),
     line({
       name: spec,
@@ -750,8 +690,6 @@ function quoteGutters(inputs: Record<string, string>, rates?: Rates): QuoteLine[
       unit: "lf",
       unit_price: hang,
       category: "gutter",
-      rateKey: hangKey,
-      why: `${money(hang)} / lf from the shop rate.`,
       manufacturer: "LeafFilter",
       product_name: spec,
       color,
@@ -776,15 +714,14 @@ function quoteGutters(inputs: Record<string, string>, rates?: Rates): QuoteLine[
       description: "New leaders to grade.",
       qty: downs,
       unit: "ea",
-      unit_price: R(rates, "gutter_downspout", 85),
+      unit_price: 85,
       category: "downspout",
-      rateKey: "gutter_downspout",
       color,
     }),
   ].filter((l) => l.qty > 0);
 }
 
-function quoteWindows(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quoteWindows(inputs: Record<string, string>): QuoteLine[] {
   const count = nInput(inputs, "window_count");
   const stories = nInput(inputs, "stories", 1);
   const product = inputs.window_product || "Andersen 100 Series";
@@ -794,17 +731,14 @@ function quoteWindows(inputs: Record<string, string>, rates?: Rates): QuoteLine[
   const unit = wood ? 1180 : /pella/i.test(product) ? 940 : 720;
   const access = stories >= 2 ? 1.12 : 1;
   const maker = product.split(" ")[0] || "Andersen";
-  const demo = R(rates, "window_demo", 55) * access;
   return [
     line({
       name: "Remove and haul",
       description: `${existing}${year ? `, ${year}` : ""}. Openings covered same day.`,
       qty: count,
       unit: "ea",
-      unit_price: demo,
+      unit_price: 55 * access,
       category: "demo",
-      rateKey: "window_demo",
-      why: `${money(R(rates, "window_demo", 55))} / opening${access > 1 ? " · two-story +12%" : ""}.`,
     }),
     line({
       name: product,
@@ -823,18 +757,17 @@ function quoteWindows(inputs: Record<string, string>, rates?: Rates): QuoteLine[
       description: "New casing at each opening.",
       qty: count,
       unit: "ea",
-      unit_price: R(rates, "window_trim", 95),
+      unit_price: 95,
       optional: true,
       included: onInput(inputs, "include_interior_trim", true),
       category: "trim",
-      rateKey: "window_trim",
     }),
     line({
       name: "Screens",
       description: "Full screens, each unit.",
       qty: count,
       unit: "ea",
-      unit_price: R(rates, "window_screen", 65),
+      unit_price: 65,
       optional: true,
       included: onInput(inputs, "include_screens", true),
       category: "screen",
@@ -844,7 +777,7 @@ function quoteWindows(inputs: Record<string, string>, rates?: Rates): QuoteLine[
   ].filter((l) => l.qty > 0);
 }
 
-function quoteSiding(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quoteSiding(inputs: Record<string, string>): QuoteLine[] {
   const sf = nInput(inputs, "square_feet");
   const stories = Math.max(1, nInput(inputs, "stories", 1));
   const elev = exteriorWallSf(sf, stories);
@@ -862,21 +795,18 @@ function quoteSiding(inputs: Record<string, string>, rates?: Rates): QuoteLine[]
       description: `${existing} off. Dumpster and magnetic sweep.`,
       qty: elev,
       unit: "sf",
-      unit_price: R(rates, "siding_tearoff", 1.45) * (stories >= 2 ? 1.1 : 1),
+      unit_price: 1.45 * (stories >= 2 ? 1.1 : 1),
       category: "demo",
-      rateKey: "siding_tearoff",
-      why: `${money(R(rates, "siding_tearoff", 1.45))} / sf${stories >= 2 ? " · two-story +10%" : ""}.`,
     }),
     line({
       name: "Housewrap and tape",
       description: "Weather barrier at the elevations and openings.",
       qty: elev,
       unit: "sf",
-      unit_price: R(rates, "siding_wrap", 0.85),
+      unit_price: 0.85,
       optional: true,
       included: wrap,
       category: "wrap",
-      rateKey: "siding_wrap",
       manufacturer: "Dupont",
       product_name: "Tyvek",
       warranty_years: 10,
@@ -912,7 +842,7 @@ function quoteSiding(inputs: Record<string, string>, rates?: Rates): QuoteLine[]
   ].filter((l) => l.qty > 0);
 }
 
-function quotePorch(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quotePorch(inputs: Record<string, string>): QuoteLine[] {
   const sf = nInput(inputs, "porch_sf");
   const kind = inputs.porch_type || "open";
   const color = inputs.stain_color || "Dark Walnut";
@@ -992,7 +922,7 @@ function quotePorch(inputs: Record<string, string>, rates?: Rates): QuoteLine[] 
   return lines.filter((l) => l.qty > 0);
 }
 
-function quoteDeck(inputs: Record<string, string>, rates?: Rates): QuoteLine[] {
+function quoteDeck(inputs: Record<string, string>): QuoteLine[] {
   const sf = nInput(inputs, "deck_sf");
   const boards = nInput(inputs, "board_repair_count", 8);
   const color = inputs.stain_color || "Dark Walnut";
