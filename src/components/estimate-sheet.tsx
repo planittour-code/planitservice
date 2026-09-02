@@ -146,11 +146,11 @@ export function EstimateSheet({
           </div>
         </div>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button type="button" variant="outline" onClick={() => onChange([...lines, blankEstimateLine()])}>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/95 p-3 shadow-[var(--shadow-border)] sticky bottom-0 z-20 -mx-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <Button type="button" variant="outline" className="min-h-11" onClick={() => onChange([...lines, blankEstimateLine()])}>
           Add a line
         </Button>
-        <p className="font-display text-2xl font-medium tabular-nums">
+        <p className="font-display text-xl font-medium tabular-nums sm:text-2xl">
           Total Amount {money(total)}
         </p>
       </div>
@@ -178,7 +178,7 @@ function LineCard({
   onRemove: () => void;
 }) {
   return (
-    <div className="space-y-3 rounded-xl bg-background p-4 shadow-[var(--shadow-border)]">
+    <div className="space-y-3 rounded-xl bg-background p-3 shadow-[var(--shadow-border)] sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs tracking-wide text-muted-foreground uppercase">Line {index + 1}</p>
         {canRemove && (

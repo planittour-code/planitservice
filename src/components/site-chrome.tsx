@@ -41,16 +41,16 @@ export function PublicHeader({
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
       <div
         className={cn(
-          "mx-auto flex items-center justify-between gap-3 px-5",
-          compact ? "max-w-3xl py-4" : "max-w-6xl py-5",
+          "mx-auto flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5",
+          compact ? "max-w-3xl py-3" : "max-w-6xl py-3 sm:py-5",
         )}
       >
         <Wordmark to={home} />
-        <div className="flex items-center gap-2">
-          <Button asChild size="lg" variant={home === "/" ? "default" : "outline"} className="px-4 sm:px-6">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <Button asChild size="default" variant={home === "/" ? "default" : "outline"} className="min-h-11 px-3 sm:px-6">
             <Link to="/">Homeowner</Link>
           </Button>
-          <Button asChild size="lg" variant={home === "/shop" ? "default" : "outline"} className="px-4 sm:px-6">
+          <Button asChild size="default" variant={home === "/shop" ? "default" : "outline"} className="min-h-11 px-3 sm:px-6">
             <Link to="/shop">Contractor</Link>
           </Button>
           {children}
@@ -61,31 +61,25 @@ export function PublicHeader({
 }
 
 export function PageFooter({ shop = false }: { shop?: boolean }) {
-  const year = new Date().getFullYear();
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            {shop
-              ? "Know the house before you start talking."
-              : "Use the same software as your contractor."}
-          </span>
-          <nav className="flex flex-wrap gap-x-4 gap-y-1">
-            <Link to="/" hash="pricing" className="hover:text-foreground">
-              Homeowner pricing
-            </Link>
-            <Link to="/shop" className="hover:text-foreground">
-              For contractors
-            </Link>
-            <Link to="/login" className="hover:text-foreground">
-              Sign in
-            </Link>
-          </nav>
-        </div>
-        <p className="text-xs text-muted-foreground/80">
-          © {year} PlanitService. All rights reserved.
-        </p>
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          {shop
+            ? "Know the house before you start talking."
+            : "Use the same software as your contractor."}
+        </span>
+        <nav className="flex flex-wrap gap-x-4 gap-y-1">
+          <Link to="/" hash="pricing" className="hover:text-foreground">
+            Homeowner pricing
+          </Link>
+          <Link to="/shop" className="hover:text-foreground">
+            For contractors
+          </Link>
+          <Link to="/login" className="hover:text-foreground">
+            Sign in
+          </Link>
+        </nav>
       </div>
     </footer>
   );

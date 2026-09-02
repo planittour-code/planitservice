@@ -71,7 +71,7 @@ function PublicProposal() {
         estimateToken={bundle.proposal.share_token}
         company={bundle.company.name}
       />
-      <main className="hf-rise mx-auto max-w-3xl px-5 py-8 pb-24">
+      <main className="hf-rise mx-auto max-w-3xl px-4 py-6 pb-28 sm:px-5 sm:py-8 sm:pb-24">
         <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />
       </main>
     </div>

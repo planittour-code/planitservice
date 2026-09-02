@@ -137,7 +137,7 @@ export function ProposalDoc({
       <ProposalTotals items={items} showCost={mode === "contractor"} />
 
       {canAccept && (
-        <AcceptEstimate total={includedTotal} onAccept={() => void accept()} sticky={false} />
+        <AcceptEstimate total={includedTotal} onAccept={() => void accept()} sticky />
       )}
 
       {mode === "contractor" && !locked && (
@@ -225,14 +225,14 @@ function AcceptEstimate({
     <div
       className={cn(
         "flex flex-col gap-3 rounded-xl bg-primary px-5 py-4 text-primary-foreground shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between",
-        sticky && "sticky bottom-3 z-20",
+        sticky && "sticky bottom-0 z-20 -mx-5 rounded-none px-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-3 sm:mx-0 sm:rounded-xl sm:px-5 sm:pb-4",
       )}
     >
       <div>
         <p className="text-sm opacity-90">If this is right, accept it. The shop will schedule the work.</p>
         <p className="font-display text-2xl font-medium tabular-nums">{money(total)}</p>
       </div>
-      <Button variant="secondary" className="min-h-11" onClick={onAccept}>
+      <Button variant="secondary" className="min-h-12 w-full sm:w-auto" onClick={onAccept}>
         Accept this estimate
       </Button>
     </div>

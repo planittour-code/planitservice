@@ -26,7 +26,7 @@ export function HomeownerHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-5 py-3">
+      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-5">
         <Link
           to="/house/$token"
           params={{ token: houseToken }}
@@ -39,7 +39,7 @@ export function HomeownerHeader({
         </Link>
         <p className="hidden text-sm text-muted-foreground sm:block">{company}</p>
       </div>
-      <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-5 pb-2" aria-label="For the homeowner">
+      <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 pb-2 sm:px-5" aria-label="For the homeowner">
         {estimateToken ? (
           <NavItem to="/p/$token" params={{ token: estimateToken }} label="This estimate" />
         ) : null}

@@ -38,7 +38,7 @@ function AppLayout() {
         <PublicHeader>
           <AuthSlot />
         </PublicHeader>
-        <div className="mx-auto max-w-6xl px-5 py-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
           <Outlet />
         </div>
       </div>
@@ -60,8 +60,6 @@ function AppLayout() {
               <NavLink to="/app/market">Market</NavLink>
               <NavLink to="/app/properties">Houses</NavLink>
               <NavLink to="/app/leads">Leads</NavLink>
-              <NavLink to="/app/book">Price book</NavLink>
-              <NavLink to="/app/templates">Work types</NavLink>
               <NavLink to="/app/settings">Shop settings</NavLink>
             <Link
               to="/home"
@@ -81,13 +79,11 @@ function AppLayout() {
           </div>
         </div>
         {!onboardPath && (
-        <nav className="flex gap-1 overflow-x-auto border-t border-border px-3 py-2 sm:hidden">
+        <nav className="flex gap-1 overflow-x-auto border-t border-border px-2 py-1 sm:hidden">
           <NavLink to="/app">Shop</NavLink>
           <NavLink to="/app/market">Market</NavLink>
           <NavLink to="/app/properties">Houses</NavLink>
           <NavLink to="/app/leads">Leads</NavLink>
-          <NavLink to="/app/book">Book</NavLink>
-          <NavLink to="/app/templates">Work</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>
           <Link
             to="/home"
@@ -98,7 +94,7 @@ function AppLayout() {
         </nav>
         )}
       </header>
-      <div className="mx-auto max-w-6xl px-5 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
         <Outlet />
       </div>
     </div>
@@ -109,7 +105,7 @@ function NavLink({ to, children }: { to: string; children: ReactNode }) {
   return (
     <Link
       to={to}
-      className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
+      className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
       activeOptions={{ exact: to === "/app" }}
     >
       {children}
