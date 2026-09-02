@@ -31,7 +31,7 @@ function HomeownerSite() {
           <div className="absolute inset-0 bg-ink/55" />
           <div className="relative mx-auto max-w-3xl space-y-6 px-4 py-16 text-center sm:px-5 md:py-24">
             <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
-              You start it. You own it.
+              Use the same software as your contractor
             </p>
             <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-6xl">
               The house record that belongs to you.
