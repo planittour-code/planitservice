@@ -44,7 +44,7 @@ function HomeownerSite() {
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg">
-                <Link to="/home/add">Start a house record</Link>
+                <Link to="/start">Start a house record</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-0 bg-card text-foreground">
                 <Link to="/house/$token" params={{ token: "maple-14" }}>
@@ -103,11 +103,11 @@ function HomeownerSite() {
                   <li>Transfer the record at sale or at death</li>
                 </ul>
                 <Button asChild className="mt-8 w-full">
-                  <Link to="/home/add">Start Standard</Link>
+                  <Link to="/start" search={{ tier: "standard" }}>Start Standard</Link>
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
                   <Link
-                    to="/home/add"
+                    to="/start"
                     search={{ tier: "standard" }}
                     className="underline underline-offset-2"
                   >
@@ -139,7 +139,7 @@ function HomeownerSite() {
                 </Button>
                 <p className="mt-3 text-center text-xs opacity-80">
                   <Link
-                    to="/home/add"
+                    to="/start"
                     search={{ tier: "pro" }}
                     className="underline underline-offset-2"
                   >
