@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { StreetView } from "@/components/street-view";
@@ -182,7 +182,7 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
       void navigate({ to: "/app/new", search });
       return;
     }
-    void navigate({ to: "/login", search: { next: quoteNext(search) } });
+    void navigate({ to: "/open" });
   }
 
   return (
@@ -202,21 +202,33 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
       <div className="space-y-5 p-5">
         <div>
           <p className="text-xs tracking-wide text-muted-foreground uppercase">
-            {tease.found ? "A File exists — not the whole job" : "No File yet"}
+            {tease.found ? "A record is on file" : "No File yet"}
           </p>
           <p className="font-display text-xl font-medium">{tease.address}</p>
           {place ? <p className="text-sm text-muted-foreground">{place}</p> : null}
         </div>
 
-        <QuoteTypePicker
-          onPick={pickTrade}
-          title="What quote do you need to build?"
-          hint={
-            tease.found
-              ? "A painter may have opened this File. A roof still needs its own takeoff. Pick the trade to start the estimate."
-              : "Pick the trade. This quote opens the File for the next shop that looks it up."
-          }
-        />
+        {tease.found && !user ? (
+          <div className="space-y-3">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              This property already has a House File. Specs from prior work stay with the address.
+              Open a shop to load the record and quote from it.
+            </p>
+            <Button asChild className="min-h-12 w-full">
+              <Link to="/open">See the File — open a shop</Link>
+            </Button>
+          </div>
+        ) : (
+          <QuoteTypePicker
+            onPick={pickTrade}
+            title="What quote do you need to build?"
+            hint={
+              tease.found
+                ? "A painter may have opened this File. A roof still needs its own takeoff. Pick the trade to start the estimate."
+                : "Pick the trade. This quote opens the File for the next shop that looks it up."
+            }
+          />
+        )}
 
         <dl className="grid grid-cols-2 gap-3 text-sm">
           {facts.map((f) => (
