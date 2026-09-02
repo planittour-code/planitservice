@@ -3,6 +3,7 @@ import { authMiddleware, optionalAuthMiddleware } from "@/lib/auth/middleware";
 import { getSql, type Sql } from "@/lib/db";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, STARTER_BOOK, type PriceBookItem } from "./book";
 import { FIELD_CATALOG } from "./fields";
+import { coverLetter } from "./cover-letter";
 import { num, slugToken } from "./format";
 import { parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
@@ -695,7 +696,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
         id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, created_by
       ) values (
         ${proposalId}, ${company.id}, ${property.id}, ${template.id}, ${slugToken()},
-        ${title}, ${pending ? "pending" : "sent"}, ${company.agreement?.trim() || template.cover_note},
+        ${title}, ${pending ? "pending" : "sent"}, ${coverLetter(property.homeowner_name, work?.name ?? template.trade)},
         ${pending ? null : new Date().toISOString()}, ${context.userId}
       )
     `;
@@ -1454,33 +1455,8 @@ export const draftCoverNote = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { templateName: string; address: string; homeownerName: string }) => input)
   .handler(async ({ data }) => {
-    const apiKey = process.env.XAI_API_KEY;
-    if (!apiKey) return { ok: false as const, error: "AI is not available" };
-    const res = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "grok-4.5",
-        max_tokens: 220,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Write a short, calm contractor cover note for a homeowner. No hype, no emoji, no exclamation marks. 80-120 words. Name the work and invite them to revise colors, photos, and house facts.",
-          },
-          {
-            role: "user",
-            content: `Template: ${data.templateName}\nAddress: ${data.address}\nHomeowner: ${data.homeownerName}`,
-          },
-        ],
-      }),
-    });
-    if (!res.ok) return { ok: false as const, error: `xAI API error ${res.status}` };
-    const body = (await res.json()) as { choices: { message: { content: string } }[] };
-    return { ok: true as const, text: body.choices[0]?.message.content ?? "" };
+    const trade = data.templateName.replace(/—/g, " ").split(" ")[0] || "work";
+    return { ok: true as const, text: coverLetter(data.homeownerName, trade.toLowerCase()) };
   });
 
 async function cloneProperty(sql: Sql, source: Property, companyId: string): Promise<Property> {

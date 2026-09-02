@@ -103,7 +103,7 @@ export function ProposalDoc({
         </div>
 
         {proposal.cover_note ? (
-          <p className="max-w-2xl text-base leading-relaxed">{proposal.cover_note}</p>
+          <p className="max-w-2xl whitespace-pre-wrap text-base leading-relaxed">{proposal.cover_note}</p>
         ) : null}
 
         {mode === "contractor" && (
