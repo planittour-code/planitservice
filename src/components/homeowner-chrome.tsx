@@ -27,11 +27,7 @@ export function HomeownerHeader({
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-5">
-        <Link
-          to="/house/$token"
-          params={{ token: houseToken }}
-          className="flex items-center gap-2.5 text-primary"
-        >
+        <Link to="/" className="flex items-center gap-2.5 text-primary">
           <Mark />
           <span className="font-display text-lg font-medium tracking-tight text-foreground">
             PlanitService

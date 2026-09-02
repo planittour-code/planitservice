@@ -37,10 +37,10 @@ function HomeownerSite() {
               The service history of the house you live in.
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-              When a Contractor provides you a quote, PlanitService can add the details to a record
-              for your home. You can keep the jobs, products, warranties, and the maintenance
-              details across every property you own. This record can be shared with potential
-              Buyers, other Contractors, or even a Property Manager.
+              When a Contractor provides a quote through PlanitService, you can add the details to a
+              record for your home. This record can keep the jobs, products, warranties, and the
+              maintenance details for your property — all in one place. You can share it with
+              potential Buyers, Contractors, or even a Property Manager.
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg">

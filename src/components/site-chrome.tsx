@@ -45,7 +45,7 @@ export function PublicHeader({
           compact ? "max-w-3xl py-3" : "max-w-6xl py-3 sm:py-5",
         )}
       >
-        <Wordmark to={home} />
+        <Wordmark to="/" />
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <Button asChild size="default" variant={home === "/" ? "default" : "outline"} className="min-h-11 px-3 sm:px-6">
             <Link to="/">Homeowner</Link>
