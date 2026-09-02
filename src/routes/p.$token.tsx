@@ -5,7 +5,7 @@ import { Wordmark } from "@/components/logo";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { SampleLock } from "@/components/sample-lock";
 import { Skeleton } from "@/components/ui/skeleton";
-import { isSampleHouseToken } from "@/lib/housefile/sample";
+import { isSampleHouseToken, isSampleShopQuote } from "@/lib/housefile/sample";
 import { getProposalByToken } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/p/$token")({
@@ -76,7 +76,7 @@ function PublicProposal() {
       />
       <main className="hf-rise mx-auto max-w-3xl px-4 py-6 pb-28 sm:px-5 sm:py-8 sm:pb-24">
         {sample ? (
-          <SampleLock>
+          <SampleLock to={isSampleShopQuote(token) ? "/open" : "/start"}>
             <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />
           </SampleLock>
         ) : (

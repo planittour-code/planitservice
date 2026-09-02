@@ -1,8 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-/** Sample File is read-only. Any attempt to edit sends the visitor to signup. */
-export function SampleLock({ children }: { children: ReactNode }) {
+/** Sample File is read-only. Edits send the visitor to the matching signup. */
+export function SampleLock({
+  children,
+  to = "/start",
+}: {
+  children: ReactNode;
+  to?: "/start" | "/open";
+}) {
   const navigate = useNavigate();
   return (
     <div
@@ -16,7 +22,7 @@ export function SampleLock({ children }: { children: ReactNode }) {
         if (control.closest("nav") || control.closest("a[href^='#']") || control.closest("[data-preview-ok]")) return;
         e.preventDefault();
         e.stopPropagation();
-        void navigate({ to: "/start" });
+        void navigate({ to });
       }}
     >
       {children}
