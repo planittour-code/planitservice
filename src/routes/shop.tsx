@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { PaidLanding } from "@/components/paid-landing";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
@@ -14,7 +14,13 @@ import {
 } from "@/lib/housefile/pricing";
 import type { AddressTease } from "@/lib/housefile/types";
 
-export const Route = createFileRoute("/shop")({ component: HomePage });
+export const Route = createFileRoute("/shop")({ component: ShopFrame });
+
+function ShopFrame() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/shop") return <Outlet />;
+  return <HomePage />;
+}
 
 function HomePage() {
   const [tease, setTease] = useState<AddressTease | null>(null);

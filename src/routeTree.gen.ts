@@ -10,12 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as HomeownersRouteImport } from './routes/homeowners'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyRouteImport } from './routes/my'
+import { Route as OpenRouteImport } from './routes/open'
 import { Route as ShopRouteImport } from './routes/shop'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
 import { Route as AppLeadsRouteImport } from './routes/app/leads'
@@ -33,6 +36,7 @@ import { Route as HouseTokenRouteImport } from './routes/house.$token'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as RfpTokenRouteImport } from './routes/rfp.$token'
+import { Route as ShopOpenRouteImport } from './routes/shop.open'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AppPropertiesIdRouteImport } from './routes/app/properties.$id'
 import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
@@ -40,6 +44,11 @@ import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRouteRoute = AppRouteRouteImport.update({
@@ -67,9 +76,19 @@ const MyRoute = MyRouteImport.update({
   path: '/my',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpenRoute = OpenRouteImport.update({
+  id: '/open',
+  path: '/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -157,6 +176,11 @@ const RfpTokenRoute = RfpTokenRouteImport.update({
   path: '/rfp/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShopOpenRoute = ShopOpenRouteImport.update({
+  id: '/open',
+  path: '/open',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -177,10 +201,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
+  '/account': typeof AccountRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
   '/my': typeof MyRoute
-  '/shop': typeof ShopRoute
+  '/open': typeof OpenRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/start': typeof StartRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
@@ -196,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/rfp/$token': typeof RfpTokenRoute
+  '/shop/open': typeof ShopOpenRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -204,10 +232,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
   '/my': typeof MyRoute
-  '/shop': typeof ShopRoute
+  '/open': typeof OpenRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/start': typeof StartRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
@@ -223,6 +254,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/rfp/$token': typeof RfpTokenRoute
+  '/shop/open': typeof ShopOpenRoute
   '/app': typeof AppIndexRoute
   '/home': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -234,10 +266,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
+  '/account': typeof AccountRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
   '/my': typeof MyRoute
-  '/shop': typeof ShopRoute
+  '/open': typeof OpenRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/start': typeof StartRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
@@ -253,6 +288,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/rfp/$token': typeof RfpTokenRoute
+  '/shop/open': typeof ShopOpenRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -265,10 +301,13 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/home'
+    | '/account'
     | '/homeowners'
     | '/login'
     | '/my'
+    | '/open'
     | '/shop'
+    | '/start'
     | '/app/book'
     | '/app/leads'
     | '/app/market'
@@ -284,6 +323,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/p/$token'
     | '/rfp/$token'
+    | '/shop/open'
     | '/app/'
     | '/home/'
     | '/api/auth/$'
@@ -292,10 +332,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/homeowners'
     | '/login'
     | '/my'
+    | '/open'
     | '/shop'
+    | '/start'
     | '/app/book'
     | '/app/leads'
     | '/app/market'
@@ -311,6 +354,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/p/$token'
     | '/rfp/$token'
+    | '/shop/open'
     | '/app'
     | '/home'
     | '/api/auth/$'
@@ -321,10 +365,13 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/home'
+    | '/account'
     | '/homeowners'
     | '/login'
     | '/my'
+    | '/open'
     | '/shop'
+    | '/start'
     | '/app/book'
     | '/app/leads'
     | '/app/market'
@@ -340,6 +387,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/p/$token'
     | '/rfp/$token'
+    | '/shop/open'
     | '/app/'
     | '/home/'
     | '/api/auth/$'
@@ -351,10 +399,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
+  AccountRoute: typeof AccountRoute
   HomeownersRoute: typeof HomeownersRoute
   LoginRoute: typeof LoginRoute
   MyRoute: typeof MyRoute
-  ShopRoute: typeof ShopRoute
+  OpenRoute: typeof OpenRoute
+  ShopRoute: typeof ShopRouteWithChildren
+  StartRoute: typeof StartRoute
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -370,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -407,11 +465,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/open': {
+      id: '/open'
+      path: '/open'
+      fullPath: '/open'
+      preLoaderRoute: typeof OpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shop': {
       id: '/shop'
       path: '/shop'
       fullPath: '/shop'
       preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -533,6 +605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RfpTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shop/open': {
+      id: '/shop/open'
+      path: '/open'
+      fullPath: '/shop/open'
+      preLoaderRoute: typeof ShopOpenRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -615,14 +694,27 @@ const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
   HomeRouteRouteChildren,
 )
 
+interface ShopRouteChildren {
+  ShopOpenRoute: typeof ShopOpenRoute
+}
+
+const ShopRouteChildren: ShopRouteChildren = {
+  ShopOpenRoute: ShopOpenRoute,
+}
+
+const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
+  AccountRoute: AccountRoute,
   HomeownersRoute: HomeownersRoute,
   LoginRoute: LoginRoute,
   MyRoute: MyRoute,
-  ShopRoute: ShopRoute,
+  OpenRoute: OpenRoute,
+  ShopRoute: ShopRouteWithChildren,
+  StartRoute: StartRoute,
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
