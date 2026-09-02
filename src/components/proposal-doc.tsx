@@ -161,23 +161,22 @@ export function ProposalDoc({
         </>
       )}
 
-      <section className="space-y-4">
-        <h2 className="font-display text-xl font-medium">Notes on this estimate</h2>
-        {messages.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {mode === "homeowner"
-              ? "No notes yet. Ask about a color, a room, or a product."
-              : "No homeowner notes yet."}
-          </p>
-        )}
+      <section className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-sm tracking-wide text-muted-foreground uppercase">Current Estimate</p>
+            <h2 className="font-display text-2xl font-medium tracking-tight">{statusHeadline(proposal.status)}</h2>
+          </div>
+          <p className="font-display text-3xl font-medium tabular-nums">{money(includedTotal)}</p>
+        </div>
         <ol className="space-y-3">
-          {messages.map((m) => (
-            <li key={m.id} className="rounded-lg bg-card px-4 py-3 shadow-[var(--shadow-border)]">
+          {estimateHistory(bundle).map((event) => (
+            <li key={event.id} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-sm font-medium">{m.author_name}</p>
-                <time className="text-xs text-muted-foreground">{shortDate(m.created_at)}</time>
+                <p className="text-sm font-medium">{event.title}</p>
+                <time className="text-xs text-muted-foreground">{shortDate(event.when)}</time>
               </div>
-              <p className="mt-1 text-sm leading-relaxed">{m.body}</p>
+              {event.body ? <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{event.body}</p> : null}
             </li>
           ))}
         </ol>
@@ -249,6 +248,51 @@ function AcceptEstimate({
       </Button>
     </div>
   );
+}
+
+function statusHeadline(status: ProposalBundle["proposal"]["status"]) {
+  switch (status) {
+    case "accepted":
+      return "Accepted";
+    case "completed":
+      return "Work complete";
+    case "pending":
+      return "Waiting on shop approval";
+    case "revised":
+      return "Revised — waiting on acceptance";
+    case "sent":
+      return "Sent — waiting on acceptance";
+    default:
+      return "Draft in the shop";
+  }
+}
+
+function estimateHistory(bundle: ProposalBundle) {
+  const { proposal, messages } = bundle;
+  const events: { id: string; when: string; title: string; body?: string }[] = [
+    { id: "opened", when: proposal.created_at, title: "Estimate opened" },
+  ];
+  if (proposal.sent_at) {
+    events.push({ id: "sent", when: proposal.sent_at, title: "Sent to the homeowner" });
+  }
+  for (const m of messages) {
+    events.push({
+      id: m.id,
+      when: m.created_at,
+      title:
+        m.author_role === "homeowner"
+          ? `${m.author_name} asked for a change`
+          : `${m.author_name} updated the estimate`,
+      body: m.body,
+    });
+  }
+  if (proposal.accepted_at) {
+    events.push({ id: "accepted", when: proposal.accepted_at, title: "Estimate accepted" });
+  }
+  if (proposal.status === "completed") {
+    events.push({ id: "done", when: proposal.accepted_at ?? proposal.created_at, title: "Marked complete" });
+  }
+  return events.sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
 }
 
 function estimateHeroSrc(bundle: ProposalBundle) {
@@ -690,19 +734,21 @@ function MessageForm({
         }
       }}
     >
-      <Label htmlFor="msg">{mode === "homeowner" ? "Request a change" : "Reply"}</Label>
+      <Label htmlFor="msg">{mode === "homeowner" ? "Ask for a change" : "Add a revision note"}</Label>
       <Textarea
         id="msg"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder={
           mode === "homeowner"
-            ? "Ask about a color, a room, or a product."
-            : "Answer the homeowner. Keep it specific."
+            ? "What should change before you accept."
+            : "What you changed, and why."
         }
         rows={3}
       />
-      <Button type="submit">Send</Button>
+      <Button type="submit" className="min-h-11">
+        {mode === "homeowner" ? "Send to the shop" : "Add to the history"}
+      </Button>
     </form>
   );
 }
