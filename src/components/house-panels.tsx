@@ -152,17 +152,20 @@ export function PhotoGrid({
       const src = await compressImage(fileObj);
       if (mode === "homeowner") {
         if (!token) throw new Error("Missing house token");
-        await addPhotoPublic({ data: { token, src, caption: nextCaption, category: nextCategory } });
+        const added = await addPhotoPublic({
+          data: { token, src, caption: nextCaption, category: nextCategory },
+        });
+        setCaption("");
+        toast.success("Photo added to the property record");
+        onChanged();
+        if (readAfterAdd) await readPhoto(added.id);
       } else {
         await addPhotoContractor({
           data: { propertyId: file.property.id, src, caption: nextCaption, category: nextCategory },
         });
-      }
-      setCaption("");
-      toast.success("Photo added to the property record");
-      onChanged();
-      if (mode === "homeowner" && readAfterAdd && token) {
-        await readPhoto(undefined, src);
+        setCaption("");
+        toast.success("Photo added to the property record");
+        onChanged();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not add photo");

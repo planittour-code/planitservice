@@ -1548,6 +1548,7 @@ export const reviewPhotoFacts = createServerFn({ method: "POST" })
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      signal: AbortSignal.timeout(18_000),
       body: JSON.stringify({
         model: process.env.XAI_VISION_MODEL || "grok-4.6",
         temperature: 0,

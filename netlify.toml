@@ -5,6 +5,9 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  timeout = 26
+
 # Nitro writes the server to .netlify/functions-internal on this preset.
 # DATABASE_URL and BETTER_AUTH_* must be set in the Netlify UI.
 
