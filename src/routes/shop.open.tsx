@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PageFooter, PublicHeader } from "@/components/site-chrome";
+import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
@@ -11,12 +11,8 @@ export const Route = createFileRoute("/shop/open")({
 function OpenShop() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <PublicHeader home="/shop">
-        <Button asChild variant="ghost" className="hidden sm:inline-flex">
-          <Link to="/p/$token" params={{ token: "maple-paint-draft" }}>
-            Sample quote
-          </Link>
-        </Button>
+      <PublicHeader path="contractor">
+        <AuthSlot />
       </PublicHeader>
 
       <main>

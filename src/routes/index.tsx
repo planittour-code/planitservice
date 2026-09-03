@@ -14,7 +14,7 @@ function WelcomeSite() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PaidLanding />
-      <PublicHeader>
+      <PublicHeader path="choose">
         <AuthSlot signedInTo="/home" />
       </PublicHeader>
 

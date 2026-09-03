@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
-import { PageFooter, PublicHeader } from "@/components/site-chrome";
+import { PageFooter, PublicHeader, AuthSlot } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,12 +66,8 @@ function StartHouseRecord() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <PublicHeader>
-        <Button asChild variant="ghost" className="hidden sm:inline-flex">
-          <Link to="/house/$token" params={{ token: "maple-14" }}>
-            Sample Property Record
-          </Link>
-        </Button>
+      <PublicHeader path="homeowner">
+        <AuthSlot signedInTo="/home" />
       </PublicHeader>
 
       <main>

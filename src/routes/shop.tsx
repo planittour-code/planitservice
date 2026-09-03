@@ -27,10 +27,7 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PaidLanding prefer="contractor" />
-      <PublicHeader home="/shop">
-        <Button asChild variant="ghost" className="hidden sm:inline-flex">
-          <a href="#pricing">Pricing</a>
-        </Button>
+      <PublicHeader path="contractor">
         <AuthSlot />
       </PublicHeader>
 

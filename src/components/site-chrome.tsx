@@ -50,11 +50,14 @@ export function PublicHeader({
   children,
   compact = false,
   home = "/",
+  path,
 }: {
   children?: ReactNode;
   compact?: boolean;
   home?: "/" | "/shop";
+  path?: "choose" | "homeowner" | "contractor";
 }) {
+  const lane = path ?? (home === "/shop" ? "contractor" : "choose");
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
       <div
@@ -64,17 +67,74 @@ export function PublicHeader({
         )}
       >
         <Wordmark to="/" />
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <Button asChild size="default" variant="outline" className="min-h-11 px-3 sm:px-6">
-            <Link to="/start">Homeowner</Link>
-          </Button>
-          <Button asChild size="default" variant={home === "/shop" ? "default" : "outline"} className="min-h-11 px-3 sm:px-6">
-            <Link to="/shop">Contractor</Link>
-          </Button>
+        <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2">
+          {lane === "choose" && (
+            <>
+              <Button asChild variant="outline" className="min-h-11">
+                <Link to="/start">Homeowner</Link>
+              </Button>
+              <Button asChild variant="outline" className="min-h-11">
+                <Link to="/shop">Contractor</Link>
+              </Button>
+            </>
+          )}
+          {lane === "homeowner" && (
+            <>
+              <HeaderLink to="/start">Start a record</HeaderLink>
+              <HeaderLink to="/house/$token" params={{ token: "maple-14" }}>
+                Sample record
+              </HeaderLink>
+              <HeaderLink to="/start" hash="pricing" hideOnMobile>
+                Pricing
+              </HeaderLink>
+              <HeaderLink to="/shop">For contractors</HeaderLink>
+            </>
+          )}
+          {lane === "contractor" && (
+            <>
+              <HeaderLink to="/shop">Look up a house</HeaderLink>
+              <HeaderLink to="/shop/open">Open a shop</HeaderLink>
+              <HeaderLink to="/p/$token" params={{ token: "maple-paint-draft" }} hideOnMobile>
+                Sample quote
+              </HeaderLink>
+              <HeaderLink to="/shop" hash="pricing" hideOnMobile>
+                Pricing
+              </HeaderLink>
+              <HeaderLink to="/start">For homeowners</HeaderLink>
+            </>
+          )}
           {children}
-        </div>
+        </nav>
       </div>
     </header>
+  );
+}
+
+function HeaderLink({
+  to,
+  params,
+  hash,
+  hideOnMobile,
+  children,
+}: {
+  to: string;
+  params?: Record<string, string>;
+  hash?: string;
+  hideOnMobile?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      to={to as never}
+      params={params as never}
+      hash={hash}
+      className={cn(
+        "rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",
+        hideOnMobile && "hidden sm:inline-flex",
+      )}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -88,12 +148,28 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
             : "You start the record. You keep it."}
         </span>
         <nav className="flex flex-wrap gap-x-4 gap-y-1">
-          <Link to="/" hash="pricing" className="hover:text-foreground">
-            Homeowner pricing
-          </Link>
-          <Link to="/shop" className="hover:text-foreground">
-            For contractors
-          </Link>
+          {shop ? (
+            <>
+              <Link to="/shop" className="hover:text-foreground">
+                Look up a house
+              </Link>
+              <Link to="/shop/open" className="hover:text-foreground">
+                Open a shop
+              </Link>
+              <Link to="/start" className="hover:text-foreground">
+                For homeowners
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/start" className="hover:text-foreground">
+                Start a record
+              </Link>
+              <Link to="/shop" className="hover:text-foreground">
+                For contractors
+              </Link>
+            </>
+          )}
           <Link to="/login" className="hover:text-foreground">
             Sign in
           </Link>
