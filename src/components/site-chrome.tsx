@@ -65,8 +65,8 @@ export function PublicHeader({
       >
         <Wordmark to="/" />
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <Button asChild size="default" variant={home === "/" ? "default" : "outline"} className="min-h-11 px-3 sm:px-6">
-            <Link to="/">Homeowner</Link>
+          <Button asChild size="default" variant="outline" className="min-h-11 px-3 sm:px-6">
+            <Link to="/start">Homeowner</Link>
           </Button>
           <Button asChild size="default" variant={home === "/shop" ? "default" : "outline"} className="min-h-11 px-3 sm:px-6">
             <Link to="/shop">Contractor</Link>
