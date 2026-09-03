@@ -16,7 +16,6 @@ import {
   addPhotoPublic,
   deletePhotoContractor,
   deletePhotoPublic,
-  reviewPhotoFacts,
   upsertFactContractor,
   upsertFactPublic,
 } from "@/lib/housefile/server";
@@ -115,57 +114,8 @@ export function PhotoGrid({
   const [caption, setCaption] = useState("");
   const [category, setCategory] = useState("exterior");
   const [busy, setBusy] = useState(false);
-  const [reading, setReading] = useState<string | null>(null);
   const [pending, setPending] = useState<{ file: File; preview: string } | null>(null);
-  const [readAfterAdd, setReadAfterAdd] = useState(true);
-  const [draft, setDraft] = useState<
-    { key: string; label: string; value: string; current: string | null; keep: boolean }[]
-  >([]);
-  const [savingDraft, setSavingDraft] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  async function readPhoto(photoId?: string, src?: string) {
-    if (!token) {
-      toast.error("Sign in as the homeowner to read photos.");
-      return;
-    }
-    setReading(photoId ?? "new");
-    try {
-      const res = await reviewPhotoFacts({ data: { token, photoId, src } });
-      if (!res.facts.length) {
-        toast.message("Nothing new was visible in that photo.");
-        setDraft([]);
-        return;
-      }
-      setDraft(res.facts.map((f) => ({ ...f, keep: true })));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not read the photo");
-    } finally {
-      setReading(null);
-    }
-  }
-
-  async function saveDraft() {
-    if (!token) return;
-    const picked = draft.filter((f) => f.keep && f.value.trim());
-    if (!picked.length) {
-      setDraft([]);
-      return;
-    }
-    setSavingDraft(true);
-    try {
-      for (const fact of picked) {
-        await upsertFactPublic({ data: { token, fieldKey: fact.key, value: fact.value.trim() } });
-      }
-      toast.success(`Saved ${picked.length} house ${picked.length === 1 ? "detail" : "details"}`);
-      setDraft([]);
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save details");
-    } finally {
-      setSavingDraft(false);
-    }
-  }
 
   async function commit(fileObj: File, nextCaption: string, nextCategory: string) {
     setBusy(true);
@@ -173,21 +123,17 @@ export function PhotoGrid({
       const src = await compressImage(fileObj);
       if (mode === "homeowner") {
         if (!token) throw new Error("Missing house token");
-        const added = await addPhotoPublic({
+        await addPhotoPublic({
           data: { token, src, caption: nextCaption, category: nextCategory },
         });
-        setCaption("");
-        toast.success("Photo added to the property record");
-        onChanged();
-        if (readAfterAdd) await readPhoto(added.id);
       } else {
         await addPhotoContractor({
           data: { propertyId: file.property.id, src, caption: nextCaption, category: nextCategory },
         });
-        setCaption("");
-        toast.success("Photo added to the property record");
-        onChanged();
       }
+      setCaption("");
+      toast.success("Photo added to the property record");
+      onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not add photo");
     } finally {
@@ -212,8 +158,7 @@ export function PhotoGrid({
         <div>
           <h2 className="font-display text-xl font-medium">Photos</h2>
           <p className="text-sm text-muted-foreground">
-            Start here. Add the elevations, rooms, and equipment tags. We can read the photo — you
-            check each detail before it lands on the Property Record.
+            Start here. Add elevations, rooms, and equipment tags. These stay with the address.
           </p>
         </div>
       </div>
@@ -227,36 +172,24 @@ export function PhotoGrid({
                 <Badge variant="muted">{p.category}</Badge>
               </div>
               {mode === "homeowner" && token ? (
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-8 flex-1 text-xs"
-                    disabled={reading === p.id}
-                    onClick={() => void readPhoto(p.id)}
-                  >
-                    {reading === p.id ? "Reading…" : "Read house data"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 text-xs text-destructive"
-                    onClick={async () => {
-                      if (!window.confirm("Remove this photo from the record?")) return;
-                      try {
-                        await deletePhotoPublic({ data: { token, photoId: p.id } });
-                        toast.success("Photo removed");
-                        onChanged();
-                      } catch (err) {
-                        toast.error(err instanceof Error ? err.message : "Could not remove");
-                      }
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-full text-xs text-destructive"
+                  onClick={async () => {
+                    if (!window.confirm("Remove this photo from the record?")) return;
+                    try {
+                      await deletePhotoPublic({ data: { token, photoId: p.id } });
+                      toast.success("Photo removed");
+                      onChanged();
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Could not remove");
+                    }
+                  }}
+                >
+                  Remove
+                </Button>
               ) : mode === "contractor" ? (
                 <Button
                   type="button"
@@ -300,16 +233,6 @@ export function PhotoGrid({
           <img src={pending.preview} alt="" className="aspect-[4/3] w-full rounded-md object-cover" />
           <div className="space-y-3">
             <p className="text-sm font-medium">Caption this photo, then add it to the house.</p>
-            {mode === "homeowner" ? (
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={readAfterAdd}
-                  onChange={(e) => setReadAfterAdd(e.target.checked)}
-                />
-                Read house data from this photo
-              </label>
-            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="cap">Caption</Label>
@@ -356,59 +279,6 @@ export function PhotoGrid({
                 Cancel
               </Button>
             </div>
-          </div>
-        </div>
-      )}
-      {draft.length > 0 && (
-        <div className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
-          <div>
-            <h3 className="font-display text-lg font-medium">Check what the photo shows</h3>
-            <p className="text-sm text-muted-foreground">
-              Nothing is written yet. Uncheck a line to skip it. Edit the value if the read is close
-              but not right.
-            </p>
-          </div>
-          <ul className="space-y-3">
-            {draft.map((fact) => (
-              <li key={fact.key} className="grid gap-2 sm:grid-cols-[auto_8rem_1fr] sm:items-center">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={fact.keep}
-                    onChange={(e) =>
-                      setDraft((rows) =>
-                        rows.map((row) =>
-                          row.key === fact.key ? { ...row, keep: e.target.checked } : row,
-                        ),
-                      )
-                    }
-                  />
-                  <span className="font-medium">{fact.label}</span>
-                </label>
-                <Input
-                  value={fact.value}
-                  disabled={!fact.keep}
-                  onChange={(e) =>
-                    setDraft((rows) =>
-                      rows.map((row) =>
-                        row.key === fact.key ? { ...row, value: e.target.value } : row,
-                      ),
-                    )
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  {fact.current ? `On the record now: ${fact.current}` : "Not on the record yet"}
-                </p>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" disabled={savingDraft} onClick={() => void saveDraft()}>
-              {savingDraft ? "Saving…" : "Save checked details"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setDraft([])}>
-              Discard
-            </Button>
           </div>
         </div>
       )}

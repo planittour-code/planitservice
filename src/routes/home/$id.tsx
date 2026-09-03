@@ -66,8 +66,7 @@ function HomeRecord() {
           {p.city}, {p.state} {p.zip}
         </p>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Add photos first. We can read the picture and write roof, siding, paint, and equipment onto
-          the record you see below.
+          Add photos first. Then fill house data and the jobs at this address.
         </p>
       </header>
 
