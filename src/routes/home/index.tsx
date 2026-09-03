@@ -1,25 +1,17 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { toast } from "sonner";
 import { HouseCard } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getHousehold } from "@/lib/housefile/server";
 import { PROPERTY_ANNUAL, PROPERTY_MONTHLY, dollars } from "@/lib/housefile/pricing";
-import { startBillingPortal } from "@/lib/housefile/stripe-billing";
+import { BILLING_PORTAL } from "@/lib/housefile/stripe";
 
 export const Route = createFileRoute("/home/")({ component: HomeDashboard });
 
 function HomeDashboard() {
   const q = useQuery({ queryKey: ["household"], queryFn: () => getHousehold() });
-  const portal = useMutation({
-    mutationFn: () => startBillingPortal({ data: { returnPath: "/home" } }),
-    onSuccess: ({ url }) => {
-      window.location.href = url;
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not open billing"),
-  });
 
   if (q.isLoading) return <Skeleton className="h-48 w-full" />;
 
@@ -92,13 +84,8 @@ function HomeDashboard() {
           property. Change the card or cancel here. Access lasts through the period you already paid.
         </p>
         <div className="mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={portal.isPending}
-            onClick={() => portal.mutate()}
-          >
-            {portal.isPending ? "Opening…" : "Manage subscription"}
+          <Button asChild variant="outline">
+            <a href={BILLING_PORTAL}>Manage subscription</a>
           </Button>
         </div>
       </section>
