@@ -16,9 +16,12 @@ export const Route = createFileRoute("/app/onboard")({ component: Onboard });
 
 const STEPS = [
   { n: 1, label: "Services" },
-  { n: 2, label: "Price book" },
-  { n: 3, label: "Branding" },
+  { n: 2, label: "Stand out" },
+  { n: 3, label: "Price book" },
+  { n: 4, label: "Branding" },
 ];
+
+const ASSOCIATIONS = ["BBB", "NARI", "NRCA", "PDCA", "Local chamber", "Licensed GC"];
 
 const DEFAULT_AGREEMENT =
   "This estimate is for the work listed at this address. Colors, products, and measurements stay on the Property Record so the next job is easier.";
@@ -38,6 +41,17 @@ function Onboard() {
   const [logo, setLogo] = useState<string | null>(null);
   const [agreement, setAgreement] = useState(DEFAULT_AGREEMENT);
   const [terms, setTerms] = useState(DEFAULT_TERMS);
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("GA");
+  const [zip, setZip] = useState("");
+  const [years, setYears] = useState("");
+  const [assoc, setAssoc] = useState<string[]>([]);
+  const [assocOther, setAssocOther] = useState("");
+  const [reviewGoogle, setReviewGoogle] = useState("");
+  const [reviewTrustpilot, setReviewTrustpilot] = useState("");
+  const [reviewNextdoor, setReviewNextdoor] = useState("");
+  const [reviewOther, setReviewOther] = useState("");
 
   const save = useMutation({
     mutationFn: () =>
@@ -49,6 +63,16 @@ function Onboard() {
           logo: logo ?? undefined,
           agreement,
           terms,
+          street,
+          city,
+          state,
+          zip,
+          yearsInBusiness: years,
+          associations: [...assoc, assocOther].filter(Boolean).join(", "),
+          reviewGoogle,
+          reviewTrustpilot,
+          reviewNextdoor,
+          reviewOther,
         },
       }),
     onSuccess: async () => {
@@ -73,7 +97,7 @@ function Onboard() {
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Shop setup</p>
         <h1 className="font-display text-3xl font-medium tracking-tight">Open the shop.</h1>
         <p className="text-muted-foreground">
-          Services, a price book, then your name on the estimate. Takes a few minutes.
+          Services, how you stand out, a price book, then your name on the estimate.
         </p>
         <WizardSteps step={step} items={STEPS} />
       </div>
@@ -113,12 +137,137 @@ function Onboard() {
             })}
           </ul>
           <Button type="button" disabled={trades.length === 0} onClick={() => setStep(2)}>
-            Next — price book
+            Next — stand out
           </Button>
         </div>
       )}
 
+      )}
+
       {step === 2 && (
+        <div className="space-y-5">
+          <p className="text-muted-foreground">
+            Homeowners pick a shop they can place. Address, years, associations, and reviews you
+            already earned elsewhere.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="st">Shop address</Label>
+            <Input id="st" value={street} onChange={(e) => setStreet(e.target.value)} placeholder="1840 Roswell Road" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5 sm:col-span-1">
+              <Label htmlFor="ct">City</Label>
+              <Input id="ct" value={city} onChange={(e) => setCity(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="stt">State</Label>
+              <Input id="stt" value={state} onChange={(e) => setState(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="zp">ZIP</Label>
+              <Input id="zp" value={zip} onChange={(e) => setZip(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="yr">Years in business</Label>
+            <Input
+              id="yr"
+              inputMode="numeric"
+              value={years}
+              onChange={(e) => setYears(e.target.value.replace(/[^\d]/g, ""))}
+              placeholder="12"
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Trade associations</p>
+            <ul className="flex flex-wrap gap-2">
+              {ASSOCIATIONS.map((name) => {
+                const on = assoc.includes(name);
+                return (
+                  <li key={name}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAssoc((cur) =>
+                          cur.includes(name) ? cur.filter((x) => x !== name) : [...cur, name],
+                        )
+                      }
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-sm shadow-[var(--shadow-border)]",
+                        on ? "bg-primary text-primary-foreground" : "bg-card",
+                      )}
+                    >
+                      {name}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <Input
+              value={assocOther}
+              onChange={(e) => setAssocOther(e.target.value)}
+              placeholder="Other memberships"
+            />
+          </div>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Reviews you already have</p>
+            <p className="text-sm text-muted-foreground">
+              Paste the public page. We do not import ratings. We show the link so a homeowner can
+              read them where they were written.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="g">Google</Label>
+              <Input
+                id="g"
+                type="url"
+                value={reviewGoogle}
+                onChange={(e) => setReviewGoogle(e.target.value)}
+                placeholder="https://maps.app.goo.gl/…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tp">Trustpilot</Label>
+              <Input
+                id="tp"
+                type="url"
+                value={reviewTrustpilot}
+                onChange={(e) => setReviewTrustpilot(e.target.value)}
+                placeholder="https://www.trustpilot.com/review/…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="nd">Nextdoor</Label>
+              <Input
+                id="nd"
+                type="url"
+                value={reviewNextdoor}
+                onChange={(e) => setReviewNextdoor(e.target.value)}
+                placeholder="https://nextdoor.com/pages/…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ot">Houzz, Angi, or other</Label>
+              <Input
+                id="ot"
+                type="url"
+                value={reviewOther}
+                onChange={(e) => setReviewOther(e.target.value)}
+                placeholder="https://"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+              Back
+            </Button>
+            <Button type="button" onClick={() => setStep(3)}>
+              Next — price book
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
         <div className="space-y-5">
           <p className="text-muted-foreground">
             Load a starter book from the aisle you actually buy. You can edit every cost later.
@@ -145,17 +294,17 @@ function Onboard() {
             />
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+            <Button type="button" variant="ghost" onClick={() => setStep(2)}>
               Back
             </Button>
-            <Button type="button" onClick={() => setStep(3)}>
+            <Button type="button" onClick={() => setStep(4)}>
               Next — branding
             </Button>
           </div>
         </div>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <div className="space-y-5">
           <div className="space-y-2">
             <Label>Logo</Label>
@@ -196,7 +345,7 @@ function Onboard() {
             <Textarea id="tm" rows={6} value={terms} onChange={(e) => setTerms(e.target.value)} />
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => setStep(2)}>
+            <Button type="button" variant="ghost" onClick={() => setStep(3)}>
               Back
             </Button>
             <Button type="button" disabled={save.isPending} onClick={() => save.mutate()}>

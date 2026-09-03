@@ -515,6 +515,16 @@ export const completeOnboard = createServerFn({ method: "POST" })
       logo?: string;
       agreement: string;
       terms: string;
+      street?: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+      yearsInBusiness?: string;
+      associations?: string;
+      reviewGoogle?: string;
+      reviewTrustpilot?: string;
+      reviewNextdoor?: string;
+      reviewOther?: string;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -534,6 +544,16 @@ export const completeOnboard = createServerFn({ method: "POST" })
           logo_src = ${data.logo?.trim() || company.logo_src},
           agreement = ${data.agreement.trim() || null},
           terms = ${data.terms.trim() || null},
+          street = ${data.street?.trim() || null},
+          city = ${data.city?.trim() || null},
+          state = ${data.state?.trim() || null},
+          zip = ${data.zip?.trim() || null},
+          years_in_business = ${Number.isFinite(Number.parseInt(data.yearsInBusiness ?? "", 10)) && Number.parseInt(data.yearsInBusiness ?? "", 10) > 0 ? Number.parseInt(data.yearsInBusiness ?? "", 10) : null},
+          associations = ${data.associations?.trim() || null},
+          review_google = ${data.reviewGoogle?.trim() || null},
+          review_trustpilot = ${data.reviewTrustpilot?.trim() || null},
+          review_nextdoor = ${data.reviewNextdoor?.trim() || null},
+          review_other = ${data.reviewOther?.trim() || null},
           onboarded_at = ${new Date().toISOString()}
       where id = ${company.id}
     `;

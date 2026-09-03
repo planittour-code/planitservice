@@ -1,0 +1,10 @@
+alter table companies add column if not exists street text;
+alter table companies add column if not exists city text;
+alter table companies add column if not exists state text;
+alter table companies add column if not exists zip text;
+alter table companies add column if not exists years_in_business integer;
+alter table companies add column if not exists associations text;
+alter table companies add column if not exists review_google text;
+alter table companies add column if not exists review_trustpilot text;
+alter table companies add column if not exists review_nextdoor text;
+alter table companies add column if not exists review_other text;

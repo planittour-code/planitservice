@@ -11,6 +11,16 @@ export type Company = {
   terms: string | null;
   trades: string | null;
   onboarded_at: string | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  years_in_business: number | null;
+  associations: string | null;
+  review_google: string | null;
+  review_trustpilot: string | null;
+  review_nextdoor: string | null;
+  review_other: string | null;
   created_at: string;
 };
 
