@@ -24,44 +24,43 @@ function HomeDashboard() {
   if (q.isLoading) return <Skeleton className="h-48 w-full" />;
 
   const houses = q.data?.houses ?? [];
+  const planLabel = (house: (typeof houses)[number]) => {
+    if (!house.plan) return "No plan yet";
+    const tier = house.plan.tier === "pro" ? "Pro" : "Standard";
+    const cadence = house.plan.cadence === "annual" ? "yearly" : "monthly";
+    return `${tier} plan · billed ${cadence}`;
+  };
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm tracking-wide text-muted-foreground uppercase">Your houses</p>
-          <h1 className="font-display text-3xl font-medium tracking-tight">The record, by address.</h1>
+          <p className="text-sm tracking-wide text-muted-foreground uppercase">Your Property Records</p>
+          <h1 className="font-display text-3xl font-medium tracking-tight">
+            {houses.length === 1 ? "This is the house on your account." : "Houses on this account."}
+          </h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            ${dollars(PROPERTY_MONTHLY)}/month or ${dollars(PROPERTY_ANNUAL)}/year for each property.
-            Share a link. Transfer the record. Pro adds RFPs and a property manager.
+            Open a card to add photos, products, warranties, and maintenance. Add another address only
+            if you own a second property — one address is one record.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/home/add">Add a property</Link>
+        <Button asChild variant="outline">
+          <Link to="/home/add">Add another property</Link>
         </Button>
       </div>
 
       {houses.length === 0 ? (
         <Card>
           <CardContent className="space-y-3 py-10 text-center">
-            <p className="font-medium">No properties on this account yet</p>
-            <p className="text-sm text-muted-foreground">
-              Start a Property Record, or open one a contractor already began.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button asChild>
-                <Link to="/home/add">Add a property</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/invite/$token" params={{ token: "maple-invite" }}>
-                  Open the Maple sample
-                </Link>
-              </Button>
-            </div>
+            <p className="font-medium">No Property Record yet</p>
+            <p className="text-sm text-muted-foreground">Add the address you just paid for.</p>
+            <Button asChild>
+              <Link to="/home/add">Add a property</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={houses.length === 1 ? "max-w-md" : "grid gap-4 md:grid-cols-2"}>
           {houses.map((h) => (
             <HouseCard
               key={h.id}
@@ -77,10 +76,8 @@ function HomeDashboard() {
               photoCount={h.photo_count}
               footnote={
                 <p className="text-sm text-muted-foreground">
-                  {h.plan
-                    ? `${h.plan.tier === "pro" ? "Pro" : "Standard"} · ${h.plan.cadence}`
-                    : "No plan yet"}
-                  {h.dueSoon ? ` · ${h.dueSoon} due soon` : ""}
+                  {planLabel(h)}
+                  {h.dueSoon ? ` · ${h.dueSoon} maintenance due soon` : ""}
                 </p>
               }
             />
@@ -91,7 +88,8 @@ function HomeDashboard() {
       <section className="rounded-xl border border-border bg-card/40 p-5">
         <h2 className="font-display text-xl font-medium tracking-tight">Billing</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cancel a property plan or update the card. Access continues through the paid period.
+          Standard is ${dollars(PROPERTY_MONTHLY)}/month or ${dollars(PROPERTY_ANNUAL)}/year per
+          property. Change the card or cancel here. Access lasts through the period you already paid.
         </p>
         <div className="mt-4">
           <Button
@@ -100,7 +98,7 @@ function HomeDashboard() {
             disabled={portal.isPending}
             onClick={() => portal.mutate()}
           >
-            {portal.isPending ? "Opening…" : "Cancel or manage subscription"}
+            {portal.isPending ? "Opening…" : "Manage subscription"}
           </Button>
         </div>
       </section>

@@ -318,6 +318,31 @@ function listRowFromCounts(p: PropertyListRow): PropertyListRow {
   };
 }
 
+function collapseSameAddress<T extends {
+  address_line: string;
+  zip: string;
+  fact_count: number;
+  photo_count: number;
+  job_count: number;
+  plan?: PropertyPlan | null;
+}>(houses: T[]): T[] {
+  const by = new Map<string, T>();
+  for (const house of houses) {
+    const key = `${house.address_line.trim().toLowerCase()}|${house.zip.trim()}`;
+    const prev = by.get(key);
+    if (!prev) {
+      by.set(key, house);
+      continue;
+    }
+    const score = (h: T) => h.fact_count + h.photo_count + h.job_count;
+    const keep = score(house) >= score(prev) ? house : prev;
+    if (!keep.plan && prev.plan) keep.plan = prev.plan;
+    if (!keep.plan && house.plan) keep.plan = house.plan;
+    by.set(key, keep);
+  }
+  return [...by.values()];
+}
+
 async function loadHouse(sql: Sql, property: Property): Promise<HouseFile> {
   const companyRows = await sql<Company>`select * from companies where id = ${property.company_id}`;
   const company = companyRows[0]!;
@@ -2078,16 +2103,17 @@ export const getHousehold = createServerFn({ method: "GET" })
       }
     }
     const planBy = new Map(plans.map((p) => [p.property_id, p]));
+    const listed = houses.map((h) => ({
+      ...listRowFromCounts(h),
+      company_name: h.company_name,
+      open_title: h.open_title,
+      open_token: h.open_token,
+      plan: planBy.get(h.id) ?? null,
+      dueSoon: dueBy.get(h.id) ?? 0,
+    }));
     return {
       profile,
-      houses: houses.map((h) => ({
-        ...listRowFromCounts(h),
-        company_name: h.company_name,
-        open_title: h.open_title,
-        open_token: h.open_token,
-        plan: planBy.get(h.id) ?? null,
-        dueSoon: dueBy.get(h.id) ?? 0,
-      })),
+      houses: collapseSameAddress(listed),
     };
   });
 
@@ -2119,6 +2145,27 @@ export const createHomeProperty = createServerFn({ method: "POST" })
           else homeowner_profiles.plan
         end
     `;
+    const existing = (
+      await sql<Property>`
+        select * from properties
+        where homeowner_user_id = ${context.userId}
+          and lower(trim(address_line)) = ${address.toLowerCase()}
+        order by created_at desc
+        limit 1
+      `
+    )[0];
+    if (existing) {
+      await sql`
+        insert into property_plans (property_id, cadence, tier, status, renews_on)
+        values (${existing.id}, ${data.cadence}, ${data.tier}, ${"active"}, ${renewsOn(data.cadence)})
+        on conflict (property_id) do update set
+          cadence = excluded.cadence,
+          tier = excluded.tier,
+          status = ${"active"},
+          renews_on = excluded.renews_on
+      `;
+      return { propertyId: existing.id };
+    }
     const id = crypto.randomUUID();
     const name = data.name?.trim() || session?.email?.split("@")[0] || "Homeowner";
     await sql`
