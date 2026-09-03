@@ -35,7 +35,7 @@ function ClaimTransfer() {
       <main className="mx-auto max-w-md space-y-4 px-5 py-16 text-center">
         <h1 className="font-display text-3xl font-medium tracking-tight">Take this Property Record</h1>
         <p className="text-muted-foreground">
-          Sale or inheritance. The jobs, warranties, and maintenance stay with the address.
+          The jobs, warranties, and maintenance stay with the address.
         </p>
         <Button type="button" onClick={() => claim.mutate()} disabled={claim.isPending}>
           {claim.isPending ? "Moving the Property Record…" : "Accept the record"}
