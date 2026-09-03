@@ -508,7 +508,7 @@ export const updateCompany = createServerFn({ method: "POST" })
 
 export const markShopPaid = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { sessionId?: string } = {}) => input)
+  .validator((input: { sessionId?: string }) => ({ sessionId: input?.sessionId }))
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
