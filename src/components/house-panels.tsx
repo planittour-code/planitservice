@@ -14,6 +14,7 @@ import { invitationLetter, invitationSubject } from "@/lib/housefile/invite";
 import {
   addPhotoContractor,
   addPhotoPublic,
+  reviewPhotoFacts,
   upsertFactContractor,
   upsertFactPublic,
 } from "@/lib/housefile/server";
@@ -112,8 +113,36 @@ export function PhotoGrid({
   const [caption, setCaption] = useState("");
   const [category, setCategory] = useState("exterior");
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState<string | null>(null);
   const [pending, setPending] = useState<{ file: File; preview: string } | null>(null);
+  const [readAfterAdd, setReadAfterAdd] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function readPhoto(photoId?: string, src?: string) {
+    if (!token) {
+      toast.error("Sign in as the homeowner to read photos.");
+      return;
+    }
+    setReading(photoId ?? "new");
+    try {
+      const res = await reviewPhotoFacts({ data: { token, photoId, src } });
+      if (!res.facts.length) {
+        toast.message("Nothing new was visible in that photo.");
+      } else {
+        toast.success(
+          `Added ${res.facts.length} house ${res.facts.length === 1 ? "detail" : "details"}: ${res.facts
+            .map((f) => f.label)
+            .slice(0, 4)
+            .join(", ")}`,
+        );
+      }
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not read the photo");
+    } finally {
+      setReading(null);
+    }
+  }
 
   async function commit(fileObj: File, nextCaption: string, nextCategory: string) {
     setBusy(true);
@@ -130,6 +159,9 @@ export function PhotoGrid({
       setCaption("");
       toast.success("Photo added to the property record");
       onChanged();
+      if (mode === "homeowner" && readAfterAdd && token) {
+        await readPhoto(undefined, src);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not add photo");
     } finally {
@@ -154,7 +186,8 @@ export function PhotoGrid({
         <div>
           <h2 className="font-display text-xl font-medium">Photos</h2>
           <p className="text-sm text-muted-foreground">
-            Rooms, elevations, damage, and product shots. These travel with the address.
+            Start here. Add the elevations, rooms, and equipment tags. We can read the photo and write
+            what is visible onto the Property Record.
           </p>
         </div>
       </div>
@@ -162,9 +195,23 @@ export function PhotoGrid({
         {file.photos.map((p) => (
           <figure key={p.id} className="overflow-hidden rounded-lg bg-card shadow-[var(--shadow-border)]">
             <img src={p.src} alt={p.caption || p.category} className="aspect-[4/3] w-full object-cover" />
-            <figcaption className="flex items-start justify-between gap-2 px-3 py-2">
-              <span className="text-xs text-foreground">{p.caption || "Untitled"}</span>
-              <Badge variant="muted">{p.category}</Badge>
+            <figcaption className="space-y-2 px-3 py-2">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs text-foreground">{p.caption || "Untitled"}</span>
+                <Badge variant="muted">{p.category}</Badge>
+              </div>
+              {mode === "homeowner" && token ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-full text-xs"
+                  disabled={reading === p.id}
+                  onClick={() => void readPhoto(p.id)}
+                >
+                  {reading === p.id ? "Reading…" : "Read house data"}
+                </Button>
+              ) : null}
             </figcaption>
           </figure>
         ))}
@@ -186,6 +233,16 @@ export function PhotoGrid({
           <img src={pending.preview} alt="" className="aspect-[4/3] w-full rounded-md object-cover" />
           <div className="space-y-3">
             <p className="text-sm font-medium">Caption this photo, then add it to the house.</p>
+            {mode === "homeowner" ? (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={readAfterAdd}
+                  onChange={(e) => setReadAfterAdd(e.target.checked)}
+                />
+                Read house data from this photo
+              </label>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="cap">Caption</Label>

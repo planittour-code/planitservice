@@ -65,7 +65,19 @@ function HomeRecord() {
         <p className="text-muted-foreground">
           {p.city}, {p.state} {p.zip}
         </p>
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Add photos first. We can read the picture and write roof, siding, paint, and equipment onto
+          the record you see below.
+        </p>
       </header>
+
+      <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
+      <SectionRule />
+      <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
+      <SectionRule />
+      <JobTimeline file={house} />
+      <SectionRule />
+      <WarrantyList file={house} />
 
       <section className="space-y-4">
         <div>
@@ -100,15 +112,6 @@ function HomeRecord() {
           })}
         </ul>
       </section>
-
-      <SectionRule />
-      <JobTimeline file={house} />
-      <SectionRule />
-      <WarrantyList file={house} />
-      <SectionRule />
-      <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <SectionRule />
-      <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
 
       <section className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
         <h2 className="font-display text-xl font-medium">Transfer this Property Record</h2>

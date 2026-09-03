@@ -1484,6 +1484,93 @@ export const draftCoverNote = createServerFn({ method: "POST" })
     return { ok: true as const, text: coverLetter(data.homeownerName, trade.toLowerCase()) };
   });
 
+export const reviewPhotoFacts = createServerFn({ method: "POST" })
+  .validator((input: { token: string; photoId?: string; src?: string }) => input)
+  .handler(async ({ data }) => {
+    const sql = await getSql();
+    const rows = await sql<Property>`
+      select * from properties where share_token = ${data.token} or invite_token = ${data.token} limit 1
+    `;
+    if (!rows[0]) throw new Error("Property Record not found");
+    let src = data.src ?? "";
+    if (data.photoId) {
+      const photo = (
+        await sql<{ src: string }>`
+          select src from property_photos
+          where id = ${data.photoId} and property_id = ${rows[0].id}
+          limit 1
+        `
+      )[0];
+      if (!photo) throw new Error("Photo not found");
+      src = photo.src;
+    }
+    if (!src.startsWith("data:image/") && !src.startsWith("https://")) {
+      throw new Error("Need a photo to read");
+    }
+    const keys = FIELD_CATALOG.map((f) => `${f.key}: ${f.label}`).join("\n");
+    const apiKey = process.env.XAI_API_KEY;
+    if (!apiKey) throw new Error("Photo review is not available yet.");
+    const res = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: process.env.XAI_VISION_MODEL || "grok-2-vision-1212",
+        temperature: 0,
+        max_tokens: 800,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You extract visible house facts from a photo. Reply with JSON only: {\"facts\":[{\"key\":\"field_key\",\"value\":\"short value\"}]}. Use only these keys. Skip anything you cannot see. No prose.",
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Address: ${rows[0].address_line}, ${rows[0].city} ${rows[0].state}\nAllowed keys:\n${keys}`,
+              },
+              { type: "image_url", image_url: { url: src } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`Photo review failed (${res.status})`);
+    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const raw = body.choices?.[0]?.message?.content ?? "{}";
+    const jsonStart = raw.indexOf("{");
+    const jsonEnd = raw.lastIndexOf("}");
+    let parsed: { facts?: { key?: string; value?: string }[] } = {};
+    try {
+      parsed = JSON.parse(jsonStart >= 0 ? raw.slice(jsonStart, jsonEnd + 1) : raw) as typeof parsed;
+    } catch {
+      throw new Error("Could not read facts from the photo.");
+    }
+    const allowed = new Set(FIELD_CATALOG.map((f) => f.key));
+    const written: { key: string; label: string; value: string }[] = [];
+    for (const fact of parsed.facts ?? []) {
+      const key = String(fact.key ?? "");
+      const value = String(fact.value ?? "").trim();
+      if (!allowed.has(key) || !value || value === "unknown") continue;
+      await sql`
+        insert into property_facts (id, property_id, field_key, value, source)
+        values (${crypto.randomUUID()}, ${rows[0].id}, ${key}, ${value}, ${"ai-photo"})
+        on conflict (property_id, field_key)
+        do update set value = excluded.value, source = excluded.source, updated_at = now()
+      `;
+      written.push({
+        key,
+        label: FIELD_CATALOG.find((f) => f.key === key)?.label ?? key,
+        value,
+      });
+    }
+    return { ok: true as const, facts: written };
+  });
+
 async function cloneProperty(sql: Sql, source: Property, companyId: string): Promise<Property> {
   const id = crypto.randomUUID();
   await sql`
