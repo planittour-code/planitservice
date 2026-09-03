@@ -506,31 +506,6 @@ export const updateCompany = createServerFn({ method: "POST" })
     return asCompany(rows[0]!);
   });
 
-export const markShopPaid = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((input: { sessionId?: string }) => ({ sessionId: input?.sessionId }))
-  .handler(async ({ context, data }) => {
-    const sql = await getSql();
-    const { getSessionUser } = await import("@/lib/auth/verify.server");
-    const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can open the shop.");
-    if (data.sessionId) {
-      try {
-        const { getStripe } = await import("@/lib/housefile/stripe.server");
-        const checkout = await getStripe().checkout.sessions.retrieve(data.sessionId);
-        const ok = checkout.status === "complete" || checkout.payment_status === "paid";
-        if (!ok) throw new Error("Payment is not finished.");
-      } catch (err) {
-        if (err instanceof Error && err.message === "Payment is not finished.") throw err;
-      }
-    }
-    await sql`
-      update companies set shop_paid_at = coalesce(shop_paid_at, now()) where id = ${company.id}
-    `;
-    return { ok: true as const };
-  });
-
 export const completeOnboard = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(
