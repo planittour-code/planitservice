@@ -1549,29 +1549,37 @@ export const reviewPhotoFacts = createServerFn({ method: "POST" })
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.XAI_VISION_MODEL || "grok-2-vision-1212",
+        model: process.env.XAI_VISION_MODEL || "grok-4.6",
         temperature: 0,
         max_tokens: 800,
         messages: [
-          {
-            role: "system",
-            content:
-              "You extract visible house facts from a photo. Reply with JSON only: {\"facts\":[{\"key\":\"field_key\",\"value\":\"short value\"}]}. Use only these keys. Skip anything you cannot see. No prose.",
-          },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Address: ${rows[0].address_line}, ${rows[0].city} ${rows[0].state}\nAllowed keys:\n${keys}`,
+                text: `Extract visible house facts from this photo of ${rows[0].address_line}, ${rows[0].city} ${rows[0].state}. Reply with JSON only: {"facts":[{"key":"field_key","value":"short value"}]}. Use only these keys. Skip anything you cannot see.\n${keys}`,
               },
-              { type: "image_url", image_url: { url: src } },
+              { type: "image_url", image_url: { url: src, detail: "low" } },
             ],
           },
         ],
       }),
     });
-    if (!res.ok) throw new Error(`Photo review failed (${res.status})`);
+    if (!res.ok) {
+      const errText = await res.text();
+      let detail = "";
+      try {
+        const parsed = JSON.parse(errText) as { error?: { message?: string } | string };
+        detail =
+          typeof parsed.error === "string"
+            ? parsed.error
+            : parsed.error?.message ?? "";
+      } catch {
+        detail = errText.slice(0, 180);
+      }
+      throw new Error(detail ? `Photo review failed: ${detail}` : `Photo review failed (${res.status})`);
+    }
     const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const raw = body.choices?.[0]?.message?.content ?? "{}";
     const jsonStart = raw.indexOf("{");
