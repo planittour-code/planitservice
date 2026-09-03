@@ -1508,8 +1508,10 @@ export const reviewPhotoFacts = createServerFn({ method: "POST" })
       throw new Error("Need a photo to read");
     }
     const keys = FIELD_CATALOG.map((f) => `${f.key}: ${f.label}`).join("\n");
-    const apiKey = process.env.XAI_API_KEY;
-    if (!apiKey) throw new Error("Photo review is not available yet.");
+    const apiKey = process.env.XAI_API_KEY || process.env.GROK_API_KEY;
+    if (!apiKey) {
+      throw new Error("Photo review needs an xAI API key. Add XAI_API_KEY in Netlify site env.");
+    }
     const res = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {

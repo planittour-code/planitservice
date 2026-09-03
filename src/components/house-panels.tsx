@@ -14,6 +14,8 @@ import { invitationLetter, invitationSubject } from "@/lib/housefile/invite";
 import {
   addPhotoContractor,
   addPhotoPublic,
+  deletePhotoContractor,
+  deletePhotoPublic,
   reviewPhotoFacts,
   upsertFactContractor,
   upsertFactPublic,
@@ -201,15 +203,56 @@ export function PhotoGrid({
                 <Badge variant="muted">{p.category}</Badge>
               </div>
               {mode === "homeowner" && token ? (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 flex-1 text-xs"
+                    disabled={reading === p.id}
+                    onClick={() => void readPhoto(p.id)}
+                  >
+                    {reading === p.id ? "Reading…" : "Read house data"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-destructive"
+                    onClick={async () => {
+                      if (!window.confirm("Remove this photo from the record?")) return;
+                      try {
+                        await deletePhotoPublic({ data: { token, photoId: p.id } });
+                        toast.success("Photo removed");
+                        onChanged();
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "Could not remove");
+                      }
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : mode === "contractor" ? (
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  className="h-8 w-full text-xs"
-                  disabled={reading === p.id}
-                  onClick={() => void readPhoto(p.id)}
+                  variant="ghost"
+                  className="h-8 w-full text-xs text-destructive"
+                  onClick={async () => {
+                    if (!window.confirm("Remove this photo from the record?")) return;
+                    try {
+                      await deletePhotoContractor({
+                        data: { propertyId: file.property.id, photoId: p.id },
+                      });
+                      toast.success("Photo removed");
+                      onChanged();
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Could not remove");
+                    }
+                  }}
                 >
-                  {reading === p.id ? "Reading…" : "Read house data"}
+                  Remove
                 </Button>
               ) : null}
             </figcaption>
