@@ -19,3 +19,4 @@ AGENTS.md
 .project_id
 .node_modules.lock
 startup.sh
+planitservicesecrets.txt
