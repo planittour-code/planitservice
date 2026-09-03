@@ -120,6 +120,14 @@ export function ProposalDoc({
         <ContractorMeta bundle={bundle} onChanged={onChanged} />
       )}
 
+      {mode === "homeowner" && !locked && openLines.length > 0 && (
+        <AcceptAllBar
+          token={proposal.share_token}
+          items={openLines}
+          onChanged={onChanged}
+        />
+      )}
+
       <ul className="space-y-3">
         {items.filter((item) => !item.option_id && !lineSettled(item)).map((item) => (
           <ProposalLine
@@ -160,6 +168,14 @@ export function ProposalDoc({
       />
 
       {mode === "contractor" && !locked && <AddLine proposalId={proposal.id} onChanged={onChanged} />}
+
+      {mode === "homeowner" && !locked && openLines.length > 0 && (
+        <AcceptAllBar
+          token={proposal.share_token}
+          items={openLines}
+          onChanged={onChanged}
+        />
+      )}
 
       <ProposalTotals items={items} showCost={mode === "contractor"} />
 
@@ -496,6 +512,49 @@ function OptionGroup({
 
 function lineSettled(item: ProposalItem) {
   return item.review_status === "accepted" || item.review_status === "change_accepted";
+}
+
+function AcceptAllBar({
+  token,
+  items,
+  onChanged,
+}: {
+  token: string;
+  items: ProposalItem[];
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">
+        {items.length} line{items.length === 1 ? "" : "s"} still open.
+      </p>
+      <Button
+        type="button"
+        className="min-h-11 w-full sm:w-auto"
+        disabled={busy}
+        data-preview-ok
+        onClick={async () => {
+          setBusy(true);
+          try {
+            for (const item of items) {
+              await reviseProposalPublic({
+                data: { token, itemId: item.id, reviewStatus: "accepted" },
+              });
+            }
+            toast.success("All lines accepted");
+            onChanged();
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Could not accept all");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Accepting…" : "Accept all"}
+      </Button>
+    </div>
+  );
 }
 
 function reviewTag(status?: string | null) {

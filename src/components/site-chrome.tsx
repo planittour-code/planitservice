@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useAudience } from "@/lib/housefile/use-audience";
+import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { cn } from "@/lib/utils";
 
 export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/my" | "/home" | "/shop" }) {
