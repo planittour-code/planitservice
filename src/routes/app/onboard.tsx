@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { WizardSteps } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
 import { WORK_TYPES } from "@/lib/housefile/quote";
-import { completeOnboard, getDashboard } from "@/lib/housefile/server";
+import { completeOnboard, getDashboard, markShopPaid } from "@/lib/housefile/server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/onboard")({ component: Onboard });
@@ -52,6 +52,17 @@ function Onboard() {
   const [reviewTrustpilot, setReviewTrustpilot] = useState("");
   const [reviewNextdoor, setReviewNextdoor] = useState("");
   const [reviewOther, setReviewOther] = useState("");
+  const sessionId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("session_id")
+      : null;
+
+  useEffect(() => {
+    if (!sessionId) return;
+    void markShopPaid({ data: { sessionId } })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["dashboard"] }))
+      .catch((err) => toast.error(err instanceof Error ? err.message : "Payment was not recorded"));
+  }, [sessionId, queryClient]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -82,6 +93,10 @@ function Onboard() {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not finish"),
   });
+
+  if (dash.data && !dash.data.company.shop_paid_at && !sessionId) {
+    return <Navigate to="/shop/open" />;
+  }
 
   if (dash.data?.company.onboarded_at) {
     return <Navigate to="/app" />;

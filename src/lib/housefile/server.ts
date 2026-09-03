@@ -54,6 +54,7 @@ function asCompany(row: Company): Company {
     terms: row.terms ?? null,
     trades: row.trades ?? null,
     onboarded_at: row.onboarded_at ?? null,
+    shop_paid_at: row.shop_paid_at ?? null,
   };
 }
 
@@ -505,6 +506,31 @@ export const updateCompany = createServerFn({ method: "POST" })
     return asCompany(rows[0]!);
   });
 
+export const markShopPaid = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { sessionId?: string } = {}) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can open the shop.");
+    if (data.sessionId) {
+      try {
+        const { getStripe } = await import("@/lib/housefile/stripe.server");
+        const checkout = await getStripe().checkout.sessions.retrieve(data.sessionId);
+        const ok = checkout.status === "complete" || checkout.payment_status === "paid";
+        if (!ok) throw new Error("Payment is not finished.");
+      } catch (err) {
+        if (err instanceof Error && err.message === "Payment is not finished.") throw err;
+      }
+    }
+    await sql`
+      update companies set shop_paid_at = coalesce(shop_paid_at, now()) where id = ${company.id}
+    `;
+    return { ok: true as const };
+  });
+
 export const completeOnboard = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(
@@ -533,6 +559,7 @@ export const completeOnboard = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await shopFor(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner sets up the shop.");
+    if (!company.shop_paid_at) throw new Error("Pay for the shop before setup.");
     const trades = data.trades.filter(Boolean);
     if (trades.length === 0) throw new Error("Pick at least one service.");
     const tradeLabel = trades.join(", ");
@@ -2382,7 +2409,7 @@ export const getAudience = createServerFn({ method: "GET" })
           limit 1
         `;
     const shop = owned[0] ?? member[0] ?? null;
-    const contractorPaying = Boolean(shop?.onboarded_at);
+    const contractorPaying = Boolean(shop?.shop_paid_at);
     const plans = await sql<{ status: string }>`
       select pp.status
       from property_plans pp

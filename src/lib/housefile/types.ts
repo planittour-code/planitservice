@@ -11,6 +11,7 @@ export type Company = {
   terms: string | null;
   trades: string | null;
   onboarded_at: string | null;
+  shop_paid_at: string | null;
   street: string | null;
   city: string | null;
   state: string | null;

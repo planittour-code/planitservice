@@ -2,9 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/logo";
-import { AuthSlot, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
-import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
+import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getDashboard } from "@/lib/housefile/server";
 
@@ -13,7 +12,7 @@ export const Route = createFileRoute("/app")({ component: AppLayout });
 function AppLayout() {
   const { user, isPending } = useCurrentUserState();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const guestQuote = pathname === "/app/new";
+  const guestQuote = false;
   const onboardPath = pathname === "/app/onboard";
   const dash = useQuery({
     queryKey: ["dashboard"],
@@ -30,22 +29,23 @@ function AppLayout() {
       </div>
     );
   }
-  if (!user && !guestQuote) return <RedirectToSignIn />;
+  if (!user) return <Navigate to="/shop/open" />;
 
-  if (!user) {
+  if (dash.isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <PublicHeader>
-          <AuthSlot />
-        </PublicHeader>
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
-          <Outlet />
+        <div className="mx-auto max-w-6xl px-5 py-6">
+          <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
         </div>
       </div>
     );
   }
 
-  if (dash.data?.role === "owner" && !dash.data.company.onboarded_at && !onboardPath) {
+  if (dash.data && !dash.data.company.shop_paid_at && !onboardPath) {
+    return <Navigate to="/shop/open" />;
+  }
+
+  if (dash.data?.role === "owner" && dash.data.company.shop_paid_at && !dash.data.company.onboarded_at && !onboardPath) {
     return <Navigate to="/app/onboard" />;
   }
 
@@ -58,15 +58,9 @@ function AppLayout() {
             <nav className="ml-auto hidden items-center gap-1 sm:flex">
               <NavLink to="/app">Shop</NavLink>
               <NavLink to="/app/market">Market</NavLink>
-              <NavLink to="/app/properties">Houses</NavLink>
+              <NavLink to="/app/properties">Jobs</NavLink>
               <NavLink to="/app/leads">Leads</NavLink>
               <NavLink to="/app/settings">Shop settings</NavLink>
-            <Link
-              to="/home"
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              My houses
-            </Link>
             </nav>
           )}
           {!onboardPath && (
@@ -82,15 +76,9 @@ function AppLayout() {
         <nav className="flex gap-1 overflow-x-auto border-t border-border px-2 py-1 sm:hidden">
           <NavLink to="/app">Shop</NavLink>
           <NavLink to="/app/market">Market</NavLink>
-          <NavLink to="/app/properties">Houses</NavLink>
+          <NavLink to="/app/properties">Jobs</NavLink>
           <NavLink to="/app/leads">Leads</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>
-          <Link
-            to="/home"
-            className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            My houses
-          </Link>
         </nav>
         )}
       </header>
