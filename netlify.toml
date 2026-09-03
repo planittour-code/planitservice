@@ -18,3 +18,8 @@
   from = "/open"
   to = "/shop/open"
   status = 301
+
+[[redirects]]
+  from = "/start"
+  to = "/homeowner"
+  status = 301

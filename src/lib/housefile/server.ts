@@ -2385,7 +2385,7 @@ export type Audience = {
   signedIn: boolean;
   kind: "guest" | "homeowner" | "contractor";
   paying: boolean;
-  homePath: "/" | "/home" | "/app" | "/start" | "/shop/open";
+  homePath: "/" | "/home" | "/app" | "/start" | "/shop/open" | "/homeowner";
 };
 
 export const getAudience = createServerFn({ method: "GET" })
@@ -2437,7 +2437,7 @@ export const getAudience = createServerFn({ method: "GET" })
     if (shop) {
       return { signedIn: true, kind: "contractor", paying: false, homePath: "/shop/open" };
     }
-    return { signedIn: true, kind: "homeowner", paying: false, homePath: "/start" };
+    return { signedIn: true, kind: "homeowner", paying: false, homePath: "/homeowner" };
     } catch {
       return { signedIn: true, kind: "guest", paying: false, homePath: "/" };
     }

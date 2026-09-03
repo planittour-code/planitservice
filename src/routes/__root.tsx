@@ -8,22 +8,6 @@ import appCss from "../styles.css?url";
 const APP_NAME = "PlanitService";
 
 export const Route = createRootRoute({
-  errorComponent: ({ error }) => (
-    <html lang="en">
-      <body style={{ fontFamily: "Georgia, serif", background: "#f3eee4", color: "#1c1917", padding: 48 }}>
-        <p>PlanitService</p>
-        <h1>The page did not load.</h1>
-        <p>
-          <a href="/">Home</a>
-          {" · "}
-          <a href="/start">Homeowner</a>
-          {" · "}
-          <a href="/shop">Contractor</a>
-        </p>
-        <p style={{ opacity: 0.6, fontSize: 13 }}>{error.message}</p>
-      </body>
-    </html>
-  ),
   head: () => ({
     meta: [
       { charSet: "utf-8" },

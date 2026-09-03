@@ -52,7 +52,7 @@ function WelcomeSite() {
                 title="Own the Property Record."
                 body="Put in what you already know. Photos, paint, roof year, equipment. Share it with a buyer, a shop, or a property manager. When a PlanitService contractor works the house, the job writes onto the same record."
                 price={`From $${dollars(PROPERTY_MONTHLY)} / month per property`}
-                to="/start"
+                to="/homeowner"
                 cta="I’m a homeowner"
               />
               <PathCard
@@ -106,7 +106,7 @@ function PathCard({
   title: string;
   body: string;
   price: string;
-  to: "/start" | "/shop";
+  to: "/homeowner" | "/shop";
   cta: string;
   emphasis?: boolean;
 }) {

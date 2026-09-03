@@ -7,7 +7,6 @@ import { authClient } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { shopKind } from "@/lib/housefile/stripe";
-import { startCheckout } from "@/lib/housefile/stripe-billing";
 
 export function ShopExplainer() {
   return (
@@ -39,6 +38,7 @@ export function ShopSignupForm({ next = "/shop/open" }: { next?: string }) {
   const [busy, setBusy] = useState(false);
 
   async function goPay() {
+    const { startCheckout } = await import("@/lib/housefile/stripe-billing");
     const { url } = await startCheckout({
       data: {
         kind: shopKind(cadence),

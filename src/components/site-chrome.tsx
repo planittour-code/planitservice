@@ -54,7 +54,7 @@ export function PublicHeader({
           {lane === "choose" && (
             <>
               <Button asChild variant="outline" className="min-h-11">
-                <Link to="/start">Homeowner</Link>
+                <Link to="/homeowner">Homeowner</Link>
               </Button>
               <Button asChild variant="outline" className="min-h-11">
                 <Link to="/shop">Contractor</Link>
@@ -63,11 +63,11 @@ export function PublicHeader({
           )}
           {lane === "homeowner" && (
             <>
-              <HeaderLink to="/start">Start a record</HeaderLink>
+              <HeaderLink to="/homeowner">Start a record</HeaderLink>
               <HeaderLink to="/house/$token" params={{ token: "maple-14" }}>
                 Sample record
               </HeaderLink>
-              <HeaderLink to="/start" hash="pricing" hideOnMobile>
+              <HeaderLink to="/homeowner" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>
               <HeaderLink to="/shop">For contractors</HeaderLink>
@@ -83,7 +83,7 @@ export function PublicHeader({
               <HeaderLink to="/shop" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>
-              <HeaderLink to="/start">For homeowners</HeaderLink>
+              <HeaderLink to="/homeowner">For homeowners</HeaderLink>
             </>
           )}
           {children}
@@ -139,13 +139,13 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
               <Link to="/shop/open" className="hover:text-foreground">
                 Open a shop
               </Link>
-              <Link to="/start" className="hover:text-foreground">
+              <Link to="/homeowner" className="hover:text-foreground">
                 For homeowners
               </Link>
             </>
           ) : (
             <>
-              <Link to="/start" className="hover:text-foreground">
+              <Link to="/homeowner" className="hover:text-foreground">
                 Start a record
               </Link>
               <Link to="/shop" className="hover:text-foreground">
