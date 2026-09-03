@@ -19,3 +19,6 @@ export function homeownerKind(tier: HomeownerTier, cadence: Cadence): CheckoutKi
 export function shopKind(cadence: Cadence): CheckoutKind {
   return cadence === "annual" ? "shop_annual" : "shop_monthly";
 }
+
+/** Stripe Customer Portal login — cancel, cards, invoices. */
+export const BILLING_PORTAL = "https://billing.stripe.com/p/login/4gM00icax759aAq3uY8AE00";
