@@ -3,14 +3,12 @@ import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { useAudience } from "@/lib/housefile/use-audience";
 
 export const Route = createFileRoute("/home")({ component: HomeLayout });
 
 function HomeLayout() {
   const { user, isPending } = useCurrentUserState();
-  const { audience, isPending: audiencePending } = useAudience();
-  if (isPending || audiencePending) {
+  if (isPending) {
     return (
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-5xl px-5 py-6">
@@ -20,7 +18,6 @@ function HomeLayout() {
     );
   }
   if (!user) return <Navigate to="/login" search={{ role: "homeowner", next: "/home" }} />;
-  if (audience.kind === "contractor") return <Navigate to={audience.paying ? "/app" : "/shop/open"} />;
 
   return (
     <div className="min-h-screen bg-background">

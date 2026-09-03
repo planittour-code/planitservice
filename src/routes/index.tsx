@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
-import { PaidLanding } from "@/components/paid-landing";
 import { Button } from "@/components/ui/button";
 import {
   PROPERTY_MONTHLY,
@@ -13,7 +12,6 @@ export const Route = createFileRoute("/")({ component: WelcomeSite });
 function WelcomeSite() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <PaidLanding />
       <PublicHeader path="choose">
         <AuthSlot signedInTo="/home" />
       </PublicHeader>

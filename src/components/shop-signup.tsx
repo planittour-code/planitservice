@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
-import { shopKind } from "@/lib/housefile/stripe";
 
 export function ShopExplainer() {
   return (
@@ -28,44 +27,35 @@ export function ShopExplainer() {
   );
 }
 
-export function ShopSignupForm({ next = "/shop/open" }: { next?: string }) {
+export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
+  const navigate = useNavigate();
   const { user } = useCurrentUserState();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function goPay() {
-    const { startCheckout } = await import("@/lib/housefile/stripe-billing");
-    const { url } = await startCheckout({
-      data: {
-        kind: shopKind(cadence),
-        successPath: "/app/onboard",
-        cancelPath: "/shop/open",
-      },
-    });
-    window.location.href = url;
-  }
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (user) {
+      void navigate({ to: "/app/onboard" });
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
-      if (!user) {
-        const res = await authClient.signUp.email({
-          email,
-          password,
-          name: name.trim() || email.split("@")[0],
-          callbackURL: "/shop/open",
-        });
-        if (res.error) throw new Error(res.error.message || "Could not create the shop account");
-      }
-      await goPay();
+      const res = await authClient.signUp.email({
+        email,
+        password,
+        name: name.trim() || email.split("@")[0],
+        callbackURL: next,
+      });
+      if (res.error) throw new Error(res.error.message || "Could not create the shop account");
+      window.location.href = next;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start shop checkout");
+      setError(err instanceof Error ? err.message : "Could not create the shop account");
+    } finally {
       setBusy(false);
     }
   }
@@ -109,24 +99,8 @@ export function ShopSignupForm({ next = "/shop/open" }: { next?: string }) {
         </>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={cadence === "monthly" ? "default" : "outline"}
-          onClick={() => setCadence("monthly")}
-        >
-          ${dollars(SHOP_MONTHLY)}/mo
-        </Button>
-        <Button
-          type="button"
-          variant={cadence === "annual" ? "default" : "outline"}
-          onClick={() => setCadence("annual")}
-        >
-          ${dollars(SHOP_ANNUAL)}/yr
-        </Button>
-      </div>
       <Button type="submit" className="min-h-12 w-full" disabled={busy}>
-        {busy ? "Working…" : user ? "Pay and open the shop" : "Create account and pay"}
+        {busy ? "Working…" : user ? "Continue to shop setup" : "Create account and open a shop"}
       </Button>
       {!user && (
         <p className="text-center text-sm text-muted-foreground">

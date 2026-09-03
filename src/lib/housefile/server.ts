@@ -559,7 +559,6 @@ export const completeOnboard = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await shopFor(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner sets up the shop.");
-    if (!company.shop_paid_at) throw new Error("Pay for the shop before setup.");
     const trades = data.trades.filter(Boolean);
     if (trades.length === 0) throw new Error("Pick at least one service.");
     const tradeLabel = trades.join(", ");

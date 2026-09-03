@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/logo";
+import { AuthSlot, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
-import { UserButton } from "@/lib/auth/gates";
+import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getDashboard } from "@/lib/housefile/server";
 
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/app")({ component: AppLayout });
 function AppLayout() {
   const { user, isPending } = useCurrentUserState();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const guestQuote = false;
+  const guestQuote = pathname === "/app/new";
   const onboardPath = pathname === "/app/onboard";
   const dash = useQuery({
     queryKey: ["dashboard"],
@@ -29,23 +30,22 @@ function AppLayout() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/shop/open" />;
+  if (!user && !guestQuote) return <RedirectToSignIn />;
 
-  if (dash.isLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="mx-auto max-w-6xl px-5 py-6">
-          <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
+        <PublicHeader>
+          <AuthSlot />
+        </PublicHeader>
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
+          <Outlet />
         </div>
       </div>
     );
   }
 
-  if (dash.data && !dash.data.company.shop_paid_at && !onboardPath) {
-    return <Navigate to="/shop/open" />;
-  }
-
-  if (dash.data?.role === "owner" && dash.data.company.shop_paid_at && !dash.data.company.onboarded_at && !onboardPath) {
+  if (dash.data?.role === "owner" && !dash.data.company.onboarded_at && !onboardPath) {
     return <Navigate to="/app/onboard" />;
   }
 
