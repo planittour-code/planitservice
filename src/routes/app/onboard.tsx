@@ -142,8 +142,6 @@ function Onboard() {
         </div>
       )}
 
-      )}
-
       {step === 2 && (
         <div className="space-y-5">
           <p className="text-muted-foreground">
