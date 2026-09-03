@@ -2391,8 +2391,10 @@ export type Audience = {
 export const getAudience = createServerFn({ method: "GET" })
   .middleware([optionalAuthMiddleware])
   .handler(async ({ context }): Promise<Audience> => {
+    const guest: Audience = { signedIn: false, kind: "guest", paying: false, homePath: "/" };
     const userId = context.userId;
-    if (!userId) return { signedIn: false, kind: "guest", paying: false, homePath: "/" };
+    if (!userId) return guest;
+    try {
     const sql = await getSql();
     const owned = await sql<Company>`
       select * from companies
@@ -2436,6 +2438,9 @@ export const getAudience = createServerFn({ method: "GET" })
       return { signedIn: true, kind: "contractor", paying: false, homePath: "/shop/open" };
     }
     return { signedIn: true, kind: "homeowner", paying: false, homePath: "/start" };
+    } catch {
+      return { signedIn: true, kind: "guest", paying: false, homePath: "/" };
+    }
   });
 
 

@@ -4,42 +4,25 @@ import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { useAudience } from "@/lib/housefile/use-audience";
 import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { cn } from "@/lib/utils";
 
 export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/my" | "/home" | "/shop" }) {
   const { user, isPending } = useCurrentUserState();
-  const { audience } = useAudience();
   if (isPending) return <div className="h-11 w-24 animate-pulse rounded-md bg-muted" />;
   if (user) {
-    const to = audience.paying
-      ? audience.kind === "homeowner"
-        ? "/home"
-        : "/app"
-      : audience.kind === "homeowner"
-        ? "/start"
-        : signedInTo === "/home" || signedInTo === "/my"
-          ? "/home"
-          : signedInTo === "/shop"
-            ? "/shop"
-            : "/shop/open";
-    const label = audience.paying
-      ? audience.kind === "homeowner"
-        ? "My houses"
-        : "Shop"
-      : signedInTo === "/home" || signedInTo === "/my"
-        ? "My houses"
-        : "Open shop";
     return (
       <Button asChild>
-        <Link to={to}>{label}</Link>
+        <Link to="/account">Account</Link>
       </Button>
     );
   }
   return (
     <Button asChild variant="outline">
-      <Link to="/login" search={signedInTo === "/home" || signedInTo === "/my" ? { role: "homeowner", next: "/home" } : {}}>
+      <Link
+        to="/login"
+        search={signedInTo === "/home" || signedInTo === "/my" ? { role: "homeowner", next: "/home" } : {}}
+      >
         Sign in
       </Link>
     </Button>
