@@ -118,6 +118,10 @@ export function PhotoGrid({
   const [reading, setReading] = useState<string | null>(null);
   const [pending, setPending] = useState<{ file: File; preview: string } | null>(null);
   const [readAfterAdd, setReadAfterAdd] = useState(true);
+  const [draft, setDraft] = useState<
+    { key: string; label: string; value: string; current: string | null; keep: boolean }[]
+  >([]);
+  const [savingDraft, setSavingDraft] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function readPhoto(photoId?: string, src?: string) {
@@ -130,19 +134,36 @@ export function PhotoGrid({
       const res = await reviewPhotoFacts({ data: { token, photoId, src } });
       if (!res.facts.length) {
         toast.message("Nothing new was visible in that photo.");
-      } else {
-        toast.success(
-          `Added ${res.facts.length} house ${res.facts.length === 1 ? "detail" : "details"}: ${res.facts
-            .map((f) => f.label)
-            .slice(0, 4)
-            .join(", ")}`,
-        );
+        setDraft([]);
+        return;
       }
-      onChanged();
+      setDraft(res.facts.map((f) => ({ ...f, keep: true })));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not read the photo");
     } finally {
       setReading(null);
+    }
+  }
+
+  async function saveDraft() {
+    if (!token) return;
+    const picked = draft.filter((f) => f.keep && f.value.trim());
+    if (!picked.length) {
+      setDraft([]);
+      return;
+    }
+    setSavingDraft(true);
+    try {
+      for (const fact of picked) {
+        await upsertFactPublic({ data: { token, fieldKey: fact.key, value: fact.value.trim() } });
+      }
+      toast.success(`Saved ${picked.length} house ${picked.length === 1 ? "detail" : "details"}`);
+      setDraft([]);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save details");
+    } finally {
+      setSavingDraft(false);
     }
   }
 
@@ -191,8 +212,8 @@ export function PhotoGrid({
         <div>
           <h2 className="font-display text-xl font-medium">Photos</h2>
           <p className="text-sm text-muted-foreground">
-            Start here. Add the elevations, rooms, and equipment tags. We can read the photo and write
-            what is visible onto the Property Record.
+            Start here. Add the elevations, rooms, and equipment tags. We can read the photo — you
+            check each detail before it lands on the Property Record.
           </p>
         </div>
       </div>
@@ -335,6 +356,59 @@ export function PhotoGrid({
                 Cancel
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+      {draft.length > 0 && (
+        <div className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+          <div>
+            <h3 className="font-display text-lg font-medium">Check what the photo shows</h3>
+            <p className="text-sm text-muted-foreground">
+              Nothing is written yet. Uncheck a line to skip it. Edit the value if the read is close
+              but not right.
+            </p>
+          </div>
+          <ul className="space-y-3">
+            {draft.map((fact) => (
+              <li key={fact.key} className="grid gap-2 sm:grid-cols-[auto_8rem_1fr] sm:items-center">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={fact.keep}
+                    onChange={(e) =>
+                      setDraft((rows) =>
+                        rows.map((row) =>
+                          row.key === fact.key ? { ...row, keep: e.target.checked } : row,
+                        ),
+                      )
+                    }
+                  />
+                  <span className="font-medium">{fact.label}</span>
+                </label>
+                <Input
+                  value={fact.value}
+                  disabled={!fact.keep}
+                  onChange={(e) =>
+                    setDraft((rows) =>
+                      rows.map((row) =>
+                        row.key === fact.key ? { ...row, value: e.target.value } : row,
+                      ),
+                    )
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  {fact.current ? `On the record now: ${fact.current}` : "Not on the record yet"}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" disabled={savingDraft} onClick={() => void saveDraft()}>
+              {savingDraft ? "Saving…" : "Save checked details"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setDraft([])}>
+              Discard
+            </Button>
           </div>
         </div>
       )}

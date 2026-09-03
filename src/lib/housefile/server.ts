@@ -1592,24 +1592,25 @@ export const reviewPhotoFacts = createServerFn({ method: "POST" })
       throw new Error("Could not read facts from the photo.");
     }
     const allowed = new Set(FIELD_CATALOG.map((f) => f.key));
-    const written: { key: string; label: string; value: string }[] = [];
+    const existing = await sql<{ field_key: string; value: string }>`
+      select field_key, value from property_facts where property_id = ${rows[0].id}
+    `;
+    const current = new Map(existing.map((f) => [f.field_key, f.value]));
+    const proposed: { key: string; label: string; value: string; current: string | null }[] = [];
+    const seen = new Set<string>();
     for (const fact of parsed.facts ?? []) {
       const key = String(fact.key ?? "");
       const value = String(fact.value ?? "").trim();
-      if (!allowed.has(key) || !value || value === "unknown") continue;
-      await sql`
-        insert into property_facts (id, property_id, field_key, value, source)
-        values (${crypto.randomUUID()}, ${rows[0].id}, ${key}, ${value}, ${"ai-photo"})
-        on conflict (property_id, field_key)
-        do update set value = excluded.value, source = excluded.source, updated_at = now()
-      `;
-      written.push({
+      if (!allowed.has(key) || !value || value === "unknown" || seen.has(key)) continue;
+      seen.add(key);
+      proposed.push({
         key,
         label: FIELD_CATALOG.find((f) => f.key === key)?.label ?? key,
         value,
+        current: current.get(key) ?? null,
       });
     }
-    return { ok: true as const, facts: written };
+    return { ok: true as const, facts: proposed };
   });
 
 async function cloneProperty(sql: Sql, source: Property, companyId: string): Promise<Property> {
