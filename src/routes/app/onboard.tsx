@@ -76,9 +76,9 @@ function Onboard() {
         },
       }),
     onSuccess: async () => {
-      toast.success("Shop is ready");
+      toast.success("Shop is ready. Set what you pay and what you sell.");
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      void navigate({ to: "/app" });
+      void navigate({ to: "/app/book" });
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not finish"),
   });
@@ -268,8 +268,8 @@ function Onboard() {
       {step === 3 && (
         <div className="space-y-5">
           <p className="text-muted-foreground">
-            Load a starter book from the aisle you actually buy. You can edit every cost later.
-            This is not a live supplier feed.
+            Load a starter book from the aisle you actually buy. Next you will add materials and
+            set cost and sell. This is not a live supplier feed.
           </p>
           <div className="grid gap-3">
             <BookChoice

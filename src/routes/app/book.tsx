@@ -127,8 +127,8 @@ function PriceBookPage() {
         <div>
           <h1 className="font-display text-3xl font-medium tracking-tight">Price book</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            What this shop sells. Quotes pick from here. Cost stays in the shop — the homeowner sees
-            the sell price.
+            Add materials and set what you pay and what you sell. Quotes pick from this book. Cost
+            stays in the shop — the homeowner sees the sell price.
           </p>
         </div>
         {owner && (
@@ -236,9 +236,17 @@ function PriceBookPage() {
           </section>
         ))}
         {items.length === 0 && (
-          <p className="rounded-xl bg-card px-4 py-8 text-center text-sm text-muted-foreground shadow-[var(--shadow-border)]">
-            No products yet.
-          </p>
+          <div className="rounded-xl bg-card px-4 py-10 text-center shadow-[var(--shadow-border)]">
+            <p className="font-display text-xl font-medium">No materials yet.</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+              Add a product with cost and sell, or paste a CSV from the yard.
+            </p>
+            {owner && (
+              <Button type="button" className="mt-4" onClick={() => setEditing("new")}>
+                Add a product
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

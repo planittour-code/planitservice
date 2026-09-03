@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
+import { Route as HomeownerRouteImport } from './routes/homeowner'
 import { Route as HomeownersRouteImport } from './routes/homeowners'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyRouteImport } from './routes/my'
@@ -38,6 +39,7 @@ import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as RfpTokenRouteImport } from './routes/rfp.$token'
 import { Route as ShopOpenRouteImport } from './routes/shop.open'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as AppPropertiesIdRouteImport } from './routes/app/properties.$id'
 import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
 import { Route as PTokenAcceptedRouteImport } from './routes/p.$token.accepted'
@@ -60,6 +62,11 @@ const AppRouteRoute = AppRouteRouteImport.update({
 const HomeRouteRoute = HomeRouteRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeownerRoute = HomeownerRouteImport.update({
+  id: '/homeowner',
+  path: '/homeowner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HomeownersRoute = HomeownersRouteImport.update({
@@ -187,6 +194,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppPropertiesIdRoute = AppPropertiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -208,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/account': typeof AccountRoute
+  '/homeowner': typeof HomeownerRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
   '/my': typeof MyRoute
@@ -233,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -240,6 +254,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/homeowner': typeof HomeownerRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
   '/my': typeof MyRoute
@@ -265,6 +280,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/home': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -275,6 +291,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/account': typeof AccountRoute
+  '/homeowner': typeof HomeownerRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
   '/my': typeof MyRoute
@@ -300,6 +317,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -311,6 +329,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/home'
     | '/account'
+    | '/homeowner'
     | '/homeowners'
     | '/login'
     | '/my'
@@ -336,6 +355,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/home/'
     | '/api/auth/$'
+    | '/api/stripe/webhook'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -343,6 +363,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/homeowner'
     | '/homeowners'
     | '/login'
     | '/my'
@@ -368,6 +389,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/home'
     | '/api/auth/$'
+    | '/api/stripe/webhook'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -377,6 +399,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/home'
     | '/account'
+    | '/homeowner'
     | '/homeowners'
     | '/login'
     | '/my'
@@ -402,6 +425,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/home/'
     | '/api/auth/$'
+    | '/api/stripe/webhook'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -412,6 +436,7 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
   AccountRoute: typeof AccountRoute
+  HomeownerRoute: typeof HomeownerRoute
   HomeownersRoute: typeof HomeownersRoute
   LoginRoute: typeof LoginRoute
   MyRoute: typeof MyRoute
@@ -424,6 +449,7 @@ export interface RootRouteChildren {
   PTokenRoute: typeof PTokenRouteWithChildren
   RfpTokenRoute: typeof RfpTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -454,6 +480,13 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/home'
       preLoaderRoute: typeof HomeRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/homeowner': {
+      id: '/homeowner'
+      path: '/homeowner'
+      fullPath: '/homeowner'
+      preLoaderRoute: typeof HomeownerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/homeowners': {
@@ -631,6 +664,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/properties/$id': {
       id: '/app/properties/$id'
       path: '/$id'
@@ -739,6 +779,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
   AccountRoute: AccountRoute,
+  HomeownerRoute: HomeownerRoute,
   HomeownersRoute: HomeownersRoute,
   LoginRoute: LoginRoute,
   MyRoute: MyRoute,
@@ -751,6 +792,7 @@ const rootRouteChildren: RootRouteChildren = {
   PTokenRoute: PTokenRouteWithChildren,
   RfpTokenRoute: RfpTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

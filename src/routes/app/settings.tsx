@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,17 @@ function SettingsPage() {
           Save
         </Button>
       </form>
+      <section className="space-y-3 border-t border-border pt-8">
+        <div>
+          <h2 className="font-display text-2xl font-medium tracking-tight">Price book</h2>
+          <p className="text-sm text-muted-foreground">
+            Materials this shop sells. Add a product, set cost and sell. Quotes pick from here.
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link to="/app/book">Open the price book</Link>
+        </Button>
+      </section>
       <TeamSection />
       <BillingSection />
     </div>

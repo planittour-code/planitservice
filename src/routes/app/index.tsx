@@ -37,9 +37,14 @@ function ShopHome() {
 
   return (
     <div className="space-y-10">
-      <div>
-        <p className="text-sm text-muted-foreground">{company.trade.replace(/-/g, " ")}</p>
-        <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted-foreground">{company.trade.replace(/-/g, " ")}</p>
+          <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+        </div>
+        <Button asChild variant="outline">
+          <Link to="/app/book">Price book</Link>
+        </Button>
       </div>
 
       {role === "owner" && (pending?.length ?? 0) > 0 && (
