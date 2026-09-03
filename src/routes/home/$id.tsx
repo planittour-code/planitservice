@@ -137,13 +137,12 @@ function TransferForm({
   onDone,
 }: {
   propertyId: string;
-  pending: { to_email: string; reason: string; token: string } | null;
+  pending: { to_email: string; token: string } | null;
   onDone: () => void;
 }) {
   const [email, setEmail] = useState("");
-  const [reason, setReason] = useState<"sale" | "death">("sale");
   const send = useMutation({
-    mutationFn: () => startPropertyTransfer({ data: { propertyId, toEmail: email, reason } }),
+    mutationFn: () => startPropertyTransfer({ data: { propertyId, toEmail: email } }),
     onSuccess: (res) => {
       toast.success("Transfer link ready");
       onDone();
@@ -155,7 +154,7 @@ function TransferForm({
   if (pending) {
     return (
       <p className="text-sm text-muted-foreground">
-        Waiting on {pending.to_email} ({pending.reason}). Share{" "}
+        Waiting on {pending.to_email}. Share{" "}
         <Link to="/claim/$token" params={{ token: pending.token }} className="underline">
           the transfer link
         </Link>
@@ -178,14 +177,6 @@ function TransferForm({
       <div className="space-y-1.5">
         <Label htmlFor="to">New owner email</Label>
         <Input id="to" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      </div>
-      <div className="flex gap-2">
-        <Button type="button" variant={reason === "sale" ? "default" : "outline"} onClick={() => setReason("sale")}>
-          Sale
-        </Button>
-        <Button type="button" variant={reason === "death" ? "default" : "outline"} onClick={() => setReason("death")}>
-          Death
-        </Button>
       </div>
       <Button type="submit" disabled={send.isPending}>
         {send.isPending ? "Sending…" : "Create transfer link"}

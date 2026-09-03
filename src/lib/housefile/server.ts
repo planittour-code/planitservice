@@ -2373,7 +2373,7 @@ export const completeMaintenance = createServerFn({ method: "POST" })
 
 export const startPropertyTransfer = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { propertyId: string; toEmail: string; reason: "sale" | "death" }) => input)
+  .validator((input: { propertyId: string; toEmail: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const property = (
@@ -2388,7 +2388,7 @@ export const startPropertyTransfer = createServerFn({ method: "POST" })
     await sql`
       insert into property_transfers (id, property_id, from_user_id, to_email, reason, token, status)
       values (
-        ${crypto.randomUUID()}, ${property.id}, ${context.userId}, ${email}, ${data.reason}, ${token}, ${"pending"}
+        ${crypto.randomUUID()}, ${property.id}, ${context.userId}, ${email}, ${"transfer"}, ${token}, ${"pending"}
       )
     `;
     return { token };
