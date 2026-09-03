@@ -2355,6 +2355,78 @@ export const claimPropertyTransfer = createServerFn({ method: "POST" })
     return { propertyId: rows[0].property_id };
   });
 
+
+export const getAccount = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const email = session?.email ?? null;
+
+    const owned = await sql`
+      select * from companies
+      where user_id = ${context.userId} and id <> ${HOUSEHOLD_COMPANY}
+      limit 1
+    `;
+    let shop = null;
+    if (owned[0]) {
+      const seats = await sql`
+        select count(*)::int as c from company_members where company_id = ${owned[0].id}
+      `;
+      shop = { id: owned[0].id, name: owned[0].name, role: "owner", seats: num(seats[0]?.c) };
+    } else {
+      const byUser = await sql`
+        select c.id, c.name, m.role as member_role
+        from company_members m
+        join companies c on c.id = m.company_id
+        where m.user_id = ${context.userId} and c.id <> ${HOUSEHOLD_COMPANY}
+        limit 1
+      `;
+      if (byUser[0]) {
+        const seats = await sql`
+          select count(*)::int as c from company_members where company_id = ${byUser[0].id}
+        `;
+        shop = {
+          id: byUser[0].id,
+          name: byUser[0].name,
+          role: byUser[0].member_role === "owner" ? "owner" : "sales",
+          seats: num(seats[0]?.c),
+        };
+      }
+    }
+
+    if (email) await bindHomeownerByEmail(sql, context.userId, email);
+    const houses = await sql`
+      select p.id, p.address_line, p.city, pp.cadence, pp.tier, pp.status, pp.renews_on
+      from properties p
+      left join property_plans pp on pp.property_id = p.id
+      where p.homeowner_user_id = ${context.userId}
+      order by p.created_at desc
+    `;
+    const quotes = shop
+      ? await sql`
+          select count(*)::int as c from proposals where company_id = ${shop.id}
+        `
+      : [{ c: 0 }];
+
+    return {
+      email,
+      name: email?.split("@")[0] ?? "Account",
+      shop,
+      quoteCount: num(quotes[0]?.c),
+      houses: houses.map((h) => ({
+        id: h.id,
+        address: h.address_line,
+        city: h.city,
+        cadence: h.cadence,
+        tier: h.tier,
+        status: h.status,
+        renewsOn: h.renews_on,
+      })),
+    };
+  });
+
 export type Audience = {
   signedIn: boolean;
   kind: "guest" | "homeowner" | "contractor";
