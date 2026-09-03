@@ -335,9 +335,10 @@ function collapseSameAddress<T extends {
       continue;
     }
     const score = (h: T) => h.fact_count + h.photo_count + h.job_count;
-    const keep = score(house) >= score(prev) ? house : prev;
-    if (!keep.plan && prev.plan) keep.plan = prev.plan;
-    if (!keep.plan && house.plan) keep.plan = house.plan;
+    const keep = score(house) > score(prev) ? house : prev;
+    const standard = [house.plan, prev.plan].find((pl) => pl?.tier === "standard");
+    if (standard) keep.plan = standard;
+    else if (!keep.plan) keep.plan = house.plan ?? prev.plan ?? null;
     by.set(key, keep);
   }
   return [...by.values()];
@@ -2096,6 +2097,35 @@ export const getHousehold = createServerFn({ method: "GET" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     if (session?.email) await bindHomeownerByEmail(sql, context.userId, session.email);
+    await sql`
+      update property_plans pp
+      set tier = ${"standard"}
+      from properties p
+      where pp.property_id = p.id
+        and p.homeowner_user_id = ${context.userId}
+        and pp.tier = ${"pro"}
+        and exists (
+          select 1
+          from properties p2
+          join property_plans pp2 on pp2.property_id = p2.id
+          where p2.homeowner_user_id = p.homeowner_user_id
+            and lower(trim(p2.address_line)) = lower(trim(p.address_line))
+            and pp2.tier = ${"standard"}
+        )
+    `;
+    await sql`
+      update homeowner_profiles
+      set plan = ${"basic"}
+      where user_id = ${context.userId}
+        and plan = ${"plus"}
+        and not exists (
+          select 1
+          from property_plans pp
+          join properties p on p.id = pp.property_id
+          where p.homeowner_user_id = ${context.userId}
+            and pp.tier = ${"pro"}
+        )
+    `;
     const profile = (
       await sql<HomeownerProfile>`select * from homeowner_profiles where user_id = ${context.userId} limit 1`
     )[0] ?? null;
@@ -2168,12 +2198,8 @@ export const createHomeProperty = createServerFn({ method: "POST" })
     if (address.length < 3) throw new Error("Need the street address.");
     await sql`
       insert into homeowner_profiles (user_id, plan, status)
-      values (${context.userId}, ${data.tier === "pro" ? "plus" : "basic"}, ${"active"})
-      on conflict (user_id) do update set
-        plan = case
-          when excluded.plan = ${"plus"} then ${"plus"}
-          else homeowner_profiles.plan
-        end
+      values (${context.userId}, ${"basic"}, ${"active"})
+      on conflict (user_id) do nothing
     `;
     const existing = (
       await sql<Property>`
@@ -2185,15 +2211,6 @@ export const createHomeProperty = createServerFn({ method: "POST" })
       `
     )[0];
     if (existing) {
-      await sql`
-        insert into property_plans (property_id, cadence, tier, status, renews_on)
-        values (${existing.id}, ${data.cadence}, ${data.tier}, ${"active"}, ${renewsOn(data.cadence)})
-        on conflict (property_id) do update set
-          cadence = excluded.cadence,
-          tier = excluded.tier,
-          status = ${"active"},
-          renews_on = excluded.renews_on
-      `;
       return { propertyId: existing.id };
     }
     const id = crypto.randomUUID();
