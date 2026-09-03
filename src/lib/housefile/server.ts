@@ -1409,6 +1409,36 @@ export const addPhotoPublic = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+
+export const deletePhotoPublic = createServerFn({ method: "POST" })
+  .validator((input: { token: string; photoId: string }) => input)
+  .handler(async ({ data }) => {
+    const sql = await getSql();
+    const rows = await sql<Property>`
+      select * from properties where share_token = ${data.token} or invite_token = ${data.token} limit 1
+    `;
+    if (!rows[0]) throw new Error("Property Record not found");
+    await sql`
+      delete from property_photos where id = ${data.photoId} and property_id = ${rows[0].id}
+    `;
+    return { ok: true as const };
+  });
+
+export const deletePhotoContractor = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string; photoId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const company = await companyFor(sql, context.userId, session?.email);
+    await requireOwnedProperty(sql, company.id, data.propertyId);
+    await sql`
+      delete from property_photos where id = ${data.photoId} and property_id = ${data.propertyId}
+    `;
+    return { ok: true as const };
+  });
+
 export const reviseProposalPublic = createServerFn({ method: "POST" })
   .validator(
     (input: {
