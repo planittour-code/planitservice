@@ -13,8 +13,11 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
+/** Verified Resend sending domain (subdomain `mail`). */
+const DEFAULT_FROM = `${LEGAL_NAME} <noreply@mail.planitservice.com>`;
+
 function fromAddress() {
-  return env("EMAIL_FROM") ?? `${LEGAL_NAME} <noreply@planitservice.com>`;
+  return env("EMAIL_FROM") ?? DEFAULT_FROM;
 }
 
 function isDeployed() {
@@ -67,6 +70,7 @@ export async function sendPasswordResetEmail(data: {
     body: JSON.stringify({
       from: fromAddress(),
       to: [to],
+      reply_to: LEGAL_EMAIL,
       subject,
       text,
       html,
@@ -74,6 +78,7 @@ export async function sendPasswordResetEmail(data: {
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(`Could not send the reset email (${res.status})${detail ? `: ${detail}` : ""}`);
+    console.error(`[auth] Resend rejected password reset (${res.status}) ${detail}`);
+    throw new Error(`We could not send the reset email. Write ${LEGAL_EMAIL}.`);
   }
 }

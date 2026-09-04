@@ -8,7 +8,7 @@
 
 # Nitro writes the server to .netlify/functions-internal on this preset.
 # DATABASE_URL and BETTER_AUTH_* must be set in the Netlify UI.
-# Password reset mail: set RESEND_API_KEY (and optional EMAIL_FROM).
+# Password reset mail: RESEND_API_KEY plus EMAIL_FROM on mail.planitservice.com.
 
 [[headers]]
   for = "/assets/*"
