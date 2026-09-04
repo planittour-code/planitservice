@@ -46,6 +46,7 @@ import { Route as RfpTokenRouteImport } from './routes/rfp.$token'
 import { Route as ShopOpenRouteImport } from './routes/shop.open'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiResendWebhookRouteImport } from './routes/api/resend/webhook'
 import { Route as AppPropertiesIdRouteImport } from './routes/app/properties.$id'
 import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
 import { Route as PTokenAcceptedRouteImport } from './routes/p.$token.accepted'
@@ -235,6 +236,11 @@ const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   path: '/api/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiResendWebhookRoute = ApiResendWebhookRouteImport.update({
+  id: '/api/resend/webhook',
+  path: '/api/resend/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppPropertiesIdRoute = AppPropertiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/home/': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/resend/webhook': typeof ApiResendWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -329,6 +336,7 @@ export interface FileRoutesByTo {
   '/home': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/resend/webhook': typeof ApiResendWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/home/': typeof HomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/resend/webhook': typeof ApiResendWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -416,6 +425,7 @@ export interface FileRouteTypes {
     | '/home/'
     | '/api/auth/$'
     | '/api/stripe/webhook'
+    | '/api/resend/webhook'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/api/auth/$'
     | '/api/stripe/webhook'
+    | '/api/resend/webhook'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -498,6 +509,7 @@ export interface FileRouteTypes {
     | '/home/'
     | '/api/auth/$'
     | '/api/stripe/webhook'
+    | '/api/resend/webhook'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -528,6 +540,7 @@ export interface RootRouteChildren {
   RfpTokenRoute: typeof RfpTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiResendWebhookRoute: typeof ApiResendWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -791,6 +804,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/resend/webhook': {
+      id: '/api/resend/webhook'
+      path: '/api/resend/webhook'
+      fullPath: '/api/resend/webhook'
+      preLoaderRoute: typeof ApiResendWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/properties/$id': {
       id: '/app/properties/$id'
       path: '/$id'
@@ -919,6 +939,7 @@ const rootRouteChildren: RootRouteChildren = {
   RfpTokenRoute: RfpTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiResendWebhookRoute: ApiResendWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

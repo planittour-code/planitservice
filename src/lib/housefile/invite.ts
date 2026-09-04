@@ -21,7 +21,18 @@ ${input.company}`;
 }
 
 export function invitationSubject(company: string, address: string) {
-  return `${company} opened a property record for ${address}`;
+  return `${company} sent an estimate for ${address}`;
+}
+
+export function publicOrigin() {
+  const fromEnv = process.env.BETTER_AUTH_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  return "https://planitservice.com";
+}
+
+export function publicUrl(path: string) {
+  const origin = publicOrigin();
+  return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export function safeNextPath(path: string | undefined, fallback = "/app") {

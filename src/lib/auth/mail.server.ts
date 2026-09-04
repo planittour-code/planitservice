@@ -14,7 +14,8 @@ function escapeHtml(value: string) {
 }
 
 /** Verified Resend sending domain (subdomain `mail`). */
-const DEFAULT_FROM = `${LEGAL_NAME} <noreply@mail.planitservice.com>`;
+export const MAIL_DOMAIN = "mail.planitservice.com";
+const DEFAULT_FROM = `${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`;
 
 function fromAddress() {
   return env("EMAIL_FROM") ?? DEFAULT_FROM;
@@ -22,6 +23,61 @@ function fromAddress() {
 
 function isDeployed() {
   return Boolean(env("DATABASE_URL") || env("NETLIFY"));
+}
+
+function resendKey() {
+  return env("RESEND_API_KEY");
+}
+
+export function estimateReplyTo(token: string) {
+  return `estimate+${token}@${MAIL_DOMAIN}`;
+}
+
+export function parseEstimateReplyToken(addresses: string[]) {
+  for (const raw of addresses) {
+    const match = raw.toLowerCase().match(/estimate\+([a-z0-9]+)@/);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+export async function sendResendEmail(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  replyTo?: string;
+  from?: string;
+}) {
+  const key = resendKey();
+  if (!key) {
+    if (isDeployed()) {
+      throw new Error(`We could not send the email. Write ${LEGAL_EMAIL}.`);
+    }
+    console.info(`[mail] ${input.subject} → ${input.to}\n${input.text}`);
+    return;
+  }
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: input.from ?? fromAddress(),
+      to: [input.to],
+      reply_to: input.replyTo ?? LEGAL_EMAIL,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error(`[mail] Resend rejected send (${res.status}) ${detail}`);
+    throw new Error(`We could not send the email. Write ${LEGAL_EMAIL}.`);
+  }
 }
 
 export async function sendPasswordResetEmail(data: {
@@ -52,33 +108,70 @@ export async function sendPasswordResetEmail(data: {
 <p>If you did not ask for this, ignore the email. Your password stays the same.</p>
 <p>${escapeHtml(LEGAL_NAME)}<br>${escapeHtml(LEGAL_SITE)}<br>${escapeHtml(LEGAL_EMAIL)}</p>`;
 
-  const key = env("RESEND_API_KEY");
-  if (!key) {
-    if (isDeployed()) {
-      throw new Error(`We could not send the reset email. Write ${LEGAL_EMAIL}.`);
-    }
-    console.info(`[auth] Password reset for ${to}: ${data.url}`);
-    return;
-  }
+  await sendResendEmail({ to, subject, text, html, replyTo: LEGAL_EMAIL });
+}
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromAddress(),
-      to: [to],
-      reply_to: LEGAL_EMAIL,
-      subject,
-      text,
-      html,
-    }),
+export async function sendEstimateEmail(data: {
+  to: string;
+  name: string;
+  company: string;
+  address: string;
+  proposalUrl: string;
+  inviteUrl: string;
+  replyToken: string;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = `${data.company} sent an estimate for ${data.address}`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    `${data.company} sent an estimate for ${data.address}.`,
+    "",
+    `Open the estimate: ${data.proposalUrl}`,
+    `Property Record: ${data.inviteUrl}`,
+    "",
+    "Reply to this email with notes or questions. We put the reply on the estimate.",
+    "",
+    data.company,
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>${escapeHtml(data.company)} sent an estimate for ${escapeHtml(data.address)}.</p>
+<p><a href="${escapeHtml(data.proposalUrl)}">Open the estimate</a></p>
+<p>The Property Record for this house: <a href="${escapeHtml(data.inviteUrl)}">${escapeHtml(data.inviteUrl)}</a></p>
+<p>Reply to this email with notes or questions. We put the reply on the estimate.</p>
+<p>${escapeHtml(data.company)}</p>`;
+
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: estimateReplyTo(data.replyToken),
+  });
+}
+
+export async function fetchReceivedEmail(emailId: string) {
+  const key = resendKey();
+  if (!key) throw new Error("RESEND_API_KEY is not set");
+  const res = await fetch(`https://api.resend.com/emails/receiving/${emailId}`, {
+    headers: { Authorization: `Bearer ${key}` },
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    console.error(`[auth] Resend rejected password reset (${res.status}) ${detail}`);
-    throw new Error(`We could not send the reset email. Write ${LEGAL_EMAIL}.`);
+    throw new Error(`Could not load received email (${res.status}) ${detail}`);
   }
+  return (await res.json()) as {
+    from?: string;
+    to?: string[];
+    subject?: string;
+    text?: string | null;
+    html?: string | null;
+    received_for?: string[];
+  };
+}
+
+export function stripQuotedReply(body: string) {
+  const cut = body.split(/\n(?:On .+wrote:|-----Original Message-----|>{2,}|\s*From:\s)/i)[0] ?? body;
+  return cut.trim();
 }

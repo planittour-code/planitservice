@@ -2,9 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Completeness,
-  CopyLink,
   FactsPanel,
-  InvitationLetter,
   JobTimeline,
   MissingChips,
   PhotoGrid,
@@ -30,7 +28,6 @@ function PropertyPage() {
   if (!q.data) return <p className="text-destructive">House not found.</p>;
   const file = q.data;
   const p = file.property;
-  const housePath = `/house/${p.share_token}`;
 
   return (
     <div className="space-y-10">
@@ -58,21 +55,7 @@ function PropertyPage() {
               New quote for this house
             </Link>
           </Button>
-          <CopyLink path={housePath} label="Copy property record link" />
         </div>
-        <details className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-          <summary className="cursor-pointer font-medium">Invitation to {p.homeowner_name}</summary>
-          <div className="mt-4">
-            <InvitationLetter
-              email={p.homeowner_email}
-              name={p.homeowner_name}
-              address={`${p.address_line}, ${p.city}`}
-              company={file.company.name}
-              invitePath={`/invite/${p.invite_token}`}
-              housePath={housePath}
-            />
-          </div>
-        </details>
       </header>
 
       {file.proposals.length > 0 && (

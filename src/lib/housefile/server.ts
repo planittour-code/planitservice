@@ -844,6 +844,16 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       await attachRfpQuote(sql, data.rfpToken, company.id, proposalId, property);
     }
     const proposal = (await sql<Proposal>`select * from proposals where id = ${proposalId}`)[0]!;
+    let emailed = false;
+    if (!pending) {
+      try {
+        const { deliverEstimateEmail } = await import("./mail");
+        await deliverEstimateEmail({ property, proposal, company });
+        emailed = true;
+      } catch (err) {
+        console.error("[mail] estimate send failed", err);
+      }
+    }
     return {
       propertyId: property.id,
       proposalId: proposal.id,
@@ -855,6 +865,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       address: `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`,
       companyName: company.name,
       pending,
+      emailed,
     };
   });
 
@@ -1820,7 +1831,17 @@ export const approveProposal = createServerFn({ method: "POST" })
       where id = ${id}
     `;
     await sql`update properties set invite_status = ${"sent"} where id = ${rows[0].property_id}`;
-    return { ok: true as const };
+    const proposal = (await sql<Proposal>`select * from proposals where id = ${id}`)[0]!;
+    const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0]!;
+    let emailed = false;
+    try {
+      const { deliverEstimateEmail } = await import("./mail");
+      await deliverEstimateEmail({ property, proposal, company });
+      emailed = true;
+    } catch (err) {
+      console.error("[mail] estimate send after approval failed", err);
+    }
+    return { ok: true as const, emailed };
   });
 
 export const adoptSampleHouse = createServerFn({ method: "POST" })

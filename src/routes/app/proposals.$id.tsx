@@ -1,10 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { CopyLink } from "@/components/house-panels";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { sendEstimateToHomeowner } from "@/lib/housefile/mail";
 import { approveProposal, getContractorProposal, listTeam } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/proposals/$id")({ component: ProposalPage });
@@ -18,8 +18,8 @@ function ProposalPage() {
   const team = useQuery({ queryKey: ["team"], queryFn: () => listTeam() });
   const approve = useMutation({
     mutationFn: () => approveProposal({ data: id }),
-    onSuccess: () => {
-      toast.success("Quote sent to the homeowner");
+    onSuccess: (result) => {
+      toast.success(result.emailed ? "Estimate emailed to the homeowner" : "Approved. Email did not go out.");
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not approve"),
@@ -45,7 +45,7 @@ function ProposalPage() {
               disabled={approve.isPending}
               onClick={() => approve.mutate()}
             >
-              {approve.isPending ? "Approving…" : "Approve and send"}
+              {approve.isPending ? "Sending…" : "Approve and Send Estimate"}
             </Button>
           )}
         </div>
@@ -57,13 +57,38 @@ function ProposalPage() {
           </Link>
         </Button>
         {bundle.proposal.status !== "pending" && (
-          <>
-            <CopyLink path={`/p/${bundle.proposal.share_token}`} label="Copy homeowner link" />
-            <CopyLink path={`/house/${bundle.property.share_token}`} label="Copy property record" />
-          </>
+          <SendEstimateButton
+            proposalId={bundle.proposal.id}
+            email={bundle.property.homeowner_email}
+            onSent={() => void q.refetch()}
+          />
         )}
       </div>
       <ProposalDoc bundle={bundle} mode="contractor" onChanged={() => q.refetch()} />
     </div>
+  );
+}
+
+function SendEstimateButton({
+  proposalId,
+  email,
+  onSent,
+}: {
+  proposalId: string;
+  email: string;
+  onSent: () => void;
+}) {
+  const send = useMutation({
+    mutationFn: () => sendEstimateToHomeowner({ data: proposalId }),
+    onSuccess: (result) => {
+      toast.success(`Estimate emailed to ${result.emailed}`);
+      onSent();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send"),
+  });
+  return (
+    <Button type="button" disabled={send.isPending} onClick={() => send.mutate()}>
+      {send.isPending ? "Sending…" : `Send Estimate to ${email}`}
+    </Button>
   );
 }

@@ -8,7 +8,8 @@
 
 # Nitro writes the server to .netlify/functions-internal on this preset.
 # DATABASE_URL and BETTER_AUTH_* must be set in the Netlify UI.
-# Password reset mail: RESEND_API_KEY plus EMAIL_FROM on mail.planitservice.com.
+# Mail: RESEND_API_KEY plus EMAIL_FROM on mail.planitservice.com.
+# Inbound estimate replies: Resend webhook → https://planitservice.com/api/resend/webhook
 
 [[headers]]
   for = "/assets/*"

@@ -6,7 +6,6 @@ import { z } from "zod";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { OpenShopDialog } from "@/components/open-shop-dialog";
 import { QuoteHouseBanner, MAPLE_DEMO } from "@/components/quote-house-banner";
-import { InvitationLetter } from "@/components/house-panels";
 import { QuotePreview, TakeoffForm } from "@/components/quote-takeoff";
 import { WizardSteps } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -213,7 +212,13 @@ function NewQuote() {
       }),
     onSuccess: (result) => {
       setSent(result);
-      toast.success(result.pending ? "Sent to the owner for approval" : "Quote ready to send");
+      toast.success(
+        result.pending
+          ? "Sent to the owner for approval"
+          : result.emailed
+            ? `Estimate emailed to ${result.homeownerEmail}`
+            : "Estimate saved. Email did not go out — open the quote to try again.",
+      );
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send"),
   });
@@ -260,42 +265,21 @@ function NewQuote() {
         </div>
       );
     }
-    const housePath = `/house/${sent.houseToken}`;
-    const proposalPath = `/p/${sent.proposalToken}`;
-    const invitePath = `/invite/${sent.inviteToken}`;
     return (
       <div className="mx-auto max-w-xl space-y-6">
-        <h1 className="font-display text-3xl font-medium tracking-tight">The quote is ready.</h1>
+        <h1 className="font-display text-3xl font-medium tracking-tight">
+          {sent.emailed ? "Estimate sent." : "Estimate saved."}
+        </h1>
         <p className="text-muted-foreground">
-          {sent.homeownerName} can open it without a password. The measurements you just took are on
-          the Property Record for the next job.
+          {sent.emailed
+            ? `We emailed ${sent.homeownerName} at ${sent.homeownerEmail}. Replies land on this estimate. The measurements you just took are on the Property Record.`
+            : `The estimate is on file for ${sent.homeownerName}. Open it to email it to ${sent.homeownerEmail}.`}
         </p>
-        <InvitationLetter
-          email={sent.homeownerEmail}
-          name={sent.homeownerName}
-          address={sent.address}
-          company={sent.companyName}
-          invitePath={invitePath}
-          housePath={housePath}
-          proposalPath={proposalPath}
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link to="/app/proposals/$id" params={{ id: sent.proposalId }}>
-              Open the quote
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/app/properties/$id" params={{ id: sent.propertyId }}>
-              Open the Property Record
-            </Link>
-          </Button>
-          <Button asChild variant="ghost">
-            <Link to="/p/$token" params={{ token: sent.proposalToken }}>
-              Preview as homeowner
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link to="/app/proposals/$id" params={{ id: sent.proposalId }}>
+            Open the estimate
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -441,9 +425,8 @@ function NewQuote() {
             <QuotePreview lines={lines} total={total} showCost />
           )}
           <p className="text-sm text-muted-foreground">
-            Sending writes these line items into a first draft and copies the measurements onto the
-            property record. {homeownerName || existing?.homeowner_name || "The homeowner"} can revise
-            colors and optional work.
+            Send Estimate emails this to {homeownerName || existing?.homeowner_name || "the homeowner"}
+            and writes the measurements onto the Property Record. They can reply to that email.
           </p>
           {!propertyId && (
             <div className="grid gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:grid-cols-2">
@@ -505,10 +488,10 @@ function NewQuote() {
               onClick={() => needShop(() => create.mutate())}
             >
               {create.isPending
-                ? "Writing quote…"
+                ? "Sending…"
                 : role === "sales" && missingBookCost.length > 0
                   ? "Send for approval"
-                  : "Send this quote"}
+                  : "Send Estimate"}
             </Button>
           </div>
         </div>
