@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { LegalSection, LegalShell, SlaContent } from "@/components/legal-doc";
+import { AupContent, LegalSection, LegalShell, SaasContent, SlaContent } from "@/components/legal-doc";
 import {
   LEGAL_EMAIL,
   LEGAL_GOVERNING,
@@ -20,11 +20,20 @@ function TermsPage() {
       <p>
         These Terms of Service (“Terms”) are the agreement between you and {LEGAL_NAME} for the
         cloud software at {LEGAL_SITE} (the “Service”). By creating an account, paying for a plan,
-        or using the Service, you agree to these Terms and to the{" "}
+        or using the Service, you agree to these Terms and to the exhibits that are part of them:
+        the{" "}
+        <Link to="/saas" className="underline underline-offset-2">
+          SaaS Agreement
+        </Link>
+        , the{" "}
+        <Link to="/aup" className="underline underline-offset-2">
+          Acceptable Use Policy
+        </Link>
+        , and the{" "}
         <Link to="/sla" className="underline underline-offset-2">
           Service Level Agreement
         </Link>
-        , which is part of these Terms.
+        .
       </p>
       <nav className="rounded-xl bg-card px-4 py-4 text-sm shadow-[var(--shadow-border)]" aria-label="On this page">
         <ul className="grid gap-2 sm:grid-cols-2">
@@ -59,33 +68,38 @@ function TermsPage() {
             </a>
           </li>
           <li>
-            <a href="#use" className="hover:text-foreground">
-              7. Acceptable use
+            <a href="#saas" className="hover:text-foreground">
+              7. SaaS Agreement
+            </a>
+          </li>
+          <li>
+            <a href="#aup" className="hover:text-foreground">
+              8. Acceptable Use Policy
             </a>
           </li>
           <li>
             <a href="#third" className="hover:text-foreground">
-              8. Third parties
+              9. Third parties
             </a>
           </li>
           <li>
             <a href="#sla" className="hover:text-foreground">
-              9. Service Level Agreement
+              10. Service Level Agreement
             </a>
           </li>
           <li>
             <a href="#disclaimers" className="hover:text-foreground">
-              10. Disclaimers
+              11. Disclaimers
             </a>
           </li>
           <li>
             <a href="#liability" className="hover:text-foreground">
-              11. Liability
+              12. Liability
             </a>
           </li>
           <li>
             <a href="#end" className="hover:text-foreground">
-              12. Ending the Service
+              13. Ending the Service
             </a>
           </li>
         </ul>
@@ -171,19 +185,28 @@ function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="use" n="7" title="Acceptable use">
-        <p>Do not:</p>
-        <ul className="list-disc space-y-2 pl-5">
-          <li>Break the law, or store content you are not allowed to share.</li>
-          <li>Probe, scrape, or overload the Service beyond ordinary use of the product.</li>
-          <li>Resell the Service or open a shop solely to siphon another shop’s materials or records.</li>
-          <li>Upload malware, or try to reach another customer’s data.</li>
-          <li>Put protected health information in a Property Record.</li>
-        </ul>
-        <p>We may suspend an account that we reasonably believe is abusing the Service.</p>
+      <LegalSection id="saas" n="7" title="SaaS Agreement">
+        <p>
+          Paid and trial access is a hosted software subscription. The SaaS Agreement (Exhibit B),
+          also published at{" "}
+          <Link to="/saas" className="underline underline-offset-2">
+            {LEGAL_SITE}/saas
+          </Link>
+          , is the license, seat, term, and confidentiality contract.
+        </p>
       </LegalSection>
 
-      <LegalSection id="third" n="8" title="Third parties">
+      <LegalSection id="aup" n="8" title="Acceptable Use Policy">
+        <p>
+          You must use the Service as described in the AUP (Exhibit C), also published at{" "}
+          <Link to="/aup" className="underline underline-offset-2">
+            {LEGAL_SITE}/aup
+          </Link>
+          . We may suspend or close an account that violates it.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="third" n="9" title="Third parties">
         <p>
           The Service uses processors we do not control, including Stripe for payment, map and
           address lookup providers, and (when enabled) model providers for reading house photos.
@@ -192,9 +215,9 @@ function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="sla" n="9" title="Service Level Agreement">
+      <LegalSection id="sla" n="10" title="Service Level Agreement">
         <p>
-          Paid accounts are covered by the cloud SLA below, also published at{" "}
+          Paid accounts are covered by the cloud SLA (Exhibit A), also published at{" "}
           <Link to="/sla" className="underline underline-offset-2">
             {LEGAL_SITE}/sla
           </Link>
@@ -207,7 +230,21 @@ function TermsPage() {
         <SlaContent />
       </div>
 
-      <LegalSection id="disclaimers" n="10" title="Disclaimers">
+      <div className="space-y-10 border-t border-border pt-10">
+        <h2 className="font-display text-3xl font-medium tracking-tight">
+          Exhibit B — Software as a Service Agreement
+        </h2>
+        <SaasContent />
+      </div>
+
+      <div className="space-y-10 border-t border-border pt-10">
+        <h2 className="font-display text-3xl font-medium tracking-tight">
+          Exhibit C — Acceptable Use Policy
+        </h2>
+        <AupContent />
+      </div>
+
+      <LegalSection id="disclaimers" n="11" title="Disclaimers">
         <p>
           THE SERVICE IS PROVIDED “AS IS.” EXCEPT FOR THE SLA, {LEGAL_NAME.toUpperCase()} DISCLAIMS
           ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR
@@ -216,7 +253,7 @@ function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="liability" n="11" title="Limitation of liability">
+      <LegalSection id="liability" n="12" title="Limitation of liability">
         <p>
           TO THE MAXIMUM EXTENT THE LAW ALLOWS, {LEGAL_NAME.toUpperCase()} IS NOT LIABLE FOR INDIRECT,
           INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR LOST PROFITS, LOST JOBS, OR
@@ -234,11 +271,12 @@ function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="end" n="12" title="Ending the Service">
+      <LegalSection id="end" n="13" title="Ending the Service">
         <p>
           You may cancel in billing at any time. We may suspend or close an account for non-payment,
-          a material breach, or a legal demand. After closure, Section 5 (license only as needed to
-          wind down), 10, 11, 12, and the SLA credit rules that already accrued still apply.
+          a material breach, an AUP violation, or a legal demand. After closure, Section 5 (license
+          only as needed to wind down), 11, 12, 13, the SaaS confidentiality term, and SLA credits
+          that already accrued still apply.
         </p>
         <p>
           These Terms are governed by {LEGAL_GOVERNING}, without regard to conflict-of-law rules.

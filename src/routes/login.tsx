@@ -138,8 +138,16 @@ function Login() {
                   Continuing with Google or X agrees to the{" "}
                   <Link to="/terms" className="underline underline-offset-2">
                     Terms
-                  </Link>{" "}
-                  and{" "}
+                  </Link>
+                  ,{" "}
+                  <Link to="/saas" className="underline underline-offset-2">
+                    SaaS
+                  </Link>
+                  ,{" "}
+                  <Link to="/aup" className="underline underline-offset-2">
+                    AUP
+                  </Link>
+                  , and{" "}
                   <Link to="/sla" className="underline underline-offset-2">
                     SLA
                   </Link>

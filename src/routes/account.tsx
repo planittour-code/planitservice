@@ -146,13 +146,21 @@ function AccountPage() {
               <div className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
                 <p className="text-sm text-muted-foreground">
                   Cards, invoices, and cancel live in Stripe. Use the email on this account. Paid
-                  plans are covered by the{" "}
-                  <Link to="/sla" className="underline underline-offset-2">
-                    Service Level Agreement
+                  plans are a{" "}
+                  <Link to="/saas" className="underline underline-offset-2">
+                    SaaS subscription
                   </Link>{" "}
-                  in the{" "}
+                  under the{" "}
                   <Link to="/terms" className="underline underline-offset-2">
-                    Terms of Service
+                    Terms
+                  </Link>
+                  ,{" "}
+                  <Link to="/aup" className="underline underline-offset-2">
+                    AUP
+                  </Link>
+                  , and{" "}
+                  <Link to="/sla" className="underline underline-offset-2">
+                    SLA
                   </Link>
                   .
                 </p>

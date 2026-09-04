@@ -19,6 +19,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as OpenRouteImport } from './routes/open'
 import { Route as ShopRouteImport } from './routes/shop'
+import { Route as AupRouteImport } from './routes/aup'
+import { Route as SaasRouteImport } from './routes/saas'
 import { Route as SlaRouteImport } from './routes/sla'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -94,6 +96,16 @@ const OpenRoute = OpenRouteImport.update({
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AupRoute = AupRouteImport.update({
+  id: '/aup',
+  path: '/aup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaasRoute = SaasRouteImport.update({
+  id: '/saas',
+  path: '/saas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlaRoute = SlaRouteImport.update({
@@ -238,6 +250,8 @@ export interface FileRoutesByFullPath {
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
+  '/aup': typeof AupRoute
+  '/saas': typeof SaasRoute
   '/sla': typeof SlaRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
@@ -274,6 +288,8 @@ export interface FileRoutesByTo {
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
+  '/aup': typeof AupRoute
+  '/saas': typeof SaasRoute
   '/sla': typeof SlaRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
@@ -313,6 +329,8 @@ export interface FileRoutesById {
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
+  '/aup': typeof AupRoute
+  '/saas': typeof SaasRoute
   '/sla': typeof SlaRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
@@ -353,6 +371,8 @@ export interface FileRouteTypes {
     | '/my'
     | '/open'
     | '/shop'
+    | '/aup'
+    | '/saas'
     | '/sla'
     | '/start'
     | '/terms'
@@ -389,6 +409,8 @@ export interface FileRouteTypes {
     | '/my'
     | '/open'
     | '/shop'
+    | '/aup'
+    | '/saas'
     | '/sla'
     | '/start'
     | '/terms'
@@ -427,6 +449,8 @@ export interface FileRouteTypes {
     | '/my'
     | '/open'
     | '/shop'
+    | '/aup'
+    | '/saas'
     | '/sla'
     | '/start'
     | '/terms'
@@ -466,6 +490,8 @@ export interface RootRouteChildren {
   MyRoute: typeof MyRoute
   OpenRoute: typeof OpenRoute
   ShopRoute: typeof ShopRouteWithChildren
+  AupRoute: typeof AupRoute
+  SaasRoute: typeof SaasRoute
   SlaRoute: typeof SlaRoute
   StartRoute: typeof StartRoute
   TermsRoute: typeof TermsRoute
@@ -548,6 +574,20 @@ declare module '@tanstack/react-router' {
       path: '/shop'
       fullPath: '/shop'
       preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aup': {
+      id: '/aup'
+      path: '/aup'
+      fullPath: '/aup'
+      preLoaderRoute: typeof AupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saas': {
+      id: '/saas'
+      path: '/saas'
+      fullPath: '/saas'
+      preLoaderRoute: typeof SaasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sla': {
@@ -825,6 +865,8 @@ const rootRouteChildren: RootRouteChildren = {
   MyRoute: MyRoute,
   OpenRoute: OpenRoute,
   ShopRoute: ShopRouteWithChildren,
+  AupRoute: AupRoute,
+  SaasRoute: SaasRoute,
   SlaRoute: SlaRoute,
   StartRoute: StartRoute,
   TermsRoute: TermsRoute,

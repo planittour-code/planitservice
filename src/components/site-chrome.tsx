@@ -157,6 +157,12 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
           <Link to="/terms" className="hover:text-foreground">
             Terms
           </Link>
+          <Link to="/saas" className="hover:text-foreground">
+            SaaS
+          </Link>
+          <Link to="/aup" className="hover:text-foreground">
+            AUP
+          </Link>
           <Link to="/sla" className="hover:text-foreground">
             SLA
           </Link>
