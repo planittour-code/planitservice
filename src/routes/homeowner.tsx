@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
+import { TermsAgree } from "@/components/legal-doc";
 import { PageFooter, PublicHeader, AuthSlot } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,6 +207,7 @@ function StartHouseRecord() {
                   </>
                 )}
                 {error && <p className="text-sm text-destructive">{error}</p>}
+                {!user && <TermsAgree id="home-agree-terms" />}
                 <Button type="submit" className="min-h-12 w-full" disabled={busy}>
                   {busy
                     ? "Working…"

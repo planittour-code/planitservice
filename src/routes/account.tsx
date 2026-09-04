@@ -145,7 +145,16 @@ function AccountPage() {
               <h2 className="font-display text-xl font-medium">Billing</h2>
               <div className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
                 <p className="text-sm text-muted-foreground">
-                  Cards, invoices, and cancel live in Stripe. Use the email on this account.
+                  Cards, invoices, and cancel live in Stripe. Use the email on this account. Paid
+                  plans are covered by the{" "}
+                  <Link to="/sla" className="underline underline-offset-2">
+                    Service Level Agreement
+                  </Link>{" "}
+                  in the{" "}
+                  <Link to="/terms" className="underline underline-offset-2">
+                    Terms of Service
+                  </Link>
+                  .
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button asChild>

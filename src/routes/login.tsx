@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
+import { TermsAgree } from "@/components/legal-doc";
 import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,6 +133,19 @@ function Login() {
                     Continue with {p.label}
                   </Button>
                 ))}
+              {grokOauthOnThisHost() && mode === "up" && (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Continuing with Google or X agrees to the{" "}
+                  <Link to="/terms" className="underline underline-offset-2">
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/sla" className="underline underline-offset-2">
+                    SLA
+                  </Link>
+                  .
+                </p>
+              )}
               {grokOauthOnThisHost() && (
                 <div className="flex items-center gap-3 py-2">
                   <div className="h-px flex-1 bg-border" />
@@ -170,6 +184,7 @@ function Login() {
                   />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
+                {mode === "up" && <TermsAgree id="login-agree-terms" />}
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? "Working…" : mode === "up" ? "Create account" : "Sign in"}
                 </Button>

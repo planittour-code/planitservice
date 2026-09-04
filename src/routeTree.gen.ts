@@ -19,7 +19,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as OpenRouteImport } from './routes/open'
 import { Route as ShopRouteImport } from './routes/shop'
+import { Route as SlaRouteImport } from './routes/sla'
 import { Route as StartRouteImport } from './routes/start'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
 import { Route as AppLeadsRouteImport } from './routes/app/leads'
@@ -94,9 +96,19 @@ const ShopRoute = ShopRouteImport.update({
   path: '/shop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SlaRoute = SlaRouteImport.update({
+  id: '/sla',
+  path: '/sla',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StartRoute = StartRouteImport.update({
   id: '/start',
   path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -226,7 +238,9 @@ export interface FileRoutesByFullPath {
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
+  '/sla': typeof SlaRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
@@ -260,7 +274,9 @@ export interface FileRoutesByTo {
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
+  '/sla': typeof SlaRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
@@ -297,7 +313,9 @@ export interface FileRoutesById {
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
+  '/sla': typeof SlaRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
@@ -335,7 +353,9 @@ export interface FileRouteTypes {
     | '/my'
     | '/open'
     | '/shop'
+    | '/sla'
     | '/start'
+    | '/terms'
     | '/app/book'
     | '/app/leads'
     | '/app/market'
@@ -369,7 +389,9 @@ export interface FileRouteTypes {
     | '/my'
     | '/open'
     | '/shop'
+    | '/sla'
     | '/start'
+    | '/terms'
     | '/app/book'
     | '/app/leads'
     | '/app/market'
@@ -405,7 +427,9 @@ export interface FileRouteTypes {
     | '/my'
     | '/open'
     | '/shop'
+    | '/sla'
     | '/start'
+    | '/terms'
     | '/app/book'
     | '/app/leads'
     | '/app/market'
@@ -442,7 +466,9 @@ export interface RootRouteChildren {
   MyRoute: typeof MyRoute
   OpenRoute: typeof OpenRoute
   ShopRoute: typeof ShopRouteWithChildren
+  SlaRoute: typeof SlaRoute
   StartRoute: typeof StartRoute
+  TermsRoute: typeof TermsRoute
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -524,11 +550,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sla': {
+      id: '/sla'
+      path: '/sla'
+      fullPath: '/sla'
+      preLoaderRoute: typeof SlaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/start': {
       id: '/start'
       path: '/start'
       fullPath: '/start'
       preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -785,7 +825,9 @@ const rootRouteChildren: RootRouteChildren = {
   MyRoute: MyRoute,
   OpenRoute: OpenRoute,
   ShopRoute: ShopRouteWithChildren,
+  SlaRoute: SlaRoute,
   StartRoute: StartRoute,
+  TermsRoute: TermsRoute,
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,
   InviteTokenRoute: InviteTokenRoute,

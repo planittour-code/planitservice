@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { TermsAgree } from "@/components/legal-doc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,6 +100,7 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
         </>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
+      {!user && <TermsAgree id="shop-agree-terms" />}
       <Button type="submit" className="min-h-12 w-full" disabled={busy}>
         {busy ? "Working…" : user ? "Continue to shop setup" : "Create account and open a shop"}
       </Button>

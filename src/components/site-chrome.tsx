@@ -128,7 +128,8 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
         <span>
           {shop
             ? "Know the house before you start talking."
-            : "You start the record. You keep it."}
+            : "You start the record. You keep it."}{" "}
+          <span className="text-muted-foreground/80">© {new Date().getFullYear()} PlanitService</span>
         </span>
         <nav className="flex flex-wrap gap-x-4 gap-y-1">
           {shop ? (
@@ -153,6 +154,12 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
               </Link>
             </>
           )}
+          <Link to="/terms" className="hover:text-foreground">
+            Terms
+          </Link>
+          <Link to="/sla" className="hover:text-foreground">
+            SLA
+          </Link>
           <Link to="/login" className="hover:text-foreground">
             Sign in
           </Link>
