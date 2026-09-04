@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware, optionalAuthMiddleware } from "@/lib/auth/middleware";
 import { getSql, type Sql } from "@/lib/db";
+import { LEGAL_EMAIL } from "@/lib/legal";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, STARTER_BOOK, type PriceBookItem } from "./book";
 import { FIELD_CATALOG } from "./fields";
 import { coverLetter } from "./cover-letter";
@@ -1842,6 +1843,38 @@ export const approveProposal = createServerFn({ method: "POST" })
       console.error("[mail] estimate send after approval failed", err);
     }
     return { ok: true as const, emailed };
+  });
+
+export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((proposalId: string) => proposalId)
+  .handler(async ({ context, data: proposalId }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company } = await shopFor(sql, context.userId, session?.email);
+    const rows = await sql<Proposal>`
+      select * from proposals where id = ${proposalId} and company_id = ${company.id} limit 1
+    `;
+    const proposal = rows[0];
+    if (!proposal) throw new Error("Proposal not found");
+    if (proposal.status === "pending") {
+      throw new Error("The owner has to approve this quote before it can go to the homeowner.");
+    }
+    const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0];
+    if (!property) throw new Error("House not found");
+    try {
+      const { deliverEstimateEmail } = await import("./mail");
+      await deliverEstimateEmail({ property, proposal, company });
+    } catch (err) {
+      console.error("[mail] estimate send failed", err);
+      throw new Error(`Could not email the estimate. Write ${LEGAL_EMAIL}.`);
+    }
+    await sql`
+      update proposals set status = ${"sent"}, sent_at = coalesce(sent_at, now()) where id = ${proposal.id}
+    `;
+    await sql`update properties set invite_status = ${"sent"} where id = ${property.id}`;
+    return { ok: true as const, emailed: property.homeowner_email };
   });
 
 export const adoptSampleHouse = createServerFn({ method: "POST" })

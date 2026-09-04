@@ -1,10 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  fetchReceivedEmail,
-  parseEstimateReplyToken,
-  stripQuotedReply,
-} from "@/lib/auth/mail.server";
-import { getSql } from "@/lib/db";
 import type { Property, Proposal } from "@/lib/housefile/types";
 
 type ResendEvent = {
@@ -26,9 +20,17 @@ function authorName(from: string | undefined) {
   return email?.[0] ?? "Homeowner";
 }
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+
 export const Route = createFileRoute("/api/resend/webhook")({
   server: {
     handlers: {
+      GET: async () => json({ ok: true }),
+      HEAD: async () => new Response(null, { status: 200 }),
       POST: async ({ request }) => {
         const raw = await request.text();
         let event: ResendEvent;
@@ -38,12 +40,15 @@ export const Route = createFileRoute("/api/resend/webhook")({
           return new Response("Invalid payload", { status: 400 });
         }
         if (event.type && event.type !== "email.received") {
-          return new Response(JSON.stringify({ ok: true }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          });
+          return json({ ok: true });
         }
         try {
+          const {
+            fetchReceivedEmail,
+            parseEstimateReplyToken,
+            stripQuotedReply,
+          } = await import("@/lib/auth/mail.server");
+          const { getSql } = await import("@/lib/db");
           const emailId = event.data?.email_id;
           const received = emailId
             ? await fetchReceivedEmail(emailId).catch(() => null)
@@ -56,26 +61,17 @@ export const Route = createFileRoute("/api/resend/webhook")({
           ];
           const token = parseEstimateReplyToken(to);
           if (!token) {
-            return new Response(JSON.stringify({ ok: true, ignored: true }), {
-              status: 200,
-              headers: { "content-type": "application/json" },
-            });
+            return json({ ok: true, ignored: true });
           }
           const text = stripQuotedReply(received?.text || received?.html?.replace(/<[^>]+>/g, " ") || "");
           if (!text) {
-            return new Response(JSON.stringify({ ok: true, empty: true }), {
-              status: 200,
-              headers: { "content-type": "application/json" },
-            });
+            return json({ ok: true, empty: true });
           }
           const sql = await getSql();
           const rows = await sql<Proposal>`select * from proposals where share_token = ${token} limit 1`;
           const proposal = rows[0];
           if (!proposal) {
-            return new Response(JSON.stringify({ ok: true, missing: true }), {
-              status: 200,
-              headers: { "content-type": "application/json" },
-            });
+            return json({ ok: true, missing: true });
           }
           const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0];
           const name = authorName(received?.from ?? event.data?.from) || property?.homeowner_name || "Homeowner";
@@ -90,10 +86,7 @@ export const Route = createFileRoute("/api/resend/webhook")({
           console.error("[resend] inbound webhook failed", err);
           return new Response("Handler failed", { status: 500 });
         }
-        return new Response(JSON.stringify({ received: true }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
+        return json({ received: true });
       },
     },
   },

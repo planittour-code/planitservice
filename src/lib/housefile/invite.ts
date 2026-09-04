@@ -24,17 +24,6 @@ export function invitationSubject(company: string, address: string) {
   return `${company} sent an estimate for ${address}`;
 }
 
-export function publicOrigin() {
-  const fromEnv = process.env.BETTER_AUTH_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/+$/, "");
-  return "https://planitservice.com";
-}
-
-export function publicUrl(path: string) {
-  const origin = publicOrigin();
-  return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
 export function safeNextPath(path: string | undefined, fallback = "/app") {
   if (!path) return fallback;
   if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {

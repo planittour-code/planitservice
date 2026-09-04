@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sendEstimateToHomeowner } from "@/lib/housefile/mail";
-import { approveProposal, getContractorProposal, listTeam } from "@/lib/housefile/server";
+import { approveProposal, getContractorProposal, listTeam, sendEstimateToHomeowner } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/proposals/$id")({ component: ProposalPage });
 
