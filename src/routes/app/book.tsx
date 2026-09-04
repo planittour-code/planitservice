@@ -92,7 +92,7 @@ function PriceBookPage() {
       warranty_terms: string;
     }) => upsertPriceBookItem({ data: row }),
     onSuccess: () => {
-      toast.success("Saved to the book");
+      toast.success("Saved to materials");
       setEditing(null);
       void q.refetch();
     },
@@ -111,7 +111,7 @@ function PriceBookPage() {
   const upload = useMutation({
     mutationFn: () => importPriceBookCsv({ data: csv }),
     onSuccess: (res) => {
-      toast.success(`${res.count} rows in the book`);
+      toast.success(`${res.count} rows in materials`);
       setCsv("");
       void q.refetch();
     },
@@ -125,9 +125,9 @@ function PriceBookPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Price book</h1>
+          <h1 className="font-display text-3xl font-medium tracking-tight">Materials</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            Add materials and set what you pay and what you sell. Quotes pick from this book. Cost
+            Add materials and set what you pay and what you sell. Quotes pick from this list. Cost
             stays in the shop — the homeowner sees the sell price.
           </p>
         </div>
@@ -273,13 +273,13 @@ function PriceBookPage() {
             placeholder="Paste from the yard…"
           />
           <Button type="button" disabled={!csv.trim() || upload.isPending} onClick={() => upload.mutate()}>
-            {upload.isPending ? "Importing…" : "Import into the book"}
+            {upload.isPending ? "Importing…" : "Import into materials"}
           </Button>
         </section>
       )}
 
       <p className="text-sm text-muted-foreground">
-        Dealer login (ABC, Beacon, SW) writes into this same book. Not wired yet.{" "}
+        Dealer login (ABC, Beacon, SW) writes into this same list. Not wired yet.{" "}
         <Link to="/app/settings" className="underline">
           Team
         </Link>{" "}

@@ -38,7 +38,7 @@ const ROOF: Starter[] = [
   { item: "Tear-off and haul", description: "Strip existing roof and haul debris.", qty: "" },
   { item: "Ice and water shield", description: "Valleys and eaves.", qty: "" },
   { item: "Synthetic underlayment", description: "Field underlayment.", qty: "" },
-  { item: "Shingles", description: "Field shingles from the book.", slot: "shingle", qty: "" },
+  { item: "Shingles", description: "Field shingles from materials.", slot: "shingle", qty: "" },
   { item: "Ridge cap and vent", description: "Cap and exhaust at the ridge.", qty: "" },
   { item: "Flashings and boots", description: "Step, pipe, and wall flashings.", qty: "1" },
   { item: "Permit, dumpster, closeout", description: "Dumpster, permit, magnetic sweep.", qty: "1" },
@@ -46,28 +46,28 @@ const ROOF: Starter[] = [
 
 const WINDOWS: Starter[] = [
   { item: "Remove and haul", description: "Pull existing units and haul.", qty: "" },
-  { item: "Window units", description: "New units from the book.", slot: "window", qty: "" },
+  { item: "Window units", description: "New units from materials.", slot: "window", qty: "" },
 ];
 
 const GUTTERS: Starter[] = [
   { item: "Remove existing gutters", description: "Pull and haul old gutters.", qty: "" },
-  { item: "Gutters", description: "New gutter run from the book.", slot: "gutter", qty: "" },
+  { item: "Gutters", description: "New gutter run from materials.", slot: "gutter", qty: "" },
   { item: "Downspouts and splash", description: "Downspouts and splash blocks.", qty: "" },
 ];
 
 const SIDING: Starter[] = [
   { item: "Tear-off and haul", description: "Strip cladding and haul.", qty: "" },
-  { item: "Siding", description: "New siding from the book.", slot: "siding", qty: "" },
+  { item: "Siding", description: "New siding from materials.", slot: "siding", qty: "" },
 ];
 
 const DECK: Starter[] = [
   { item: "Wash and prep", description: "Clean, dull, and sand as needed.", qty: "" },
-  { item: "Stain / sealer", description: "Finish from the book.", slot: "stain", qty: "" },
+  { item: "Stain / sealer", description: "Finish from materials.", slot: "stain", qty: "" },
 ];
 
 const PORCH: Starter[] = [
   { item: "Prep floor", description: "Clean and dull the walking surface.", qty: "" },
-  { item: "Porch floor finish", description: "Floor coat from the book.", slot: "stain", qty: "" },
+  { item: "Porch floor finish", description: "Floor coat from materials.", slot: "stain", qty: "" },
 ];
 
 export function startersFor(workId: string, paintScope?: string): Starter[] {

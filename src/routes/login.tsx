@@ -114,7 +114,7 @@ function Login() {
           <p className="max-w-md text-muted-foreground">
             {homeowner
               ? "Jobs, warranties, and maintenance at the address. Add another property when you need to. Pro hands the Property Record to the next owner."
-              : "Pick the template. Enter while you talk. Price from the book. Send the estimate before you leave. The Property Record is how they call you back."}
+              : "Pick the template. Enter while you talk. Price from materials. Send the estimate before you leave. The Property Record is how they call you back."}
           </p>
         </div>
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">

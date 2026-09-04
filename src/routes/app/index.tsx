@@ -43,7 +43,7 @@ function ShopHome() {
           <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
         </div>
         <Button asChild variant="outline">
-          <Link to="/app/book">Price book</Link>
+          <Link to="/app/book">Materials</Link>
         </Button>
       </div>
 

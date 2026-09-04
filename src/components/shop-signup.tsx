@@ -20,7 +20,7 @@ export function ShopExplainer() {
       </p>
       <ul className="space-y-3 text-sm text-muted-foreground">
         <li>Search the address before you roll the truck.</li>
-        <li>Price from your book — suppliers, a spreadsheet, or numbers you type.</li>
+        <li>Price from your materials — suppliers, a spreadsheet, or numbers you type.</li>
         <li>Every quote starts the Property Record. The next trade at that address is already yours.</li>
       </ul>
     </div>

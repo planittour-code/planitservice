@@ -110,13 +110,13 @@ function SettingsPage() {
       </form>
       <section className="space-y-3 border-t border-border pt-8">
         <div>
-          <h2 className="font-display text-2xl font-medium tracking-tight">Price book</h2>
+          <h2 className="font-display text-2xl font-medium tracking-tight">Materials</h2>
           <p className="text-sm text-muted-foreground">
             Materials this shop sells. Add a product, set cost and sell. Quotes pick from here.
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link to="/app/book">Open the price book</Link>
+          <Link to="/app/book">Open materials</Link>
         </Button>
       </section>
       <TeamSection />
@@ -174,7 +174,7 @@ function TeamSection() {
       <div>
         <h2 className="font-display text-2xl font-medium tracking-tight">Sales team</h2>
         <p className="text-sm text-muted-foreground">
-          They quote from the book. If a cost is missing they propose one, and you approve before
+          They quote from materials. If a cost is missing they propose one, and you approve before
           the homeowner sees it.
         </p>
       </div>

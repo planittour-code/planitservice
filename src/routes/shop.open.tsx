@@ -35,7 +35,7 @@ function OpenShop() {
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
                 <li>Search the address before you roll the truck.</li>
-                <li>Price from your book — suppliers, a spreadsheet, or numbers you type.</li>
+                <li>Price from your materials — suppliers, a spreadsheet, or numbers you type.</li>
                 <li>Every quote starts the Property Record. The next trade at that address is already yours.</li>
               </ul>
             </div>
@@ -68,7 +68,7 @@ function OpenShop() {
               photo="/houses/maple-interior.jpg"
               kicker="Send it now"
               title="The estimate leaves with you still in the yard."
-              body="Templates, line items, and the book. Talk and type. The homeowner has a number before the other shop finds parking."
+              body="Templates, line items, and materials. Talk and type. The homeowner has a number before the other shop finds parking."
             />
             <Proof
               photo="/houses/maple-roof.jpg"

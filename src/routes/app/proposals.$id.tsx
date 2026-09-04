@@ -35,8 +35,8 @@ function ProposalPage() {
         <div className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
           <p className="font-medium">Waiting on the owner</p>
           <p className="text-sm text-muted-foreground">
-            A cost was not in the book. Approve to send this to the homeowner and write the cost
-            into the book.
+            A cost was not in materials. Approve to send this to the homeowner and write the cost
+            into materials.
           </p>
           {owner && (
             <Button

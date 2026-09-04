@@ -79,7 +79,7 @@ export function EstimateSheet({
       <div>
         <h2 className="font-display text-2xl font-medium tracking-tight">Line items</h2>
         <p className="text-sm text-muted-foreground">
-          Pick from the price book or type a custom item. Amount is quantity × price.
+          Pick from materials or type a custom item. Amount is quantity × price.
         </p>
       </div>
       <div className="space-y-4">

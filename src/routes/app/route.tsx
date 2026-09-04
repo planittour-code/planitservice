@@ -60,7 +60,7 @@ function AppLayout() {
               <NavLink to="/app/market">Market</NavLink>
               <NavLink to="/app/properties">Jobs</NavLink>
               <NavLink to="/app/leads">Leads</NavLink>
-              <NavLink to="/app/book">Price book</NavLink>
+              <NavLink to="/app/book">Materials</NavLink>
               <NavLink to="/app/settings">Shop settings</NavLink>
             </nav>
           )}
@@ -79,7 +79,7 @@ function AppLayout() {
           <NavLink to="/app/market">Market</NavLink>
           <NavLink to="/app/properties">Jobs</NavLink>
           <NavLink to="/app/leads">Leads</NavLink>
-          <NavLink to="/app/book">Book</NavLink>
+          <NavLink to="/app/book">Materials</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>
         </nav>
         )}

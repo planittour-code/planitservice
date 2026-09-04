@@ -56,7 +56,7 @@ function WelcomeSite() {
               <PathCard
                 kicker="Contractors"
                 title="Quote from the last job."
-                body="Look up the address. If a record is there, you know the walk before you talk. Templates, a price book, and a quote you can send before you leave the yard. The File you open is theirs — they keep it."
+                body="Look up the address. If a record is there, you know the walk before you talk. Templates, materials, and a quote you can send before you leave the yard. The File you open is theirs — they keep it."
                 price={`Shop from $${dollars(SHOP_MONTHLY)} / month`}
                 to="/shop"
                 cta="I’m a contractor"

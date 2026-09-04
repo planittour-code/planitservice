@@ -249,7 +249,7 @@ function NewQuote() {
         <div className="mx-auto max-w-xl space-y-6">
           <h1 className="font-display text-3xl font-medium tracking-tight">Waiting on the owner.</h1>
           <p className="text-muted-foreground">
-            You entered a cost that was not in the book. {sent.homeownerName} will not see this quote
+            You entered a cost that was not in materials. {sent.homeownerName} will not see this quote
             until the owner approves the number.
           </p>
           <Button asChild>
@@ -463,8 +463,8 @@ function NewQuote() {
             <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
               <p className="text-sm text-muted-foreground">
                 {role === "sales"
-                  ? "A cost is missing from the book. The owner has to approve the number before the homeowner sees this quote."
-                  : "Enter a cost for each product that is not in the book. Sending writes it into the book."}
+                  ? "A cost is missing from materials. The owner has to approve the number before the homeowner sees this quote."
+                  : "Enter a cost for each product that is not in materials. Sending writes it into materials."}
               </p>
               {missingBookCost.map((line) =>
                 line.bookId ? (

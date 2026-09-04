@@ -17,7 +17,7 @@ export const Route = createFileRoute("/app/onboard")({ component: Onboard });
 const STEPS = [
   { n: 1, label: "Services" },
   { n: 2, label: "Stand out" },
-  { n: 3, label: "Price book" },
+  { n: 3, label: "Materials" },
   { n: 4, label: "Branding" },
 ];
 
@@ -97,7 +97,7 @@ function Onboard() {
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Shop setup</p>
         <h1 className="font-display text-3xl font-medium tracking-tight">Open the shop.</h1>
         <p className="text-muted-foreground">
-          Services, how you stand out, a price book, then your name on the estimate.
+          Services, how you stand out, materials, then your name on the estimate.
         </p>
         <WizardSteps step={step} items={STEPS} />
       </div>
@@ -259,7 +259,7 @@ function Onboard() {
               Back
             </Button>
             <Button type="button" onClick={() => setStep(3)}>
-              Next — price book
+              Next — materials
             </Button>
           </div>
         </div>
@@ -268,7 +268,7 @@ function Onboard() {
       {step === 3 && (
         <div className="space-y-5">
           <p className="text-muted-foreground">
-            Load a starter book from the aisle you actually buy. Next you will add materials and
+            Load starter materials from the aisle you actually buy. Next you will add products and
             set cost and sell. This is not a live supplier feed.
           </p>
           <div className="grid gap-3">
@@ -286,7 +286,7 @@ function Onboard() {
             />
             <BookChoice
               on={book === "starter"}
-              title="Shop book"
+              title="Shop materials"
               body="Sherwin-Williams, GAF, Marvin, LeafFilter — the PlanitService starter."
               onClick={() => setBook("starter")}
             />

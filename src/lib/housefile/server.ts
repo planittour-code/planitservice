@@ -188,7 +188,7 @@ async function ensureDemoPending(sql: Sql, companyId: string) {
     ) values (
       ${proposalId}, ${companyId}, ${maple[0].id}, ${"tmpl_windows"}, ${slugToken()},
       ${"Window replacement — Marvin Essential"}, ${"pending"},
-      ${"Twelve openings. Sales picked Marvin Essential. The yard cost is not in the book yet."},
+      ${"Twelve openings. Sales picked Marvin Essential. The yard cost is not in materials yet."},
       ${null}
     )
   `;
@@ -223,7 +223,7 @@ async function ensureDemoPending(sql: Sql, companyId: string) {
     {
       sort: 2,
       name: "Marvin Essential",
-      description: "Unit, flashing, and install. Low-E glass. Yard cost proposed — not yet in the book.",
+      description: "Unit, flashing, and install. Low-E glass. Yard cost proposed — not yet in materials.",
       qty: 12,
       unit: "ea",
       price: 672,
@@ -267,7 +267,7 @@ async function ensureDemoPending(sql: Sql, companyId: string) {
     insert into proposal_messages (id, proposal_id, author_role, author_name, body)
     values (
       ${crypto.randomUUID()}, ${proposalId}, ${"contractor"}, ${"Sales"},
-      ${"Quoted Marvin Essential at $480 a unit from the yard. Cost is not in the book. Margaret should not see this until you approve the number."}
+      ${"Quoted Marvin Essential at $480 a unit from the yard. Cost is not in materials. Margaret should not see this until you approve the number."}
     )
   `;
 }
@@ -1676,7 +1676,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await shopFor(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit the price book.");
+    if (role !== "owner") throw new Error("Only the owner can edit materials.");
     const product = data.product_name.trim();
     if (!product) throw new Error("Product name is required");
     const cost = data.cost.trim() === "" ? null : num(data.cost);
@@ -1724,7 +1724,7 @@ export const archivePriceBookItem = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await shopFor(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit the price book.");
+    if (role !== "owner") throw new Error("Only the owner can edit materials.");
     await sql`update price_book set active = false, updated_at = now() where id = ${id} and company_id = ${company.id}`;
     return { ok: true as const };
   });
@@ -1737,7 +1737,7 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await shopFor(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit the price book.");
+    if (role !== "owner") throw new Error("Only the owner can edit materials.");
     const rows = parseBookCsv(csv);
     for (const row of rows) {
       await sql`
