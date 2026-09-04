@@ -134,8 +134,9 @@ function TermsPage() {
       <LegalSection id="accounts" n="3" title="Accounts">
         <p>
           Keep your email and password accurate and secret. You are responsible for activity under
-          your account, including extra shop seats you invite. Tell us promptly at {LEGAL_EMAIL} if
-          you believe the account was used without permission.
+          your account, including extra shop seats you invite. If you forget the password, use the
+          reset link on the sign-in page. Tell us promptly at {LEGAL_EMAIL} if you believe the
+          account was used without permission.
         </p>
         <p>
           Shop owners control materials, team seats, and billing for the shop. Homeowners control

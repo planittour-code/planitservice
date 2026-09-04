@@ -180,7 +180,22 @@ function Login() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="password">Password</Label>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password">Password</Label>
+                    {mode === "in" && (
+                      <Link
+                        to="/forgot-password"
+                        search={{
+                          email: email || undefined,
+                          next: search.next,
+                          role: search.role,
+                        }}
+                        className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                      >
+                        Forgot password?
+                      </Link>
+                    )}
+                  </div>
                   <Input
                     id="password"
                     type="password"

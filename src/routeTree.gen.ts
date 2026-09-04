@@ -16,6 +16,8 @@ import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as HomeownerRouteImport } from './routes/homeowner'
 import { Route as HomeownersRouteImport } from './routes/homeowners'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as OpenRouteImport } from './routes/open'
 import { Route as ShopRouteImport } from './routes/shop'
@@ -81,6 +83,16 @@ const HomeownersRoute = HomeownersRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MyRoute = MyRouteImport.update({
@@ -247,6 +259,8 @@ export interface FileRoutesByFullPath {
   '/homeowner': typeof HomeownerRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
@@ -285,6 +299,8 @@ export interface FileRoutesByTo {
   '/homeowner': typeof HomeownerRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
@@ -326,6 +342,8 @@ export interface FileRoutesById {
   '/homeowner': typeof HomeownerRoute
   '/homeowners': typeof HomeownersRoute
   '/login': typeof LoginRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/my': typeof MyRoute
   '/open': typeof OpenRoute
   '/shop': typeof ShopRouteWithChildren
@@ -368,6 +386,8 @@ export interface FileRouteTypes {
     | '/homeowner'
     | '/homeowners'
     | '/login'
+    | '/forgot-password'
+    | '/reset-password'
     | '/my'
     | '/open'
     | '/shop'
@@ -406,6 +426,8 @@ export interface FileRouteTypes {
     | '/homeowner'
     | '/homeowners'
     | '/login'
+    | '/forgot-password'
+    | '/reset-password'
     | '/my'
     | '/open'
     | '/shop'
@@ -446,6 +468,8 @@ export interface FileRouteTypes {
     | '/homeowner'
     | '/homeowners'
     | '/login'
+    | '/forgot-password'
+    | '/reset-password'
     | '/my'
     | '/open'
     | '/shop'
@@ -487,6 +511,8 @@ export interface RootRouteChildren {
   HomeownerRoute: typeof HomeownerRoute
   HomeownersRoute: typeof HomeownersRoute
   LoginRoute: typeof LoginRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   MyRoute: typeof MyRoute
   OpenRoute: typeof OpenRoute
   ShopRoute: typeof ShopRouteWithChildren
@@ -553,6 +579,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/my': {
@@ -862,6 +902,8 @@ const rootRouteChildren: RootRouteChildren = {
   HomeownerRoute: HomeownerRoute,
   HomeownersRoute: HomeownersRoute,
   LoginRoute: LoginRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   MyRoute: MyRoute,
   OpenRoute: OpenRoute,
   ShopRoute: ShopRouteWithChildren,

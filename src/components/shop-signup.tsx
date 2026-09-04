@@ -110,6 +110,10 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
           <Link to="/login" search={{ next }} className="underline underline-offset-2">
             Sign in
           </Link>
+          {" · "}
+          <Link to="/forgot-password" search={{ next }} className="underline underline-offset-2">
+            Forgot password?
+          </Link>
         </p>
       )}
     </form>

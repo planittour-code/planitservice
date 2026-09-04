@@ -169,6 +169,9 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
           <Link to="/login" className="hover:text-foreground">
             Sign in
           </Link>
+          <Link to="/forgot-password" className="hover:text-foreground">
+            Reset password
+          </Link>
         </nav>
       </div>
     </footer>

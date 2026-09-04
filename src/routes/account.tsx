@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { useState, type FormEvent } from "react";
 import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { authClient } from "@/lib/auth/client";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getAccount } from "@/lib/housefile/server";
@@ -183,8 +187,98 @@ function AccountPage() {
             </section>
           </>
         )}
+
+        <section className="space-y-3">
+          <h2 className="font-display text-xl font-medium">Password</h2>
+          <ChangePasswordForm />
+        </section>
       </main>
     </div>
+  );
+}
+
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setDone(false);
+    if (newPassword !== confirm) {
+      setError("The two new passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: true,
+      });
+      if (res.error) throw new Error(res.error.message || "Could not update the password");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirm("");
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update the password");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]" onSubmit={(e) => void onSubmit(e)}>
+      <p className="text-sm text-muted-foreground">
+        Change the password on this email login. If you signed in with Google or X and never set a
+        password, request a reset from the sign-in page instead.
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="current-password">Current password</Label>
+        <Input
+          id="current-password"
+          type="password"
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="account-new-password">New password</Label>
+        <Input
+          id="account-new-password"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+          minLength={8}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="account-confirm-password">Confirm new password</Label>
+        <Input
+          id="account-confirm-password"
+          type="password"
+          autoComplete="new-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+          minLength={8}
+        />
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {done && <p className="text-sm text-muted-foreground">Password updated.</p>}
+      <Button type="submit" disabled={busy}>
+        {busy ? "Saving…" : "Update password"}
+      </Button>
+    </form>
   );
 }
 
