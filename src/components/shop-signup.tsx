@@ -43,7 +43,7 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
   const [busy, setBusy] = useState(false);
   const price = cadence === "annual" ? SHOP_ANNUAL : SHOP_MONTHLY;
 
-  async function payForShop() {
+  async function goToStripe() {
     const { startCheckout } = await import("@/lib/housefile/stripe-billing");
     const checkout = await startCheckout({
       data: {
@@ -71,11 +71,11 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
           name: name.trim() || email.split("@")[0],
           callbackURL: "/shop/open",
         });
-        if (res.error) throw new Error(res.error.message || "Could not create the shop account");
+        if (res.error) throw new Error(res.error.message || "Could not continue to checkout");
       }
-      await payForShop();
+      await goToStripe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create the shop account");
+      setError(err instanceof Error ? err.message : "Could not continue to checkout");
       setBusy(false);
     }
   }
@@ -152,11 +152,7 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!user && <TermsAgree id="shop-agree-terms" />}
       <Button type="submit" className="min-h-12 w-full" disabled={busy}>
-        {busy
-          ? "Working…"
-          : user
-            ? `Continue to checkout · $${dollars(price)}`
-            : `Create account and open a shop · $${dollars(price)}`}
+        {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
       </Button>
       {!user && (
         <p className="text-center text-sm text-muted-foreground">

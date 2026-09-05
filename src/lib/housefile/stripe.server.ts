@@ -109,3 +109,75 @@ export async function createPortalSessionUrl(input: {
   });
   return portal.url;
 }
+
+const HOUSEHOLD_COMPANY = "co_household";
+
+export async function markShopPaid(userId: string, email?: string | null) {
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const owned = await sql<{ id: string }>`
+    select id from companies
+    where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
+    limit 1
+  `;
+  if (owned[0]) {
+    await sql`
+      update companies
+      set shop_paid_at = coalesce(shop_paid_at, now())
+      where id = ${owned[0].id}
+    `;
+    return owned[0].id;
+  }
+  const member = await sql<{ id: string }>`
+    select c.id
+    from company_members m
+    join companies c on c.id = m.company_id
+    where m.user_id = ${userId} and c.id <> ${HOUSEHOLD_COMPANY}
+    limit 1
+  `;
+  if (member[0]) {
+    await sql`
+      update companies
+      set shop_paid_at = coalesce(shop_paid_at, now())
+      where id = ${member[0].id}
+    `;
+    return member[0].id;
+  }
+  const id = crypto.randomUUID();
+  const local = email?.split("@")[0]?.replace(/[._]/g, " ") ?? "My shop";
+  const name = local.replace(/\b\w/g, (c) => c.toUpperCase()) || "My shop";
+  const mail = email?.trim().toLowerCase() || null;
+  await sql`
+    insert into companies (id, user_id, name, trade, email, shop_paid_at)
+    values (${id}, ${userId}, ${name}, ${"general"}, ${mail}, now())
+  `;
+  await sql`
+    insert into company_members (id, company_id, user_id, email, role)
+    values (
+      ${crypto.randomUUID()}, ${id}, ${userId},
+      ${mail || `owner-${id}@local`}, ${"owner"}
+    )
+    on conflict (company_id, email) do nothing
+  `;
+  return id;
+}
+
+export async function confirmPaidShopSession(input: { sessionId: string; userId: string }) {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(input.sessionId);
+  if (session.payment_status !== "paid" && session.status !== "complete") {
+    return { ok: false as const };
+  }
+  if (session.metadata?.userId !== input.userId) {
+    throw new Error("That checkout belongs to another account.");
+  }
+  const kind = session.metadata?.kind ?? "";
+  if (kind !== "shop_monthly" && kind !== "shop_annual") {
+    return { ok: false as const };
+  }
+  await markShopPaid(
+    input.userId,
+    session.customer_details?.email ?? session.customer_email ?? null,
+  );
+  return { ok: true as const };
+}

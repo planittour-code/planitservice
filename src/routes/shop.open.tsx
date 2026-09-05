@@ -148,7 +148,7 @@ function OpenShop() {
               Unlimited quotes. Unlimited Property Records. The household is never the customer.
             </p>
             <Button asChild size="lg" className="min-h-12">
-              <a href="#signup">Create the shop account</a>
+              <a href="#signup">Continue to Stripe</a>
             </Button>
           </div>
         </section>

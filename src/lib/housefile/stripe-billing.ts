@@ -31,25 +31,8 @@ export const confirmShopCheckout = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((sessionId: string) => sessionId)
   .handler(async ({ context, data: sessionId }) => {
-    const { getStripe } = await import("@/lib/housefile/stripe.server");
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status !== "paid" && session.status !== "complete") {
-      return { ok: false as const };
-    }
-    if (session.metadata?.userId !== context.userId) {
-      throw new Error("That checkout belongs to another account.");
-    }
-    const kind = session.metadata?.kind ?? "";
-    if (kind !== "shop_monthly" && kind !== "shop_annual") {
-      return { ok: false as const };
-    }
-    const { markShopPaid } = await import("@/lib/housefile/shop-paid.server");
-    await markShopPaid(
-      context.userId,
-      session.customer_details?.email ?? session.customer_email ?? null,
-    );
-    return { ok: true as const };
+    const { confirmPaidShopSession } = await import("@/lib/housefile/stripe.server");
+    return confirmPaidShopSession({ sessionId, userId: context.userId });
   });
 
 export const startBillingPortal = createServerFn({ method: "POST" })

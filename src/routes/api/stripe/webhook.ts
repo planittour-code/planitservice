@@ -44,7 +44,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               `;
             }
             if (userId && (kind === "shop_monthly" || kind === "shop_annual")) {
-              const { markShopPaid } = await import("@/lib/housefile/shop-paid.server");
+              const { markShopPaid } = await import("@/lib/housefile/stripe.server");
               await markShopPaid(
                 userId,
                 session.customer_details?.email ?? session.customer_email ?? null,

@@ -35,7 +35,7 @@ function Login() {
       : homeowner
         ? "/home"
         : "/shop/open";
-  const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
+  const [mode, setMode] = useState<"in" | "up">(homeowner ? "up" : "in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -95,7 +95,7 @@ function Login() {
     setError(null);
     setBusy(true);
     try {
-      if (mode === "up") {
+      if (homeowner && mode === "up") {
         const res = await authClient.signUp.email({
           email,
           password,
@@ -151,7 +151,7 @@ function Login() {
                     Continue with {p.label}
                   </Button>
                 ))}
-              {grokOauthOnThisHost() && mode === "up" && (
+              {grokOauthOnThisHost() && homeowner && mode === "up" && (
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   Continuing with Google or X agrees to the{" "}
                   <Link to="/terms" className="underline underline-offset-2">
@@ -180,9 +180,9 @@ function Login() {
                 </div>
               )}
               <form className="space-y-3" onSubmit={(e) => void onEmail(e)}>
-                {mode === "up" && (
+                {homeowner && mode === "up" && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">{search.invite ? "Your name" : "Company or name"}</Label>
+                    <Label htmlFor="name">{search.invite ? "Your name" : "Your name"}</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
                 )}
@@ -225,18 +225,28 @@ function Login() {
                   />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                {mode === "up" && <TermsAgree id="login-agree-terms" />}
+                {homeowner && mode === "up" && <TermsAgree id="login-agree-terms" />}
                 <Button type="submit" className="w-full" disabled={busy}>
-                  {busy ? "Working…" : mode === "up" ? "Create account" : "Sign in"}
+                  {busy ? "Working…" : homeowner && mode === "up" ? "Create account" : "Sign in"}
                 </Button>
               </form>
-              <button
-                type="button"
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setMode(mode === "up" ? "in" : "up")}
-              >
-                {mode === "up" ? "Already have an account? Sign in" : "New here? Create an account"}
-              </button>
+              {homeowner ? (
+                <button
+                  type="button"
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setMode(mode === "up" ? "in" : "up")}
+                >
+                  {mode === "up" ? "Already have an account? Sign in" : "New here? Create an account"}
+                </button>
+              ) : (
+                <p className="text-center text-sm text-muted-foreground">
+                  New shop?{" "}
+                  <Link to="/shop/open" className="underline underline-offset-2">
+                    Open a shop
+                  </Link>
+                  {" — explainer, then Stripe checkout."}
+                </p>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Sign-in is disabled.</p>
