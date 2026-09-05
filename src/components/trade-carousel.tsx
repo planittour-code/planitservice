@@ -14,7 +14,6 @@ import {
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { WORK_TYPES } from "@/lib/housefile/quote";
-import { useAudience } from "@/lib/housefile/use-audience";
 import { cn } from "@/lib/utils";
 
 const TRADE_FACE: Record<string, { icon: LucideIcon; surface: string }> = {
@@ -29,9 +28,7 @@ const TRADE_FACE: Record<string, { icon: LucideIcon; surface: string }> = {
 
 export function TradeCarousel() {
   const navigate = useNavigate();
-  const { audience } = useAudience();
   const scroller = useRef<HTMLDivElement>(null);
-  const payingShop = audience.kind === "contractor" && audience.paying;
 
   function scroll(dir: -1 | 1) {
     const el = scroller.current;
@@ -67,13 +64,7 @@ export function TradeCarousel() {
                 key={work.id}
                 type="button"
                 data-card
-                onClick={() =>
-                  void navigate(
-                    payingShop
-                      ? { to: "/app/new", search: { work: work.id } }
-                      : { to: "/shop/open" },
-                  )
-                }
+                onClick={() => void navigate({ to: "/app/new", search: { work: work.id } })}
                 className={cn(
                   "w-[min(18rem,80vw)] shrink-0 snap-start rounded-xl p-5 text-left",
                   "transition-opacity duration-150 hover:opacity-95",

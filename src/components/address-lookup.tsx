@@ -279,3 +279,19 @@ function quoteSearch(tease: AddressTease, workId: string) {
     zip: tease.zip || undefined,
   };
 }
+
+function quoteNext(search: {
+  work: string;
+  address: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}) {
+  const q = new URLSearchParams();
+  q.set("work", search.work);
+  q.set("address", search.address);
+  if (search.city) q.set("city", search.city);
+  if (search.state) q.set("state", search.state);
+  if (search.zip) q.set("zip", search.zip);
+  return `/app/new?${q.toString()}`;
+}

@@ -2,26 +2,26 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/logo";
+import { AuthSlot, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
-import { UserButton } from "@/lib/auth/gates";
+import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getDashboard } from "@/lib/housefile/server";
-import { useAudience } from "@/lib/housefile/use-audience";
 
 export const Route = createFileRoute("/app")({ component: AppLayout });
 
 function AppLayout() {
   const { user, isPending } = useCurrentUserState();
-  const { audience, isPending: audiencePending } = useAudience();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const guestQuote = pathname === "/app/new";
   const onboardPath = pathname === "/app/onboard";
   const dash = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => getDashboard(),
-    enabled: Boolean(user) && audience.kind === "contractor" && audience.paying,
+    enabled: Boolean(user),
   });
 
-  if (isPending || (user && audiencePending)) {
+  if (isPending) {
     return (
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-6xl px-5 py-6">
@@ -30,16 +30,19 @@ function AppLayout() {
       </div>
     );
   }
+  if (!user && !guestQuote) return <RedirectToSignIn />;
+
   if (!user) {
-    return <Navigate to="/shop/open" />;
-  }
-
-  if (audience.kind === "homeowner" && audience.paying) {
-    return <Navigate to="/home" />;
-  }
-
-  if (!(audience.kind === "contractor" && audience.paying)) {
-    return <Navigate to="/shop/open" />;
+    return (
+      <div className="min-h-screen bg-background">
+        <PublicHeader>
+          <AuthSlot />
+        </PublicHeader>
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
+          <Outlet />
+        </div>
+      </div>
+    );
   }
 
   if (dash.data?.role === "owner" && !dash.data.company.onboarded_at && !onboardPath) {
