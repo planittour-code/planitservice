@@ -1,6 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getSql } from "@/lib/db";
-import { getStripe } from "@/lib/housefile/stripe.server";
 
 export const Route = createFileRoute("/api/stripe/webhook")({
   server: {
@@ -10,6 +8,8 @@ export const Route = createFileRoute("/api/stripe/webhook")({
         if (!secret) {
           return new Response("Webhook not configured", { status: 503 });
         }
+        const { getStripe } = await import("@/lib/housefile/stripe.server");
+        const { getSql } = await import("@/lib/db");
         const stripe = getStripe();
         const signature = request.headers.get("stripe-signature");
         if (!signature) return new Response("No signature", { status: 400 });

@@ -8,7 +8,6 @@ import { authClient } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { shopKind } from "@/lib/housefile/stripe";
-import { startCheckout } from "@/lib/housefile/stripe-billing";
 import { useAudience } from "@/lib/housefile/use-audience";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +44,7 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
   const price = cadence === "annual" ? SHOP_ANNUAL : SHOP_MONTHLY;
 
   async function payForShop() {
+    const { startCheckout } = await import("@/lib/housefile/stripe-billing");
     const checkout = await startCheckout({
       data: {
         kind: shopKind(cadence),
