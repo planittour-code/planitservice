@@ -51,7 +51,7 @@ function AccountPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-5 py-3">
-          <Wordmark to={isShop ? "/app" : "/home"} />
+          <Wordmark to={data?.shop?.paid ? "/app" : isHome ? "/home" : "/"} />
           <div className="ml-auto">
             <UserButton />
           </div>
@@ -74,7 +74,7 @@ function AccountPage() {
             <section className="space-y-3">
               <h2 className="font-display text-xl font-medium">Your dashboard</h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {isShop && (
+                {isShop && data.shop?.paid && (
                   <Link
                     to="/app"
                     className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] transition-[box-shadow] hover:shadow-[var(--shadow-border-hover)]"
@@ -83,6 +83,18 @@ function AccountPage() {
                     <p className="mt-1 font-display text-lg font-medium">{data.shop?.name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {data.quoteCount} {data.quoteCount === 1 ? "quote" : "quotes"} on file
+                    </p>
+                  </Link>
+                )}
+                {isShop && !data.shop?.paid && (
+                  <Link
+                    to="/shop/open"
+                    className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] transition-[box-shadow] hover:shadow-[var(--shadow-border-hover)]"
+                  >
+                    <p className="text-xs tracking-wide text-muted-foreground uppercase">Contractor</p>
+                    <p className="mt-1 font-display text-lg font-medium">Open a shop</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Finish signup and billing to quote from this account.
                     </p>
                   </Link>
                 )}
@@ -110,12 +122,13 @@ function AccountPage() {
                       Shop · {data.shop.role === "owner" ? "Owner" : "Sales seat"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {data.shop.name}. ${dollars(SHOP_MONTHLY)}/month or ${dollars(SHOP_ANNUAL)}/year
-                      for the shop
-                      {data.shop.seats > 1
-                        ? ` · ${data.shop.seats - 1} extra ${data.shop.seats - 1 === 1 ? "seat" : "seats"} at $${dollars(SEAT_MONTHLY)}/month`
-                        : ""}
-                      .
+                      {data.shop.paid
+                        ? `${data.shop.name}. $${dollars(SHOP_MONTHLY)}/month or $${dollars(SHOP_ANNUAL)}/year for the shop${
+                            data.shop.seats > 1
+                              ? ` · ${data.shop.seats - 1} extra ${data.shop.seats - 1 === 1 ? "seat" : "seats"} at $${dollars(SEAT_MONTHLY)}/month`
+                              : ""
+                          }.`
+                        : `${data.shop.name}. Shop billing is not finished — open a shop to quote.`}
                     </p>
                   </li>
                 )}

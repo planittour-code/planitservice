@@ -1,14 +1,67 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { z } from "zod";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { confirmShopCheckout } from "@/lib/housefile/stripe-billing";
+import { useAudience } from "@/lib/housefile/use-audience";
+
+const searchSchema = z.object({
+  session_id: z.string().optional(),
+});
 
 export const Route = createFileRoute("/shop/open")({
+  validateSearch: (s) => searchSchema.parse(s),
   component: OpenShop,
 });
 
 function OpenShop() {
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useCurrentUserState();
+  const { audience, isPending } = useAudience();
+  const [confirming, setConfirming] = useState(Boolean(search.session_id));
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || !search.session_id) {
+      setConfirming(false);
+      return;
+    }
+    let cancelled = false;
+    setConfirming(true);
+    setConfirmError(null);
+    void confirmShopCheckout({ data: search.session_id })
+      .then(async (res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          setConfirming(false);
+          setConfirmError("Checkout did not finish. Open a shop below to try again.");
+          return;
+        }
+        await queryClient.invalidateQueries({ queryKey: ["audience"] });
+        await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        void navigate({ to: "/app/onboard" });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setConfirming(false);
+        setConfirmError(err instanceof Error ? err.message : "Could not confirm checkout.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, search.session_id, queryClient, navigate]);
+
+  if (!isPending && audience.kind === "contractor" && audience.paying && !search.session_id) {
+    return <Navigate to="/app" />;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PublicHeader path="contractor">
@@ -50,7 +103,14 @@ function OpenShop() {
                 for the people who quote — not per house.
               </p>
               <div className="mt-5">
-                <ShopSignupForm />
+                {confirming ? (
+                  <p className="text-sm text-muted-foreground">Confirming payment…</p>
+                ) : (
+                  <>
+                    {confirmError ? <p className="mb-3 text-sm text-destructive">{confirmError}</p> : null}
+                    <ShopSignupForm />
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -7,6 +7,10 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { shopKind } from "@/lib/housefile/stripe";
+import { startCheckout } from "@/lib/housefile/stripe-billing";
+import { useAudience } from "@/lib/housefile/use-audience";
+import { cn } from "@/lib/utils";
 
 export function ShopExplainer() {
   return (
@@ -31,32 +35,47 @@ export function ShopExplainer() {
 export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
   const navigate = useNavigate();
   const { user } = useCurrentUserState();
+  const { audience } = useAudience();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const price = cadence === "annual" ? SHOP_ANNUAL : SHOP_MONTHLY;
+
+  async function payForShop() {
+    const checkout = await startCheckout({
+      data: {
+        kind: shopKind(cadence),
+        successPath: "/shop/open",
+        cancelPath: "/shop/open",
+      },
+    });
+    window.location.href = checkout.url;
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (user) {
-      void navigate({ to: "/app/onboard" });
-      return;
-    }
     setError(null);
     setBusy(true);
     try {
-      const res = await authClient.signUp.email({
-        email,
-        password,
-        name: name.trim() || email.split("@")[0],
-        callbackURL: next,
-      });
-      if (res.error) throw new Error(res.error.message || "Could not create the shop account");
-      window.location.href = next;
+      if (user && audience.kind === "contractor" && audience.paying) {
+        void navigate({ to: next });
+        return;
+      }
+      if (!user) {
+        const res = await authClient.signUp.email({
+          email,
+          password,
+          name: name.trim() || email.split("@")[0],
+          callbackURL: "/shop/open",
+        });
+        if (res.error) throw new Error(res.error.message || "Could not create the shop account");
+      }
+      await payForShop();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create the shop account");
-    } finally {
       setBusy(false);
     }
   }
@@ -99,15 +118,50 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
           </div>
         </>
       )}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Billing</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setCadence("monthly")}
+            className={cn(
+              "rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
+              cadence === "monthly" ? "bg-primary text-primary-foreground" : "bg-background",
+            )}
+          >
+            <p className="font-medium">${dollars(SHOP_MONTHLY)} / month</p>
+            <p className={cn("mt-1 text-sm", cadence === "monthly" ? "opacity-80" : "text-muted-foreground")}>
+              Extra seats ${dollars(SEAT_MONTHLY)}/month
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCadence("annual")}
+            className={cn(
+              "rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
+              cadence === "annual" ? "bg-primary text-primary-foreground" : "bg-background",
+            )}
+          >
+            <p className="font-medium">${dollars(SHOP_ANNUAL)} / year</p>
+            <p className={cn("mt-1 text-sm", cadence === "annual" ? "opacity-80" : "text-muted-foreground")}>
+              Two months free
+            </p>
+          </button>
+        </div>
+      </fieldset>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!user && <TermsAgree id="shop-agree-terms" />}
       <Button type="submit" className="min-h-12 w-full" disabled={busy}>
-        {busy ? "Working…" : user ? "Continue to shop setup" : "Create account and open a shop"}
+        {busy
+          ? "Working…"
+          : user
+            ? `Continue to checkout · $${dollars(price)}`
+            : `Create account and open a shop · $${dollars(price)}`}
       </Button>
       {!user && (
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link to="/login" search={{ next }} className="underline underline-offset-2">
+          <Link to="/login" search={{ next: "/shop/open" }} className="underline underline-offset-2">
             Sign in
           </Link>
           {" · "}

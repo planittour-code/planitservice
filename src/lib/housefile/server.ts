@@ -47,6 +47,8 @@ import type {
 } from "./types";
 import { MAINTENANCE_LIBRARY, nextDue } from "./maintain";
 
+const HOUSEHOLD_COMPANY = "co_household";
+
 function asCompany(row: Company): Company {
   return {
     ...row,
@@ -92,7 +94,11 @@ async function shopFor(
   userId: string,
   email?: string | null,
 ): Promise<{ company: Company; role: ShopRole }> {
-  const owned = await sql<Company>`select * from companies where user_id = ${userId} limit 1`;
+  const owned = await sql<Company>`
+    select * from companies
+    where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
+    limit 1
+  `;
   if (owned[0]) {
     await ensureOwnerMember(sql, owned[0], email);
     await ensureStarterBook(sql, owned[0].id);
@@ -102,7 +108,7 @@ async function shopFor(
     select c.*, m.role as member_role
     from company_members m
     join companies c on c.id = m.company_id
-    where m.user_id = ${userId}
+    where m.user_id = ${userId} and c.id <> ${HOUSEHOLD_COMPANY}
     limit 1
   `;
   if (byUser[0]) {
@@ -115,7 +121,7 @@ async function shopFor(
       select c.*, m.id as member_id, m.role as member_role
       from company_members m
       join companies c on c.id = m.company_id
-      where lower(m.email) = ${normalized}
+      where lower(m.email) = ${normalized} and c.id <> ${HOUSEHOLD_COMPANY}
       limit 1
     `;
     if (byEmail[0]) {
@@ -124,25 +130,19 @@ async function shopFor(
       return { company: asCompany(rest as Company), role: member_role === "owner" ? "owner" : "sales" };
     }
   }
-  const id = crypto.randomUUID();
-  const local = email?.split("@")[0]?.replace(/[._]/g, " ") ?? "My company";
-  const name = local.replace(/\b\w/g, (c) => c.toUpperCase());
-  await sql`
-    insert into companies (id, user_id, name, trade, email)
-    values (${id}, ${userId}, ${name}, ${"general"}, ${email ?? null})
-  `;
-  await sql`
-    insert into company_members (id, company_id, user_id, email, role)
-    values (${crypto.randomUUID()}, ${id}, ${userId}, ${normalized || `owner-${id}@local`}, ${"owner"})
-    on conflict (company_id, email) do nothing
-  `;
-  await ensureStarterBook(sql, id);
-  const created = await sql<Company>`select * from companies where id = ${id}`;
-  return { company: created[0]!, role: "owner" };
+  throw new Error("Open a shop to send estimates.");
 }
 
 async function companyFor(sql: Sql, userId: string, email?: string | null): Promise<Company> {
   return (await shopFor(sql, userId, email)).company;
+}
+
+async function requirePaidShop(sql: Sql, userId: string, email?: string | null) {
+  const shop = await shopFor(sql, userId, email);
+  if (!shop.company.shop_paid_at) {
+    throw new Error("Open a shop to send estimates.");
+  }
+  return shop;
 }
 
 async function ensureOwnerMember(sql: Sql, company: Company, email?: string | null) {
@@ -426,7 +426,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     await ensureDemoPending(sql, company.id);
     const properties = await sql<PropertyListRow>`
       select p.*,
@@ -533,7 +533,7 @@ export const completeOnboard = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner sets up the shop.");
     const trades = data.trades.filter(Boolean);
     if (trades.length === 0) throw new Error("Pick at least one service.");
@@ -682,7 +682,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
 
     const templates = await sql<Template>`select * from templates where id = ${data.templateId} limit 1`;
     const template = templates[0];
@@ -1806,7 +1806,7 @@ export const approveProposal = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can approve a quote.");
     const rows = await sql<Proposal>`
       select * from proposals where id = ${id} and company_id = ${company.id} limit 1
@@ -1852,7 +1852,7 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company } = await shopFor(sql, context.userId, session?.email);
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
     const rows = await sql<Proposal>`
       select * from proposals where id = ${proposalId} and company_id = ${company.id} limit 1
     `;
@@ -1883,7 +1883,7 @@ export const adoptSampleHouse = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const company = await companyFor(sql, context.userId, session?.email);
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
     const existing = await sql<Property>`
       select * from properties
       where company_id = ${company.id} and address_line = ${"142 Maple Street"}
@@ -2138,8 +2138,6 @@ export const closeRfp = createServerFn({ method: "POST" })
     await sql`update rfps set status = ${"closed"} where id = ${rows[0].id}`;
     return { ok: true as const };
   });
-
-const HOUSEHOLD_COMPANY = "co_household";
 
 function renewsOn(cadence: "monthly" | "annual") {
   const d = new Date();
@@ -2418,27 +2416,39 @@ export const getAccount = createServerFn({ method: "GET" })
     const session = await getSessionUser();
     const email = session?.email ?? null;
 
-    const owned = await sql`
+    const owned = await sql<Company>`
       select * from companies
       where user_id = ${context.userId} and id <> ${HOUSEHOLD_COMPANY}
       limit 1
     `;
-    let shop = null;
+    let shop: {
+      id: string;
+      name: string;
+      role: ShopRole;
+      seats: number;
+      paid: boolean;
+    } | null = null;
     if (owned[0]) {
-      const seats = await sql`
+      const seats = await sql<{ c: number }>`
         select count(*)::int as c from company_members where company_id = ${owned[0].id}
       `;
-      shop = { id: owned[0].id, name: owned[0].name, role: "owner", seats: num(seats[0]?.c) };
+      shop = {
+        id: owned[0].id,
+        name: owned[0].name,
+        role: "owner",
+        seats: num(seats[0]?.c),
+        paid: Boolean(owned[0].shop_paid_at),
+      };
     } else {
-      const byUser = await sql`
-        select c.id, c.name, m.role as member_role
+      const byUser = await sql<{ id: string; name: string; shop_paid_at: string | null; member_role: string }>`
+        select c.id, c.name, c.shop_paid_at, m.role as member_role
         from company_members m
         join companies c on c.id = m.company_id
         where m.user_id = ${context.userId} and c.id <> ${HOUSEHOLD_COMPANY}
         limit 1
       `;
       if (byUser[0]) {
-        const seats = await sql`
+        const seats = await sql<{ c: number }>`
           select count(*)::int as c from company_members where company_id = ${byUser[0].id}
         `;
         shop = {
@@ -2446,12 +2456,21 @@ export const getAccount = createServerFn({ method: "GET" })
           name: byUser[0].name,
           role: byUser[0].member_role === "owner" ? "owner" : "sales",
           seats: num(seats[0]?.c),
+          paid: Boolean(byUser[0].shop_paid_at),
         };
       }
     }
 
     if (email) await bindHomeownerByEmail(sql, context.userId, email);
-    const houses = await sql`
+    const houses = await sql<{
+      id: string;
+      address_line: string;
+      city: string | null;
+      cadence: string | null;
+      tier: string | null;
+      status: string | null;
+      renews_on: string | null;
+    }>`
       select p.id, p.address_line, p.city, pp.cadence, pp.tier, pp.status, pp.renews_on
       from properties p
       left join property_plans pp on pp.property_id = p.id
@@ -2459,7 +2478,7 @@ export const getAccount = createServerFn({ method: "GET" })
       order by p.created_at desc
     `;
     const quotes = shop
-      ? await sql`
+      ? await sql<{ c: number }>`
           select count(*)::int as c from proposals where company_id = ${shop.id}
         `
       : [{ c: 0 }];

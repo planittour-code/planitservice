@@ -28,9 +28,13 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             const session = event.data.object as {
               metadata?: { userId?: string; kind?: string; propertyId?: string };
               customer?: string | null;
+              customer_email?: string | null;
+              customer_details?: { email?: string | null } | null;
               subscription?: string | null;
             };
-            const propertyId = session.metadata?.propertyId;
+            const propertyId = session.metadata?.propertyId?.trim();
+            const kind = session.metadata?.kind ?? "";
+            const userId = session.metadata?.userId;
             if (propertyId) {
               const sql = await getSql();
               await sql`
@@ -38,6 +42,13 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 set status = ${"active"}
                 where property_id = ${propertyId}
               `;
+            }
+            if (userId && (kind === "shop_monthly" || kind === "shop_annual")) {
+              const { markShopPaid } = await import("@/lib/housefile/shop-paid.server");
+              await markShopPaid(
+                userId,
+                session.customer_details?.email ?? session.customer_email ?? null,
+              );
             }
             console.log("[stripe] checkout.session.completed", session.metadata);
           }

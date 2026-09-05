@@ -26,15 +26,15 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const search = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
-  const { audience } = useAudience();
+  const { audience, isPending: audiencePending } = useAudience();
   const homeowner = Boolean(search.invite) || search.role === "homeowner";
   const after = search.invite
     ? `/invite/${search.invite}`
     : search.next
-      ? safeNextPath(search.next, homeowner ? "/home" : "/app/onboard")
+      ? safeNextPath(search.next, homeowner ? "/home" : "/shop/open")
       : homeowner
         ? "/home"
-        : "/app/onboard";
+        : "/shop/open";
   const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
@@ -42,12 +42,27 @@ function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!isPending && user) {
+  if (isPending || (user && audiencePending)) {
+    return (
+      <main className="min-h-screen bg-background">
+        <PublicHeader>
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+            Back
+          </Link>
+        </PublicHeader>
+        <div className="mx-auto max-w-5xl px-5 py-8">
+          <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
+        </div>
+      </main>
+    );
+  }
+
+  if (user) {
     if (search.invite) {
       return <Navigate to="/invite/$token" params={{ token: search.invite }} />;
     }
     const next = safeNextPath(search.next);
-    if (next.startsWith("/app/new")) {
+    if (next.startsWith("/app/new") && audience.kind === "contractor" && audience.paying) {
       const params = new URLSearchParams(next.split("?")[1] ?? "");
       return (
         <Navigate
@@ -69,7 +84,10 @@ function Login() {
     if (audience.paying && audience.kind === "homeowner") {
       return <Navigate to="/home" />;
     }
-    return <Navigate to="/app" />;
+    if (audience.paying && audience.kind === "contractor") {
+      return <Navigate to="/app" />;
+    }
+    return <Navigate to="/shop/open" />;
   }
 
   async function onEmail(e: FormEvent) {
@@ -110,12 +128,12 @@ function Login() {
             {homeowner ? "For the homeowner" : "For contractors"}
           </p>
           <h1 className="font-display text-4xl font-medium tracking-tight md:text-5xl">
-            {homeowner ? "Keep the record for every house you own." : "Sign in and quote the job."}
+            {homeowner ? "Keep the record for every house you own." : "Sign in to open a shop."}
           </h1>
           <p className="max-w-md text-muted-foreground">
             {homeowner
               ? "Jobs, warranties, and maintenance at the address. Add another property when you need to. Pro hands the Property Record to the next owner."
-              : "Pick the template. Enter while you talk. Price from materials. Send the estimate before you leave. The Property Record is how they call you back."}
+              : "Open a shop from the contractor explainer, then quote from materials. Sending an estimate is for a paid shop."}
           </p>
         </div>
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">

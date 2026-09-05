@@ -24,7 +24,7 @@ export function invitationSubject(company: string, address: string) {
   return `${company} sent an estimate for ${address}`;
 }
 
-export function safeNextPath(path: string | undefined, fallback = "/app") {
+export function safeNextPath(path: string | undefined, fallback = "/shop/open") {
   if (!path) return fallback;
   if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {
     return fallback;
