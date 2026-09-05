@@ -4,10 +4,10 @@ import type { ReactNode } from "react";
 /** Sample Property Record is read-only. Edits send the visitor to the matching signup. */
 export function SampleLock({
   children,
-  to = "/start",
+  to = "/homeowner",
 }: {
   children: ReactNode;
-  to?: "/start" | "/shop/open";
+  to?: "/homeowner" | "/shop/open";
 }) {
   const navigate = useNavigate();
   return (

@@ -82,7 +82,7 @@ function HousePage() {
         {sample && (
           <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
             This is a sample Property Record. Look through it. To keep a record of your own house,{" "}
-            <Link to="/start" className="underline underline-offset-2">
+            <Link to="/homeowner" className="underline underline-offset-2">
               start a Property Record
             </Link>
             .
@@ -115,7 +115,7 @@ function HousePage() {
           {sample ? (
             <p className="text-sm text-muted-foreground">
               Requests are off on the sample.{" "}
-              <Link to="/start" className="underline underline-offset-2">
+              <Link to="/homeowner" className="underline underline-offset-2">
                 Start a Property Record
               </Link>{" "}
               to put a job on the market.

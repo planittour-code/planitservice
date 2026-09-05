@@ -7,7 +7,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { cn } from "@/lib/utils";
 
-export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/my" | "/home" | "/shop" }) {
+export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/home" | "/shop" }) {
   const { user, isPending } = useCurrentUserState();
   if (isPending) return <div className="h-11 w-24 animate-pulse rounded-md bg-muted" />;
   if (user) {
@@ -21,7 +21,7 @@ export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/my" 
     <Button asChild variant="outline">
       <Link
         to="/login"
-        search={signedInTo === "/home" || signedInTo === "/my" ? { role: "homeowner", next: "/home" } : {}}
+        search={signedInTo === "/home" ? { role: "homeowner", next: "/home" } : {}}
       >
         Sign in
       </Link>

@@ -47,6 +47,8 @@ import type {
 } from "./types";
 import { MAINTENANCE_LIBRARY, nextDue } from "./maintain";
 
+const HOUSEHOLD_COMPANY = "co_household";
+
 function asCompany(row: Company): Company {
   return {
     ...row,
@@ -92,7 +94,11 @@ async function shopFor(
   userId: string,
   email?: string | null,
 ): Promise<{ company: Company; role: ShopRole }> {
-  const owned = await sql<Company>`select * from companies where user_id = ${userId} limit 1`;
+  const owned = await sql<Company>`
+    select * from companies
+    where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
+    limit 1
+  `;
   if (owned[0]) {
     await ensureOwnerMember(sql, owned[0], email);
     await ensureStarterBook(sql, owned[0].id);
@@ -102,7 +108,7 @@ async function shopFor(
     select c.*, m.role as member_role
     from company_members m
     join companies c on c.id = m.company_id
-    where m.user_id = ${userId}
+    where m.user_id = ${userId} and c.id <> ${HOUSEHOLD_COMPANY}
     limit 1
   `;
   if (byUser[0]) {
@@ -115,7 +121,7 @@ async function shopFor(
       select c.*, m.id as member_id, m.role as member_role
       from company_members m
       join companies c on c.id = m.company_id
-      where lower(m.email) = ${normalized}
+      where lower(m.email) = ${normalized} and c.id <> ${HOUSEHOLD_COMPANY}
       limit 1
     `;
     if (byEmail[0]) {
@@ -124,25 +130,19 @@ async function shopFor(
       return { company: asCompany(rest as Company), role: member_role === "owner" ? "owner" : "sales" };
     }
   }
-  const id = crypto.randomUUID();
-  const local = email?.split("@")[0]?.replace(/[._]/g, " ") ?? "My company";
-  const name = local.replace(/\b\w/g, (c) => c.toUpperCase());
-  await sql`
-    insert into companies (id, user_id, name, trade, email)
-    values (${id}, ${userId}, ${name}, ${"general"}, ${email ?? null})
-  `;
-  await sql`
-    insert into company_members (id, company_id, user_id, email, role)
-    values (${crypto.randomUUID()}, ${id}, ${userId}, ${normalized || `owner-${id}@local`}, ${"owner"})
-    on conflict (company_id, email) do nothing
-  `;
-  await ensureStarterBook(sql, id);
-  const created = await sql<Company>`select * from companies where id = ${id}`;
-  return { company: created[0]!, role: "owner" };
+  throw new Error("Open a shop to send estimates.");
+}
+
+async function requirePaidShop(sql: Sql, userId: string, email?: string | null) {
+  const shop = await shopFor(sql, userId, email);
+  if (!shop.company.shop_paid_at) {
+    throw new Error("Open a shop to send estimates.");
+  }
+  return shop;
 }
 
 async function companyFor(sql: Sql, userId: string, email?: string | null): Promise<Company> {
-  return (await shopFor(sql, userId, email)).company;
+  return (await requirePaidShop(sql, userId, email)).company;
 }
 
 async function ensureOwnerMember(sql: Sql, company: Company, email?: string | null) {
@@ -426,7 +426,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     await ensureDemoPending(sql, company.id);
     const properties = await sql<PropertyListRow>`
       select p.*,
@@ -533,7 +533,7 @@ export const completeOnboard = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner sets up the shop.");
     const trades = data.trades.filter(Boolean);
     if (trades.length === 0) throw new Error("Pick at least one service.");
@@ -682,7 +682,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
 
     const templates = await sql<Template>`select * from templates where id = ${data.templateId} limit 1`;
     const template = templates[0];
@@ -1358,7 +1358,7 @@ export const listQuoteLeads = createServerFn({ method: "GET" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { role } = await shopFor(sql, context.userId, session?.email);
+    const { role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can read inbound leads.");
     const rows = await sql<QuoteLead>`
       select * from quote_leads order by created_at desc limit 100
@@ -1658,7 +1658,7 @@ export const listPriceBook = createServerFn({ method: "GET" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     const rows = await sql<PriceBookItem>`
       select * from price_book where company_id = ${company.id} order by trade, slot, product_name
     `;
@@ -1687,7 +1687,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can edit materials.");
     const product = data.product_name.trim();
     if (!product) throw new Error("Product name is required");
@@ -1735,7 +1735,7 @@ export const archivePriceBookItem = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can edit materials.");
     await sql`update price_book set active = false, updated_at = now() where id = ${id} and company_id = ${company.id}`;
     return { ok: true as const };
@@ -1748,7 +1748,7 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can edit materials.");
     const rows = parseBookCsv(csv);
     for (const row of rows) {
@@ -1772,7 +1772,7 @@ export const listTeam = createServerFn({ method: "GET" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     const members = await sql<CompanyMember>`
       select * from company_members where company_id = ${company.id} order by role, email
     `;
@@ -1786,7 +1786,7 @@ export const addTeamMember = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can add the sales team.");
     const email = data.email.trim().toLowerCase();
     if (!email.includes("@")) throw new Error("Need a real email");
@@ -1806,7 +1806,7 @@ export const approveProposal = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company, role } = await shopFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can approve a quote.");
     const rows = await sql<Proposal>`
       select * from proposals where id = ${id} and company_id = ${company.id} limit 1
@@ -1852,7 +1852,7 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company } = await shopFor(sql, context.userId, session?.email);
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
     const rows = await sql<Proposal>`
       select * from proposals where id = ${proposalId} and company_id = ${company.id} limit 1
     `;
@@ -2094,7 +2094,7 @@ export const listMarketRfps = createServerFn({ method: "GET" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const { company } = await shopFor(sql, context.userId, session?.email);
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
     const trades = (company.trades ?? "")
       .split(",")
       .map((s) => s.trim())
@@ -2138,8 +2138,6 @@ export const closeRfp = createServerFn({ method: "POST" })
     await sql`update rfps set status = ${"closed"} where id = ${rows[0].id}`;
     return { ok: true as const };
   });
-
-const HOUSEHOLD_COMPANY = "co_household";
 
 function renewsOn(cadence: "monthly" | "annual") {
   const d = new Date();
@@ -2485,7 +2483,7 @@ export type Audience = {
   signedIn: boolean;
   kind: "guest" | "homeowner" | "contractor";
   paying: boolean;
-  homePath: "/" | "/home" | "/app" | "/start" | "/shop/open" | "/homeowner";
+  homePath: "/" | "/home" | "/app" | "/shop/open" | "/homeowner";
 };
 
 export const getAudience = createServerFn({ method: "GET" })

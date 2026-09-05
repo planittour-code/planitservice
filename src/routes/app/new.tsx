@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { OpenShopDialog } from "@/components/open-shop-dialog";
 import { QuoteHouseBanner, MAPLE_DEMO } from "@/components/quote-house-banner";
 import { QuotePreview, TakeoffForm } from "@/components/quote-takeoff";
 import { WizardSteps } from "@/components/site-chrome";
@@ -86,7 +85,6 @@ function NewQuote() {
     enabled: Boolean(user),
   });
   const [step, setStep] = useState(search.work ? 3 : 1);
-  const [gate, setGate] = useState(false);
   const [workId, setWorkId] = useState(
     search.work ?? workForTemplate(search.template ?? "")?.id ?? "",
   );
@@ -243,10 +241,8 @@ function NewQuote() {
       run();
       return;
     }
-    setGate(true);
+    window.location.href = "/shop/open";
   }
-
-  const shopNext = `/app/new?work=${encodeURIComponent(workId)}`;
 
   if (sent) {
     if (sent.pending) {
@@ -496,12 +492,6 @@ function NewQuote() {
           </div>
         </div>
       )}
-      <OpenShopDialog
-        open={gate}
-        onClose={() => setGate(false)}
-        workName={work?.name}
-        next={shopNext}
-      />
     </div>
   );
 }

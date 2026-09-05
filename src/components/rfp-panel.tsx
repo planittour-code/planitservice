@@ -71,7 +71,7 @@ export function RfpForm({
   if (!user) {
     return (
       <p className="text-sm text-muted-foreground">
-        <Link to="/login" search={{ next: "/homeowners", role: "homeowner" }} className="underline">
+        <Link to="/login" search={{ next: "/homeowner", role: "homeowner" }} className="underline">
           Start Pro
         </Link>{" "}
         to put this job on the market.

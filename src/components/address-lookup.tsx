@@ -1,16 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { StreetView } from "@/components/street-view";
 import { QuoteTypePicker } from "@/components/quote-type";
-import { ShopExplainer, ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAudience } from "@/lib/housefile/use-audience";
 import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { formatLine, houseNumber } from "@/lib/housefile/geocode";
-import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { captureQuoteLead, peekHouseByAddress, suggestAddresses } from "@/lib/housefile/server";
 import type { AddressTease } from "@/lib/housefile/types";
 
@@ -224,22 +222,13 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
             hint="Pick the trade. This quote writes to the Property Record for the next shop that looks it up."
           />
         ) : (
-          <div className="grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-start">
-            <ShopExplainer />
-            <div className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-6">
-              <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a shop</p>
-              <p className="mt-2 font-display text-3xl font-medium tracking-tight">
-                ${dollars(SHOP_MONTHLY)}
-                <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                or ${dollars(SHOP_ANNUAL)} a year. Extra seats ${dollars(SEAT_MONTHLY)}/month. You pay
-                for the people who quote — not per house.
-              </p>
-              <div className="mt-5">
-                <ShopSignupForm />
-              </div>
-            </div>
+          <div className="space-y-3">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Open a shop to quote this house from the Property Record. Card details stay on Stripe.
+            </p>
+            <Button asChild className="min-h-12 w-full sm:w-auto">
+              <Link to="/shop/open">Open a shop</Link>
+            </Button>
           </div>
         )}
 
@@ -278,20 +267,4 @@ function quoteSearch(tease: AddressTease, workId: string) {
     state: tease.state || undefined,
     zip: tease.zip || undefined,
   };
-}
-
-function quoteNext(search: {
-  work: string;
-  address: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-}) {
-  const q = new URLSearchParams();
-  q.set("work", search.work);
-  q.set("address", search.address);
-  if (search.city) q.set("city", search.city);
-  if (search.state) q.set("state", search.state);
-  if (search.zip) q.set("zip", search.zip);
-  return `/app/new?${q.toString()}`;
 }

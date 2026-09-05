@@ -12,19 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as AupRouteImport } from './routes/aup'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as HomeownerRouteImport } from './routes/homeowner'
-import { Route as HomeownersRouteImport } from './routes/homeowners'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as MyRouteImport } from './routes/my'
-import { Route as OpenRouteImport } from './routes/open'
-import { Route as ShopRouteImport } from './routes/shop'
-import { Route as AupRouteImport } from './routes/aup'
 import { Route as SaasRouteImport } from './routes/saas'
+import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SlaRouteImport } from './routes/sla'
-import { Route as StartRouteImport } from './routes/start'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
@@ -65,6 +61,16 @@ const AppRouteRoute = AppRouteRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AupRoute = AupRouteImport.update({
+  id: '/aup',
+  path: '/aup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HomeRouteRoute = HomeRouteRouteImport.update({
   id: '/home',
   path: '/home',
@@ -75,19 +81,9 @@ const HomeownerRoute = HomeownerRouteImport.update({
   path: '/homeowner',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HomeownersRoute = HomeownersRouteImport.update({
-  id: '/homeowners',
-  path: '/homeowners',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -95,14 +91,9 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MyRoute = MyRouteImport.update({
-  id: '/my',
-  path: '/my',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OpenRoute = OpenRouteImport.update({
-  id: '/open',
-  path: '/open',
+const SaasRoute = SaasRouteImport.update({
+  id: '/saas',
+  path: '/saas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -110,24 +101,9 @@ const ShopRoute = ShopRouteImport.update({
   path: '/shop',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AupRoute = AupRouteImport.update({
-  id: '/aup',
-  path: '/aup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SaasRoute = SaasRouteImport.update({
-  id: '/saas',
-  path: '/saas',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SlaRoute = SlaRouteImport.update({
   id: '/sla',
   path: '/sla',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StartRoute = StartRouteImport.update({
-  id: '/start',
-  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -256,18 +232,14 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/account': typeof AccountRoute
-  '/homeowner': typeof HomeownerRoute
-  '/homeowners': typeof HomeownersRoute
-  '/login': typeof LoginRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/my': typeof MyRoute
-  '/open': typeof OpenRoute
-  '/shop': typeof ShopRouteWithChildren
   '/aup': typeof AupRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/homeowner': typeof HomeownerRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/saas': typeof SaasRoute
+  '/shop': typeof ShopRouteWithChildren
   '/sla': typeof SlaRoute
-  '/start': typeof StartRoute
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
@@ -296,18 +268,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
-  '/homeowner': typeof HomeownerRoute
-  '/homeowners': typeof HomeownersRoute
-  '/login': typeof LoginRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/my': typeof MyRoute
-  '/open': typeof OpenRoute
-  '/shop': typeof ShopRouteWithChildren
   '/aup': typeof AupRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/homeowner': typeof HomeownerRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/saas': typeof SaasRoute
+  '/shop': typeof ShopRouteWithChildren
   '/sla': typeof SlaRoute
-  '/start': typeof StartRoute
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
@@ -339,18 +307,14 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/account': typeof AccountRoute
-  '/homeowner': typeof HomeownerRoute
-  '/homeowners': typeof HomeownersRoute
-  '/login': typeof LoginRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/my': typeof MyRoute
-  '/open': typeof OpenRoute
-  '/shop': typeof ShopRouteWithChildren
   '/aup': typeof AupRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/homeowner': typeof HomeownerRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/saas': typeof SaasRoute
+  '/shop': typeof ShopRouteWithChildren
   '/sla': typeof SlaRoute
-  '/start': typeof StartRoute
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/leads': typeof AppLeadsRoute
@@ -383,18 +347,14 @@ export interface FileRouteTypes {
     | '/app'
     | '/home'
     | '/account'
-    | '/homeowner'
-    | '/homeowners'
-    | '/login'
-    | '/forgot-password'
-    | '/reset-password'
-    | '/my'
-    | '/open'
-    | '/shop'
     | '/aup'
+    | '/forgot-password'
+    | '/homeowner'
+    | '/login'
+    | '/reset-password'
     | '/saas'
+    | '/shop'
     | '/sla'
-    | '/start'
     | '/terms'
     | '/app/book'
     | '/app/leads'
@@ -423,18 +383,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
-    | '/homeowner'
-    | '/homeowners'
-    | '/login'
-    | '/forgot-password'
-    | '/reset-password'
-    | '/my'
-    | '/open'
-    | '/shop'
     | '/aup'
+    | '/forgot-password'
+    | '/homeowner'
+    | '/login'
+    | '/reset-password'
     | '/saas'
+    | '/shop'
     | '/sla'
-    | '/start'
     | '/terms'
     | '/app/book'
     | '/app/leads'
@@ -465,18 +421,14 @@ export interface FileRouteTypes {
     | '/app'
     | '/home'
     | '/account'
-    | '/homeowner'
-    | '/homeowners'
-    | '/login'
-    | '/forgot-password'
-    | '/reset-password'
-    | '/my'
-    | '/open'
-    | '/shop'
     | '/aup'
+    | '/forgot-password'
+    | '/homeowner'
+    | '/login'
+    | '/reset-password'
     | '/saas'
+    | '/shop'
     | '/sla'
-    | '/start'
     | '/terms'
     | '/app/book'
     | '/app/leads'
@@ -508,18 +460,14 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
   AccountRoute: typeof AccountRoute
-  HomeownerRoute: typeof HomeownerRoute
-  HomeownersRoute: typeof HomeownersRoute
-  LoginRoute: typeof LoginRoute
-  ForgotPasswordRoute: typeof ForgotPasswordRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
-  MyRoute: typeof MyRoute
-  OpenRoute: typeof OpenRoute
-  ShopRoute: typeof ShopRouteWithChildren
   AupRoute: typeof AupRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  HomeownerRoute: typeof HomeownerRoute
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SaasRoute: typeof SaasRoute
+  ShopRoute: typeof ShopRouteWithChildren
   SlaRoute: typeof SlaRoute
-  StartRoute: typeof StartRoute
   TermsRoute: typeof TermsRoute
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
@@ -553,6 +501,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aup': {
+      id: '/aup'
+      path: '/aup'
+      fullPath: '/aup'
+      preLoaderRoute: typeof AupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/home': {
       id: '/home'
       path: '/home'
@@ -567,25 +529,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeownerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/homeowners': {
-      id: '/homeowners'
-      path: '/homeowners'
-      fullPath: '/homeowners'
-      preLoaderRoute: typeof HomeownersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -595,18 +543,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/my': {
-      id: '/my'
-      path: '/my'
-      fullPath: '/my'
-      preLoaderRoute: typeof MyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/open': {
-      id: '/open'
-      path: '/open'
-      fullPath: '/open'
-      preLoaderRoute: typeof OpenRouteImport
+    '/saas': {
+      id: '/saas'
+      path: '/saas'
+      fullPath: '/saas'
+      preLoaderRoute: typeof SaasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -616,32 +557,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/aup': {
-      id: '/aup'
-      path: '/aup'
-      fullPath: '/aup'
-      preLoaderRoute: typeof AupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/saas': {
-      id: '/saas'
-      path: '/saas'
-      fullPath: '/saas'
-      preLoaderRoute: typeof SaasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sla': {
       id: '/sla'
       path: '/sla'
       fullPath: '/sla'
       preLoaderRoute: typeof SlaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/start': {
-      id: '/start'
-      path: '/start'
-      fullPath: '/start'
-      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -899,18 +819,14 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
   AccountRoute: AccountRoute,
-  HomeownerRoute: HomeownerRoute,
-  HomeownersRoute: HomeownersRoute,
-  LoginRoute: LoginRoute,
-  ForgotPasswordRoute: ForgotPasswordRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
-  MyRoute: MyRoute,
-  OpenRoute: OpenRoute,
-  ShopRoute: ShopRouteWithChildren,
   AupRoute: AupRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  HomeownerRoute: HomeownerRoute,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SaasRoute: SaasRoute,
+  ShopRoute: ShopRouteWithChildren,
   SlaRoute: SlaRoute,
-  StartRoute: StartRoute,
   TermsRoute: TermsRoute,
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,

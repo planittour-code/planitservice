@@ -20,8 +20,22 @@
   from = "/open"
   to = "/shop/open"
   status = 301
+  force = true
 
 [[redirects]]
   from = "/start"
   to = "/homeowner"
   status = 301
+  force = true
+
+[[redirects]]
+  from = "/my"
+  to = "/home"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/homeowners"
+  to = "/homeowner"
+  status = 301
+  force = true

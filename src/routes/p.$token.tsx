@@ -82,7 +82,7 @@ function PublicProposal() {
       />
       <main className="hf-rise mx-auto max-w-3xl px-4 py-6 pb-28 sm:px-5 sm:py-8 sm:pb-24">
         {sample ? (
-          <SampleLock to={isSampleShopQuote(token) ? "/shop/open" : "/start"}>
+          <SampleLock to={isSampleShopQuote(token) ? "/shop/open" : "/homeowner"}>
             <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />
           </SampleLock>
         ) : (
