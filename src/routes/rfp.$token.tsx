@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { shortDate } from "@/lib/housefile/format";
 import { closeRfp, getRfpByToken } from "@/lib/housefile/server";
+import { useAudience } from "@/lib/housefile/use-audience";
 
 export const Route = createFileRoute("/rfp/$token")({
   loader: async ({ params }) => {
@@ -24,6 +25,8 @@ export const Route = createFileRoute("/rfp/$token")({
 function RfpPage() {
   const { token } = Route.useParams();
   const { user } = useCurrentUserState();
+  const { audience } = useAudience();
+  const payingShop = audience.kind === "contractor" && audience.paying;
   const initial = Route.useLoaderData();
   const q = useQuery({
     queryKey: ["rfp", token],
@@ -92,19 +95,23 @@ function RfpPage() {
         {rfp.status === "open" && (
           <div className="flex flex-wrap gap-2">
             <Button asChild>
-              <Link
-                to="/app/new"
-                search={{
-                  work: rfp.work_id,
-                  address: rfp.address_line,
-                  city: rfp.city,
-                  state: rfp.state,
-                  zip: rfp.zip,
-                  rfp: rfp.share_token,
-                }}
-              >
-                Quote this job
-              </Link>
+              {payingShop ? (
+                <Link
+                  to="/app/new"
+                  search={{
+                    work: rfp.work_id,
+                    address: rfp.address_line,
+                    city: rfp.city,
+                    state: rfp.state,
+                    zip: rfp.zip,
+                    rfp: rfp.share_token,
+                  }}
+                >
+                  Quote this job
+                </Link>
+              ) : (
+                <Link to="/shop/open">Quote this job</Link>
+              )}
             </Button>
             {mine && (
               <Button type="button" variant="ghost" onClick={() => close.mutate()}>

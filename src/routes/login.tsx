@@ -31,10 +31,10 @@ function Login() {
   const after = search.invite
     ? `/invite/${search.invite}`
     : search.next
-      ? safeNextPath(search.next, homeowner ? "/home" : "/app/onboard")
+      ? safeNextPath(search.next, homeowner ? "/home" : "/app")
       : homeowner
         ? "/home"
-        : "/app/onboard";
+        : "/app";
   const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
@@ -77,7 +77,7 @@ function Login() {
     setError(null);
     setBusy(true);
     try {
-      if (mode === "up") {
+      if (mode === "up" && homeowner) {
         const res = await authClient.signUp.email({
           email,
           password,
@@ -121,7 +121,7 @@ function Login() {
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">
           {authEnabled ? (
             <div className="space-y-3">
-              {grokOauthOnThisHost() &&
+              {homeowner && grokOauthOnThisHost() &&
                 GROK_PROVIDERS.map((p) => (
                   <Button
                     key={p.providerId}
@@ -133,7 +133,7 @@ function Login() {
                     Continue with {p.label}
                   </Button>
                 ))}
-              {grokOauthOnThisHost() && mode === "up" && (
+              {homeowner && grokOauthOnThisHost() && mode === "up" && (
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   Continuing with Google or X agrees to the{" "}
                   <Link to="/terms" className="underline underline-offset-2">
@@ -154,7 +154,7 @@ function Login() {
                   .
                 </p>
               )}
-              {grokOauthOnThisHost() && (
+              {homeowner && grokOauthOnThisHost() && (
                 <div className="flex items-center gap-3 py-2">
                   <div className="h-px flex-1 bg-border" />
                   <span className="text-xs text-muted-foreground">or email</span>
@@ -162,9 +162,9 @@ function Login() {
                 </div>
               )}
               <form className="space-y-3" onSubmit={(e) => void onEmail(e)}>
-                {mode === "up" && (
+                {mode === "up" && homeowner && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">{search.invite ? "Your name" : "Company or name"}</Label>
+                    <Label htmlFor="name">{search.invite ? "Your name" : "Your name"}</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
                 )}
@@ -207,18 +207,27 @@ function Login() {
                   />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                {mode === "up" && <TermsAgree id="login-agree-terms" />}
+                {mode === "up" && homeowner && <TermsAgree id="login-agree-terms" />}
                 <Button type="submit" className="w-full" disabled={busy}>
-                  {busy ? "Working…" : mode === "up" ? "Create account" : "Sign in"}
+                  {busy ? "Working…" : mode === "up" && homeowner ? "Create account" : "Sign in"}
                 </Button>
               </form>
-              <button
-                type="button"
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setMode(mode === "up" ? "in" : "up")}
-              >
-                {mode === "up" ? "Already have an account? Sign in" : "New here? Create an account"}
-              </button>
+              {homeowner ? (
+                <button
+                  type="button"
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setMode(mode === "up" ? "in" : "up")}
+                >
+                  {mode === "up" ? "Already have an account? Sign in" : "New here? Create an account"}
+                </button>
+              ) : (
+                <p className="text-center text-sm text-muted-foreground">
+                  New shop?{" "}
+                  <Link to="/shop/open" className="underline underline-offset-2 hover:text-foreground">
+                    Open a shop
+                  </Link>
+                </p>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Sign-in is disabled.</p>

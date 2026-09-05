@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { shopKind } from "@/lib/housefile/stripe";
+import { useAudience } from "@/lib/housefile/use-audience";
+import { cn } from "@/lib/utils";
 
 export function ShopExplainer() {
   return (
@@ -28,35 +31,47 @@ export function ShopExplainer() {
   );
 }
 
-export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
+export function ShopSignupForm() {
   const navigate = useNavigate();
   const { user } = useCurrentUserState();
+  const { audience } = useAudience();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const price = cadence === "annual" ? SHOP_ANNUAL : SHOP_MONTHLY;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (user) {
-      void navigate({ to: "/app/onboard" });
-      return;
-    }
     setError(null);
     setBusy(true);
     try {
-      const res = await authClient.signUp.email({
-        email,
-        password,
-        name: name.trim() || email.split("@")[0],
-        callbackURL: next,
+      if (user && audience.kind === "contractor" && audience.paying) {
+        void navigate({ to: "/app" });
+        return;
+      }
+      if (user) {
+        const { startCheckout } = await import("@/lib/housefile/stripe-billing");
+        const checkout = await startCheckout({
+          data: {
+            kind: shopKind(cadence),
+            successPath: "/shop/open",
+            cancelPath: "/shop/open",
+          },
+        });
+        window.location.href = checkout.url;
+        return;
+      }
+      const { startShopCheckout } = await import("@/lib/housefile/stripe-billing");
+      const checkout = await startShopCheckout({
+        data: {
+          kind: cadence === "annual" ? "shop_annual" : "shop_monthly",
+          shopName: name.trim() || undefined,
+        },
       });
-      if (res.error) throw new Error(res.error.message || "Could not create the shop account");
-      window.location.href = next;
+      window.location.href = checkout.url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create the shop account");
-    } finally {
+      setError(err instanceof Error ? err.message : "Could not continue to Stripe checkout");
       setBusy(false);
     }
   }
@@ -64,58 +79,118 @@ export function ShopSignupForm({ next = "/app/onboard" }: { next?: string }) {
   return (
     <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
       {!user && (
-        <>
-          <div className="space-y-1.5">
-            <Label htmlFor="shop-name">Shop or your name</Label>
-            <Input
-              id="shop-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="organization"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="shop-email">Email</Label>
-            <Input
-              id="shop-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="shop-password">Password</Label>
-            <Input
-              id="shop-password"
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
-        </>
+        <div className="space-y-1.5">
+          <Label htmlFor="shop-name">Shop name (optional)</Label>
+          <Input
+            id="shop-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="organization"
+          />
+        </div>
       )}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Billing</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setCadence("monthly")}
+            className={cn(
+              "rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
+              cadence === "monthly" ? "bg-primary text-primary-foreground" : "bg-background",
+            )}
+          >
+            <p className="font-medium">${dollars(SHOP_MONTHLY)} / month</p>
+            <p className={cn("mt-1 text-sm", cadence === "monthly" ? "opacity-80" : "text-muted-foreground")}>
+              Extra seats ${dollars(SEAT_MONTHLY)}/month
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCadence("annual")}
+            className={cn(
+              "rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
+              cadence === "annual" ? "bg-primary text-primary-foreground" : "bg-background",
+            )}
+          >
+            <p className="font-medium">${dollars(SHOP_ANNUAL)} / year</p>
+            <p className={cn("mt-1 text-sm", cadence === "annual" ? "opacity-80" : "text-muted-foreground")}>
+              Two months included
+            </p>
+          </button>
+        </div>
+      </fieldset>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {!user && <TermsAgree id="shop-agree-terms" />}
+      <TermsAgree id="shop-agree-terms" />
       <Button type="submit" className="min-h-12 w-full" disabled={busy}>
-        {busy ? "Working…" : user ? "Continue to shop setup" : "Create account and open a shop"}
+        {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
       </Button>
-      {!user && (
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" search={{ next }} className="underline underline-offset-2">
-            Sign in
-          </Link>
-          {" · "}
-          <Link to="/forgot-password" search={{ next }} className="underline underline-offset-2">
-            Forgot password?
-          </Link>
-        </p>
-      )}
+      <p className="text-center text-sm text-muted-foreground">
+        Card details stay on Stripe. No PlanitService account until payment finishes.
+      </p>
+      <p className="text-center text-sm text-muted-foreground">
+        Already paid and set a password?{" "}
+        <Link to="/login" search={{ next: "/app" }} className="underline underline-offset-2">
+          Sign in
+        </Link>
+      </p>
+    </form>
+  );
+}
+
+export function ShopClaimForm({ sessionId }: { sessionId: string }) {
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      const { claimShopCheckout } = await import("@/lib/housefile/stripe-billing");
+      const claimed = await claimShopCheckout({
+        data: { sessionId, password, name: name.trim() || undefined },
+      });
+      const signed = await authClient.signIn.email({
+        email: claimed.email,
+        password,
+        callbackURL: "/app/onboard",
+      });
+      if (signed.error) throw new Error(signed.error.message || "Account created. Sign in to continue.");
+      window.location.href = "/app/onboard";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not finish shop setup");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
+      <p className="text-sm text-muted-foreground">
+        Payment received. Set a password for the email you used on Stripe.
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="claim-name">Your name</Label>
+        <Input id="claim-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="claim-password">Password</Label>
+        <Input
+          id="claim-password"
+          type="password"
+          required
+          minLength={8}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+        />
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <Button type="submit" className="min-h-12 w-full" disabled={busy}>
+        {busy ? "Opening your shop…" : "Set password and open the shop"}
+      </Button>
     </form>
   );
 }
