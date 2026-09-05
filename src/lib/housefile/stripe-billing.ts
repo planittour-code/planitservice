@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import type { CheckoutKind } from "@/lib/housefile/stripe";
+import {
+  createCheckoutSessionUrl,
+  createPortalSessionUrl,
+} from "@/lib/housefile/stripe.server";
 
 export const startCheckout = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -14,7 +18,6 @@ export const startCheckout = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { getSessionUser } = await import("@/lib/auth/verify.server");
-    const { createCheckoutSessionUrl } = await import("@/lib/housefile/stripe.server");
     const session = await getSessionUser();
     const url = await createCheckoutSessionUrl({
       kind: data.kind,
@@ -57,7 +60,6 @@ export const startBillingPortal = createServerFn({ method: "POST" })
   .validator((input: { returnPath: string }) => input)
   .handler(async ({ context, data }) => {
     const { getSessionUser } = await import("@/lib/auth/verify.server");
-    const { createPortalSessionUrl } = await import("@/lib/housefile/stripe.server");
     const session = await getSessionUser();
     const url = await createPortalSessionUrl({
       customerEmail: session?.email,

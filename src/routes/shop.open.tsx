@@ -7,6 +7,7 @@ import { ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { confirmShopCheckout } from "@/lib/housefile/stripe-billing";
 import { useAudience } from "@/lib/housefile/use-audience";
 
 const searchSchema = z.object({
@@ -35,8 +36,7 @@ function OpenShop() {
     let cancelled = false;
     setConfirming(true);
     setConfirmError(null);
-    void import("@/lib/housefile/stripe-billing")
-      .then(({ confirmShopCheckout }) => confirmShopCheckout({ data: search.session_id }))
+    void confirmShopCheckout({ data: search.session_id })
       .then(async (res) => {
         if (cancelled) return;
         if (!res.ok) {
