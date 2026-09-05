@@ -9,10 +9,10 @@ const databaseUrl =
   rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
 
 /**
- * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured
- * sandbox), otherwise a local embedded **PGLite** (Postgres compiled to WASM) so
- * the app has a working database even with nothing configured — the live preview
- * included. Swap in Neon later by just setting `DATABASE_URL`; no code changes.
+ * Active backend: real **Postgres** when `DATABASE_URL` is set (Netlify /
+ * Supabase). Otherwise a local embedded **PGLite** so `npm run dev` can start
+ * without secrets. Production must set DATABASE_URL — PGLite is not a deploy
+ * target and is not used on Netlify.
  */
 export const dbSource: DbSource = databaseUrl ? "neon" : "pglite";
 
@@ -212,12 +212,10 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
 /**
  * Finish DB bootstrap before the server handles traffic.
  *
- * - **PGLite** (preview / no `DATABASE_URL`): open the in-memory DB and apply
+ * - **PGLite** (local / no `DATABASE_URL`): open the in-memory DB and apply
  *   `migrations/*.sql`. Idempotent — concurrent callers share one promise.
- * - **Neon**: no-op (pool is created lazily on first query).
- *
- * Vite `configureServer` awaits this at dev startup; production imports of this
- * module kick it off immediately (see bottom of file).
+ * - **Postgres** (`DATABASE_URL` set, including Netlify): no-op (pool is created
+ *   lazily on first query).
  */
 export function ensureDbReady(): Promise<void> {
   if (dbSource !== "pglite") return Promise.resolve();

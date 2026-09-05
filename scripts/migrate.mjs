@@ -2,12 +2,12 @@
 /**
  * Deploy-time database migrator (node-postgres, `pg`).
  *
- * Runs during `npm run build` — on every Vercel deploy — applying pending files
- * in ../migrations to DATABASE_URL. Each file is applied in one transaction and
- * recorded in a `_migrations` table, so it runs once and is safe to re-run.
+ * Runs during `npm run build` — on every Netlify deploy — applying pending files
+ * in ../migrations to DATABASE_URL (live Postgres / Supabase). Each file is
+ * applied in one transaction and recorded in a `_migrations` table, so it runs
+ * once and is safe to re-run.
  *
- * No DATABASE_URL (local / preview builds) -> skip; the PGLite fallback applies
- * the same files at startup instead (see src/lib/db.ts).
+ * No DATABASE_URL (local builds) -> skip. Do not treat PGLite as production.
  */
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -17,7 +17,7 @@ import pg from "pg";
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   console.log(
-    "[migrate] DATABASE_URL not set — skipping (the PGLite fallback migrates itself).",
+    "[migrate] DATABASE_URL not set — skipping (set it on Netlify for production Postgres).",
   );
   process.exit(0);
 }
