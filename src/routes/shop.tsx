@@ -100,11 +100,6 @@ function HomePage() {
                     <span className="text-muted-foreground">Lifetime</span>
                   </li>
                 </ul>
-                <Button asChild variant="outline" className="w-full">
-                  <Link to="/invite/$token" params={{ token: "maple-invite" }}>
-                    Take a Tour
-                  </Link>
-                </Button>
               </div>
             </div>
           </div>

@@ -64,9 +64,6 @@ export function PublicHeader({
           {lane === "homeowner" && (
             <>
               <HeaderLink to="/homeowner">Start a record</HeaderLink>
-              <HeaderLink to="/house/$token" params={{ token: "maple-14" }}>
-                Sample record
-              </HeaderLink>
               <HeaderLink to="/homeowner" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>
@@ -77,9 +74,6 @@ export function PublicHeader({
             <>
               <HeaderLink to="/shop">Look up a house</HeaderLink>
               <HeaderLink to="/shop/open">Open a shop</HeaderLink>
-              <HeaderLink to="/p/$token" params={{ token: "maple-paint-draft" }} hideOnMobile>
-                Sample quote
-              </HeaderLink>
               <HeaderLink to="/shop" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>

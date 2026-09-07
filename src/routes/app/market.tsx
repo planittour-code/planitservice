@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { workLabel } from "@/components/rfp-panel";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/housefile/format";
 import { listMarketRfps } from "@/lib/housefile/server";
@@ -47,11 +46,6 @@ function MarketPage() {
           ))}
         </ul>
       )}
-      <Button asChild variant="ghost">
-        <Link to="/rfp/$token" params={{ token: "maple-roof-rfp" }}>
-          Sample: Maple Street reroof
-        </Link>
-      </Button>
     </div>
   );
 }
