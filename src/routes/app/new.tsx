@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { QuoteHouseBanner, MAPLE_DEMO } from "@/components/quote-house-banner";
+import { TradeGrid } from "@/components/trade-face";
 import { QuotePreview, TakeoffForm } from "@/components/quote-takeoff";
 import { WizardSteps } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -355,23 +356,13 @@ function NewQuote() {
       {step === 2 && (
         <div className="space-y-4">
           <p className="text-muted-foreground">What are you quoting at this address?</p>
-          <div className="grid gap-3">
-            {offered.map((w) => (
-              <button
-                key={w.id}
-                type="button"
-                onClick={() => {
-                  setWorkId(w.id);
-                  setStep(3);
-                }}
-                className="rounded-xl bg-card p-4 text-left shadow-[var(--shadow-border)] transition-[box-shadow] duration-150 hover:shadow-[var(--shadow-border-hover)]"
-              >
-                <p className="text-xs tracking-wide text-muted-foreground uppercase">{w.trade}</p>
-                <p className="font-display text-lg font-medium">{w.name}</p>
-                <p className="text-sm text-muted-foreground">{w.blurb}</p>
-              </button>
-            ))}
-          </div>
+          <TradeGrid
+            types={offered}
+            onPick={(id) => {
+              setWorkId(id);
+              setStep(3);
+            }}
+          />
           <Button type="button" variant="ghost" onClick={() => setStep(1)}>
             Back
           </Button>

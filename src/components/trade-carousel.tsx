@@ -1,31 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
-import {
-  AppWindow,
-  ChevronLeft,
-  ChevronRight,
-  Columns2,
-  Droplets,
-  Fence,
-  House,
-  Layers,
-  PaintRoller,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
+import { TRADE_FACE } from "@/components/trade-face";
 import { Button } from "@/components/ui/button";
 import { WORK_TYPES } from "@/lib/housefile/quote";
 import { useAudience } from "@/lib/housefile/use-audience";
 import { cn } from "@/lib/utils";
-
-const TRADE_FACE: Record<string, { icon: LucideIcon; surface: string }> = {
-  paint: { icon: PaintRoller, surface: "bg-trade-paint text-primary-foreground" },
-  roof: { icon: House, surface: "bg-trade-roof text-primary-foreground" },
-  windows: { icon: AppWindow, surface: "bg-trade-windows text-primary-foreground" },
-  gutters: { icon: Droplets, surface: "bg-trade-gutters text-primary-foreground" },
-  siding: { icon: Layers, surface: "bg-trade-siding text-primary-foreground" },
-  deck: { icon: Fence, surface: "bg-trade-deck text-primary-foreground" },
-  porch: { icon: Columns2, surface: "bg-trade-porch text-primary-foreground" },
-};
 
 export function TradeCarousel() {
   const navigate = useNavigate();

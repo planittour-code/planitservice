@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { HouseCard } from "@/components/site-chrome";
 import { StatusBadge } from "@/components/status-badge";
+import { TradeGrid } from "@/components/trade-face";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { workTypesFor } from "@/lib/housefile/quote";
 import { getDashboard } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/")({ component: ShopHome });
@@ -23,18 +25,36 @@ function ShopHome() {
     return <p className="text-destructive">Could not load the shop.</p>;
   }
   const { company, properties, proposals, pending, role } = q.data;
+  const trades = workTypesFor(company.trades);
 
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">{company.trade.replace(/-/g, " ")}</p>
-          <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+        <div className="flex min-w-0 items-center gap-4">
+          {company.logo_src ? (
+            <img
+              src={company.logo_src}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-lg bg-card object-contain p-1.5 shadow-[var(--shadow-border)] sm:h-20 sm:w-20"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">{company.trade.replace(/-/g, " ")}</p>
+            <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+          </div>
         </div>
         <Button asChild variant="outline">
           <Link to="/app/book">Materials</Link>
         </Button>
       </div>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="font-display text-xl font-medium">New quote</h2>
+          <p className="text-sm text-muted-foreground">Pick the work. Address and measurements come next.</p>
+        </div>
+        <TradeGrid types={trades} />
+      </section>
 
       {role === "owner" && (pending?.length ?? 0) > 0 && (
         <section className="space-y-3">
