@@ -175,28 +175,39 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
 export function WizardSteps({
   step,
   items,
+  onSelect,
 }: {
   step: number;
   items: { n: number; label: string }[];
+  onSelect?: (n: number) => void;
 }) {
   return (
     <ol className="flex gap-2" aria-label="Quote steps">
       {items.map((item) => {
         const current = step === item.n;
         const done = step > item.n;
-        return (
-          <li
-            key={item.n}
-            className={cn(
-              "flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-2 text-sm",
-              current && "bg-primary text-primary-foreground",
-              done && "bg-muted text-foreground",
-              !current && !done && "bg-card text-muted-foreground shadow-[var(--shadow-border)]",
-            )}
-            aria-current={current ? "step" : undefined}
-          >
+        const className = cn(
+          "flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-2 text-sm",
+          current && "bg-primary text-primary-foreground",
+          done && "bg-muted text-foreground",
+          !current && !done && "bg-card text-muted-foreground shadow-[var(--shadow-border)]",
+          onSelect && "hover:opacity-90",
+        );
+        const body = (
+          <>
             <span className="tabular-nums">{item.n}</span>
             <span className="hidden sm:inline">{item.label}</span>
+          </>
+        );
+        return (
+          <li key={item.n} className="min-w-0 flex-1" aria-current={current ? "step" : undefined}>
+            {onSelect ? (
+              <button type="button" className={className} onClick={() => onSelect(item.n)}>
+                {body}
+              </button>
+            ) : (
+              <div className={className}>{body}</div>
+            )}
           </li>
         );
       })}

@@ -88,7 +88,7 @@ function NewQuote() {
     queryFn: () => listPriceBook(),
     enabled: Boolean(user),
   });
-  const [step, setStep] = useState(search.work ? 3 : 1);
+  const [step, setStep] = useState(1);
   const [workId, setWorkId] = useState(
     search.work ?? workForTemplate(search.template ?? "")?.id ?? "",
   );
@@ -121,7 +121,6 @@ function NewQuote() {
       setLocalCustom((cur) => (cur.includes(res.workId) ? cur : [...cur, res.workId]));
       setWorkId(res.workId);
       setAddingWork(false);
-      setStep(3);
       void dash.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add category"),
@@ -163,7 +162,6 @@ function NewQuote() {
     setZip(rfp.zip);
     setHomeownerName(rfp.homeowner_name);
     if (rfp.work_id) setWorkId(rfp.work_id);
-    setStep(3);
   }, [rfpQ.data?.rfp.id]);
 
   useEffect(() => {
@@ -264,6 +262,29 @@ function NewQuote() {
     window.location.href = "/shop/open";
   }
 
+  function goToStep(n: number) {
+    if (n <= 1) {
+      setStep(1);
+      return;
+    }
+    if (!addressReady) {
+      setStep(1);
+      return;
+    }
+    if (n >= 3 && !workId) {
+      setStep(2);
+      return;
+    }
+    setStep(n);
+  }
+
+  function afterWorkPicked(id: string) {
+    setWorkId(id);
+    goToStep(addressReady ? 3 : 1);
+  }
+
+  const shownStep = !addressReady ? 1 : step > 2 && !workId ? 2 : step;
+
   if (sent) {
     if (sent.pending) {
       return (
@@ -320,10 +341,10 @@ function NewQuote() {
           lng={usingDemo ? null : geo.data?.lng}
           onAddPhoto={user ? setCoverPhoto : undefined}
         />
-        <WizardSteps step={step} items={STEPS} />
+        <WizardSteps step={shownStep} items={STEPS} onSelect={goToStep} />
       </div>
 
-      {step === 1 && (
+      {shownStep === 1 && (
         <div className="space-y-5">
           <p className="text-muted-foreground">
             Start with the address. If this house already has a file, the measurements come with it.
@@ -366,21 +387,18 @@ function NewQuote() {
               {existing.address_line}, {existing.city} · {existing.fact_count} facts already on file.
             </p>
           )}
-          <Button type="button" disabled={user ? !addressReady : false} onClick={() => needShop(() => setStep(workId ? 3 : 2))}>
+          <Button type="button" disabled={user ? !addressReady : false} onClick={() => needShop(() => goToStep(workId ? 3 : 2))}>
             Next — {workId ? "details" : "type of work"}
           </Button>
         </div>
       )}
 
-      {step === 2 && (
+      {shownStep === 2 && (
         <div className="space-y-4">
           <p className="text-muted-foreground">What are you quoting at this address?</p>
           <TradeGrid
             types={offered}
-            onPick={(id) => {
-              setWorkId(id);
-              setStep(3);
-            }}
+            onPick={afterWorkPicked}
             onAddCustom={() => setAddingWork(true)}
           />
           <CustomWorkDialog
@@ -389,23 +407,23 @@ function NewQuote() {
             onSave={async (name) => {
               if (user) {
                 await addWork.mutateAsync(name);
+                afterWorkPicked(customWorkId(name));
                 return;
               }
               const id = customWorkId(name);
               setLocalCustom((cur) => (cur.includes(id) ? cur : [...cur, id]));
-              setWorkId(id);
               setAddingWork(false);
-              setStep(3);
+              afterWorkPicked(id);
             }}
             busy={addWork.isPending}
           />
-          <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+          <Button type="button" variant="ghost" onClick={() => goToStep(1)}>
             Back
           </Button>
         </div>
       )}
 
-      {step === 3 && work && (
+      {shownStep === 3 && work && (
         <div className="space-y-5">
           <TakeoffForm
             work={work}
@@ -415,17 +433,17 @@ function NewQuote() {
             book={book}
           />
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => setStep(2)}>
+            <Button type="button" variant="ghost" onClick={() => goToStep(2)}>
               Back
             </Button>
-            <Button type="button" onClick={() => setStep(4)}>
+            <Button type="button" onClick={() => goToStep(4)}>
               Review quote
             </Button>
           </div>
         </div>
       )}
 
-      {step === 4 && work && (
+      {shownStep === 4 && work && (
         <div className="space-y-5">
           <div>
             <p className="font-display text-2xl font-medium">{work.name}</p>
@@ -502,7 +520,7 @@ function NewQuote() {
           )}
           <p className="font-display text-3xl font-medium tabular-nums">{money(total)}</p>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => setStep(3)}>
+            <Button type="button" variant="ghost" onClick={() => goToStep(3)}>
               Back
             </Button>
             <Button
