@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StreetView } from "@/components/street-view";
 import { Mark } from "@/components/logo";
 import { money, shortDate } from "@/lib/housefile/format";
+import { normalizePaymentLink, paymentSchedule, paymentTermLabel } from "@/lib/housefile/payment";
 import {
   acceptProposalPublic,
   addContractorMessage,
@@ -226,18 +227,43 @@ export function ProposalDoc({
       )}
 
       {mode === "accepted" ? (
-        <section className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-            <p className="text-sm tracking-wide text-muted-foreground uppercase">Homeowner</p>
-            <p className="font-medium">{property.homeowner_name}</p>
-            <p className="text-sm text-muted-foreground">Accepted the estimate. Work may begin.</p>
-          </div>
-          <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-            <p className="text-sm tracking-wide text-muted-foreground uppercase">Contractor</p>
-            <p className="font-medium">{company.name}</p>
-            <p className="text-sm text-muted-foreground">Estimate from {company.name}.</p>
-          </div>
-        </section>
+        <>
+          <section className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+              <p className="text-sm tracking-wide text-muted-foreground uppercase">Homeowner</p>
+              <p className="font-medium">{property.homeowner_name}</p>
+              <p className="text-sm text-muted-foreground">Accepted the estimate. Work may begin.</p>
+            </div>
+            <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+              <p className="text-sm tracking-wide text-muted-foreground uppercase">Contractor</p>
+              <p className="font-medium">{company.name}</p>
+              <p className="text-sm text-muted-foreground">Estimate from {company.name}.</p>
+            </div>
+          </section>
+          <section className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+            <p className="text-sm tracking-wide text-muted-foreground uppercase">Payment</p>
+            <p className="font-medium">{paymentTermLabel(company.payment_terms)}</p>
+            <ul className="space-y-1 text-sm text-muted-foreground">
+              {paymentSchedule(includedTotal, company.payment_terms).map((row) => (
+                <li key={row.label} className="flex justify-between gap-3">
+                  <span>{row.label}</span>
+                  <span className="tabular-nums text-foreground">{money(row.amount)}</span>
+                </li>
+              ))}
+            </ul>
+            {normalizePaymentLink(company.payment_link) ? (
+              <Button asChild className="min-h-12 w-full">
+                <a href={normalizePaymentLink(company.payment_link)!} target="_blank" rel="noreferrer">
+                  Pay {company.name}
+                </a>
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Ask {company.name} how they take payment.
+              </p>
+            )}
+          </section>
+        </>
       ) : null}
 
       {mode === "homeowner" && company.terms ? (

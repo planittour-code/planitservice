@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
+import { PAYMENT_TERM_LABELS, PAYMENT_TERMS, asPaymentTerms } from "@/lib/housefile/payment";
 import { addTeamMember, getDashboard, listTeam, updateCompany } from "@/lib/housefile/server";
 import { startBillingPortal } from "@/lib/housefile/stripe-billing";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
 
@@ -22,6 +24,8 @@ function SettingsPage() {
   const [logo, setLogo] = useState<string | null>(null);
   const [agreement, setAgreement] = useState("");
   const [terms, setTerms] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState<(typeof PAYMENT_TERMS)[number]>("due_completion");
+  const [paymentLink, setPaymentLink] = useState("");
 
   useEffect(() => {
     if (!q.data) return;
@@ -32,12 +36,24 @@ function SettingsPage() {
     setLogo(q.data.company.logo_src ?? null);
     setAgreement(q.data.company.agreement ?? "");
     setTerms(q.data.company.terms ?? "");
+    setPaymentTerms(asPaymentTerms(q.data.company.payment_terms));
+    setPaymentLink(q.data.company.payment_link ?? "");
   }, [q.data]);
 
   const save = useMutation({
     mutationFn: () =>
       updateCompany({
-        data: { name, trade, phone, email, logo_src: logo, agreement, terms },
+        data: {
+          name,
+          trade,
+          phone,
+          email,
+          logo_src: logo,
+          agreement,
+          terms,
+          payment_terms: paymentTerms,
+          payment_link: paymentLink,
+        },
       }),
     onSuccess: () => {
       toast.success("Shop updated");
@@ -103,6 +119,40 @@ function SettingsPage() {
         <div className="space-y-1.5">
           <Label htmlFor="tm">Terms and conditions</Label>
           <Textarea id="tm" rows={5} value={terms} onChange={(e) => setTerms(e.target.value)} />
+        </div>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">Payment terms</legend>
+          <p className="text-sm text-muted-foreground">
+            This goes on the accepted-estimate email with a PDF of the estimate.
+          </p>
+          <div className="grid gap-2">
+            {PAYMENT_TERMS.map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setPaymentTerms(kind)}
+                className={cn(
+                  "rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
+                  paymentTerms === kind ? "bg-primary text-primary-foreground" : "bg-background",
+                )}
+              >
+                <p className="font-medium">{PAYMENT_TERM_LABELS[kind]}</p>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <div className="space-y-1.5">
+          <Label htmlFor="pay">Payment link</Label>
+          <Input
+            id="pay"
+            inputMode="url"
+            placeholder="https://pay.example.com/your-shop"
+            value={paymentLink}
+            onChange={(e) => setPaymentLink(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            Venmo, PayPal, Square, or any URL you already use. Homeowners get this after they accept.
+          </p>
         </div>
         <Button type="submit" disabled={save.isPending}>
           Save

@@ -22,6 +22,8 @@ export type Company = {
   review_trustpilot: string | null;
   review_nextdoor: string | null;
   review_other: string | null;
+  payment_terms: string | null;
+  payment_link: string | null;
   created_at: string;
 };
 
@@ -204,6 +206,8 @@ export type HouseCompany = {
   logo_src: string | null;
   agreement: string | null;
   terms: string | null;
+  payment_terms: string | null;
+  payment_link: string | null;
 };
 
 export type HouseFile = {

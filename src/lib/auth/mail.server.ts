@@ -48,6 +48,7 @@ export async function sendResendEmail(input: {
   html: string;
   replyTo?: string;
   from?: string;
+  attachments?: { filename: string; content: string }[];
 }) {
   const key = resendKey();
   if (!key) {
@@ -71,6 +72,7 @@ export async function sendResendEmail(input: {
       subject: input.subject,
       text: input.text,
       html: input.html,
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     }),
   });
   if (!res.ok) {
@@ -148,6 +150,76 @@ export async function sendEstimateEmail(data: {
     html,
     from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
     replyTo: estimateReplyTo(data.replyToken),
+  });
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  return Buffer.from(bytes).toString("base64");
+}
+
+export async function sendAcceptedEstimateEmail(data: {
+  to: string;
+  name: string;
+  company: string;
+  address: string;
+  total: string;
+  paymentTerms: string;
+  schedule: string[];
+  paymentLink: string | null;
+  proposalUrl: string;
+  pdf: { filename: string; bytes: Uint8Array };
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = `Accepted estimate from ${data.company} for ${data.address}`;
+  const payLines = data.paymentLink
+    ? ["", "Pay here:", data.paymentLink]
+    : ["", "Ask the shop how they take payment."];
+  const text = [
+    `Hi ${first},`,
+    "",
+    `You accepted the estimate from ${data.company} for ${data.address}.`,
+    `Total: ${data.total}`,
+    "",
+    "Payment terms",
+    data.paymentTerms,
+    ...data.schedule,
+    ...payLines,
+    "",
+    `Open the accepted estimate: ${data.proposalUrl}`,
+    "",
+    "The signed estimate is attached as a PDF.",
+    "",
+    data.company,
+  ].join("\n");
+  const scheduleHtml = data.schedule.map((line) => `<li>${escapeHtml(line)}</li>`).join("");
+  const payHtml = data.paymentLink
+    ? `<p><a href="${escapeHtml(data.paymentLink)}">Pay ${escapeHtml(data.company)}</a></p>
+<p>If the button does not work, paste this into your browser:</p>
+<p>${escapeHtml(data.paymentLink)}</p>`
+    : `<p>Ask ${escapeHtml(data.company)} how they take payment.</p>`;
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>You accepted the estimate from ${escapeHtml(data.company)} for ${escapeHtml(data.address)}.</p>
+<p><strong>Total ${escapeHtml(data.total)}</strong></p>
+<p><strong>Payment terms</strong><br>${escapeHtml(data.paymentTerms)}</p>
+<ul>${scheduleHtml}</ul>
+${payHtml}
+<p><a href="${escapeHtml(data.proposalUrl)}">Open the accepted estimate</a></p>
+<p>The signed estimate is attached as a PDF.</p>
+<p>${escapeHtml(data.company)}</p>`;
+
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: LEGAL_EMAIL,
+    attachments: [
+      {
+        filename: data.pdf.filename,
+        content: bytesToBase64(data.pdf.bytes),
+      },
+    ],
   });
 }
 

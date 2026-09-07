@@ -6,6 +6,7 @@ import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv
 import { FIELD_CATALOG } from "./fields";
 import { coverLetter } from "./cover-letter";
 import { num, slugToken } from "./format";
+import { asPaymentTerms, normalizePaymentLink } from "./payment";
 import { parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
   ESTIMATE_KEY,
@@ -58,6 +59,8 @@ function asCompany(row: Company): Company {
     trades: row.trades ?? null,
     onboarded_at: row.onboarded_at ?? null,
     shop_paid_at: row.shop_paid_at ?? null,
+    payment_terms: row.payment_terms ?? null,
+    payment_link: row.payment_link ?? null,
   };
 }
 
@@ -71,6 +74,8 @@ function publicCompany(c: Company): HouseCompany {
     logo_src: c.logo_src ?? null,
     agreement: c.agreement ?? null,
     terms: c.terms ?? null,
+    payment_terms: c.payment_terms ?? null,
+    payment_link: c.payment_link ?? null,
   };
 }
 
@@ -483,6 +488,8 @@ export const updateCompany = createServerFn({ method: "POST" })
       agreement?: string | null;
       terms?: string | null;
       trades?: string | null;
+      payment_terms?: string | null;
+      payment_link?: string | null;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -500,7 +507,9 @@ export const updateCompany = createServerFn({ method: "POST" })
           logo_src = ${data.logo_src === undefined ? company.logo_src : data.logo_src},
           agreement = ${data.agreement === undefined ? company.agreement : data.agreement},
           terms = ${data.terms === undefined ? company.terms : data.terms},
-          trades = ${data.trades === undefined ? company.trades : data.trades}
+          trades = ${data.trades === undefined ? company.trades : data.trades},
+          payment_terms = ${data.payment_terms === undefined ? company.payment_terms : asPaymentTerms(data.payment_terms)},
+          payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)}
       where id = ${company.id}
     `;
     const rows = await sql<Company>`select * from companies where id = ${company.id}`;
@@ -1533,11 +1542,39 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
     const sql = await getSql();
     const rows = await sql<Proposal>`select * from proposals where share_token = ${data.token} limit 1`;
     if (!rows[0]) throw new Error("Proposal not found");
-    await sql`
-      update proposals set status = ${"accepted"}, accepted_at = now()
-      where id = ${rows[0].id}
+    const already = rows[0].status === "accepted" || rows[0].status === "completed";
+    if (!already) {
+      await sql`
+        update proposals set status = ${"accepted"}, accepted_at = now()
+        where id = ${rows[0].id}
+      `;
+    }
+    const proposal = (await sql<Proposal>`select * from proposals where id = ${rows[0].id}`)[0]!;
+    const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0]!;
+    const company = asCompany(
+      (await sql<Company>`select * from companies where id = ${proposal.company_id}`)[0]!,
+    );
+    const items = await sql<ProposalItem>`
+      select * from proposal_items where proposal_id = ${proposal.id} order by sort_order
     `;
-    return { ok: true as const };
+    let emailed = false;
+    if (!already) {
+      try {
+        const { deliverAcceptedEstimateEmail } = await import("./mail");
+        await deliverAcceptedEstimateEmail({
+          property,
+          proposal,
+          company,
+          items: items.map((i) =>
+            hydrateItem({ ...i, included: Boolean(i.included), optional: Boolean(i.optional) }),
+          ),
+        });
+        emailed = true;
+      } catch (err) {
+        console.error("[mail] accepted estimate send failed", err);
+      }
+    }
+    return { ok: true as const, emailed };
   });
 
 export const draftCoverNote = createServerFn({ method: "POST" })
