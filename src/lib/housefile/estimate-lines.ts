@@ -14,6 +14,7 @@ export type EstimateLine = {
   price: string;
   photos: string[];
   optionId?: string;
+  unit?: string;
 };
 
 type Starter = {
@@ -21,6 +22,7 @@ type Starter = {
   description: string;
   slot?: BookSlotId;
   qty?: string;
+  unit?: string;
 };
 
 const PAINT_INTERIOR: Starter[] = [
@@ -325,8 +327,29 @@ function starterToLine(row: Starter, book: PriceBookItem[]): EstimateLine {
     cost: "",
     price: "",
     photos: [],
+    unit: row.unit,
   };
   return item ? applyBookToLine({ ...base, description: row.description }, item) : base;
+}
+
+export function linesFromKitItems(
+  items: { name: string; description?: string | null; qty?: string | null; unit?: string | null; slot?: string | null }[],
+  book: PriceBookItem[],
+): EstimateLine[] {
+  if (!items.length) return [blankEstimateLine()];
+  return items.map((row) => {
+    const line = starterToLine(
+      {
+        item: row.name,
+        description: row.description ?? "",
+        qty: row.qty ?? "",
+        unit: row.unit ?? undefined,
+        slot: row.slot ? (row.slot as BookSlotId) : undefined,
+      },
+      book,
+    );
+    return { ...line, item: row.name };
+  });
 }
 
 export function seedEstimateLines(
@@ -371,6 +394,7 @@ export function parseEstimateLines(raw: string | undefined): EstimateLine[] {
           ? r.photos.filter((p): p is string => typeof p === "string" && p.startsWith("data:image/"))
           : [],
         optionId: r.optionId ? String(r.optionId) : undefined,
+        unit: r.unit ? String(r.unit) : undefined,
       };
     });
   } catch {
@@ -440,7 +464,7 @@ export function toQuoteLines(lines: EstimateLine[], book: PriceBookItem[]): Quot
       name: line.item.trim(),
       description: line.description.trim(),
       qty: num(line.qty),
-      unit: item?.unit || "ea",
+      unit: item?.unit || line.unit || "ea",
       unit_price: num(line.price),
       optional: Boolean(line.optionId),
       included: num(line.qty) > 0 && String(line.price).trim() !== "",

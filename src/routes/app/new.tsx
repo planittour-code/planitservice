@@ -14,11 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EstimateSheet } from "@/components/estimate-sheet";
 import { applyPriceBook, linesNeedingBookCost, pickKey, proposedCostKey, slotsForWork, STARTER_BOOK } from "@/lib/housefile/book";
+import { GUTTER_KIT_SEED, type WorkKit } from "@/lib/housefile/kits";
+import { cn } from "@/lib/utils";
 import {
   ESTIMATE_KEY,
   blankEstimateLine,
   estimateReady,
   estimateTotal,
+  linesFromKitItems,
   parseEstimateLines,
   seedEstimateLines,
   serializeEstimateLines,
@@ -44,6 +47,7 @@ import {
   getQuoteHouse,
   getRfpByToken,
   listPriceBook,
+  listWorkKits,
   standardizeAddress,
 } from "@/lib/housefile/server";
 
@@ -86,6 +90,11 @@ function NewQuote() {
   const bookQ = useQuery({
     queryKey: ["price-book"],
     queryFn: () => listPriceBook(),
+    enabled: Boolean(user),
+  });
+  const kitsQ = useQuery({
+    queryKey: ["work-kits"],
+    queryFn: () => listWorkKits({ data: {} }),
     enabled: Boolean(user),
   });
   const [step, setStep] = useState(1);
@@ -176,20 +185,51 @@ function NewQuote() {
     if (hit) setPropertyId(hit.id);
   }, [dash.data, search.address, propertyId]);
 
+  const workKits = useMemo(() => {
+    if (user) return (kitsQ.data?.kits ?? []).filter((kit) => kit.work_id === workId);
+    if (workId !== "gutters") return [];
+    return GUTTER_KIT_SEED.map((kit, i) => ({
+      id: `seed-${i}`,
+      company_id: "guest",
+      work_id: "gutters",
+      name: kit.name,
+      sort_order: i,
+      created_at: "",
+      items: kit.lines.map((line, j) => ({
+        id: `seed-${i}-${j}`,
+        kit_id: `seed-${i}`,
+        sort_order: j,
+        name: line.name,
+        description: line.description,
+        qty: line.qty ?? null,
+        unit: line.unit ?? "ls",
+        slot: line.slot ?? null,
+      })),
+    })) satisfies WorkKit[];
+  }, [kitsQ.data?.kits, workId, user]);
+
   useEffect(() => {
     if (!work) return;
+    if (user && !kitsQ.isFetched) return;
     const items = user ? (bookQ.data?.items ?? []) : guestBook();
     const scope = search.template === "tmpl_ext_paint" ? "exterior" : "interior";
     setTakeoff((prev) => {
-      const sameJob = prev.__work === work.id && prev.paint_scope === (work.id === "paint" ? scope : prev.paint_scope);
-      if (sameJob && prev[ESTIMATE_KEY]) return prev;
+      if (prev.__work === work.id) return prev;
+      if (workKits.length > 0) {
+        return {
+          __work: work.id,
+          paint_scope: work.id === "paint" ? scope : "",
+          __kit: "",
+          __kit_name: "",
+        };
+      }
       return {
         __work: work.id,
         paint_scope: work.id === "paint" ? scope : "",
         [ESTIMATE_KEY]: serializeEstimateLines(seedEstimateLines(work.id, items, scope)),
       };
     });
-  }, [work?.id, bookQ.data?.items.length, search.template]);
+  }, [work?.id, user, kitsQ.isFetched, workKits.length, bookQ.data?.items.length, search.template]);
 
   const book = user ? (bookQ.data?.items ?? []) : guestBook();
   const role = user ? (bookQ.data?.role ?? dash.data?.role ?? "owner") : "owner";
@@ -220,7 +260,7 @@ function NewQuote() {
           state: existing?.state || state,
           zip: existing?.zip || zip,
           templateId,
-          title: work?.name,
+          title: work?.name && takeoff.__kit_name ? `${work.name} — ${takeoff.__kit_name}` : work?.name,
           takeoff,
           coverPhoto: coverPhoto || undefined,
           rfpToken: search.rfp,
@@ -282,6 +322,33 @@ function NewQuote() {
     setWorkId(id);
     goToStep(addressReady ? 3 : 1);
   }
+
+  function applyKit(kit: WorkKit | null) {
+    if (!work) return;
+    const items = user ? (bookQ.data?.items ?? []) : guestBook();
+    const scope = takeoff.paint_scope || (search.template === "tmpl_ext_paint" ? "exterior" : "interior");
+    if (!kit) {
+      setTakeoff((s) => ({
+        ...s,
+        __work: work.id,
+        __kit: "",
+        __kit_name: "",
+        paint_scope: work.id === "paint" ? scope : s.paint_scope,
+        [ESTIMATE_KEY]: serializeEstimateLines(seedEstimateLines(work.id, items, scope)),
+      }));
+      return;
+    }
+    setTakeoff((s) => ({
+      ...s,
+      __work: work.id,
+      __kit: kit.id,
+      __kit_name: kit.name,
+      paint_scope: work.id === "paint" ? scope : s.paint_scope,
+      [ESTIMATE_KEY]: serializeEstimateLines(linesFromKitItems(kit.items, items)),
+    }));
+  }
+
+  const waitingOnKit = workKits.length > 0 && !takeoff.__kit && !takeoff[ESTIMATE_KEY];
 
   const shownStep = !addressReady ? 1 : step > 2 && !workId ? 2 : step;
 
@@ -425,18 +492,35 @@ function NewQuote() {
 
       {shownStep === 3 && work && (
         <div className="space-y-5">
-          <TakeoffForm
-            work={work}
-            paintScope={takeoff.paint_scope}
-            inputs={takeoff}
-            onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
-            book={book}
-          />
+          {user && !kitsQ.isFetched ? (
+            <p className="text-muted-foreground">Loading sub-categories…</p>
+          ) : (
+            <>
+              {workKits.length > 0 && (
+                <KitPicker
+                  kits={workKits}
+                  selectedId={takeoff.__kit}
+                  onPick={applyKit}
+                  onSkip={() => applyKit(null)}
+                  skipped={Boolean(!takeoff.__kit && takeoff[ESTIMATE_KEY])}
+                />
+              )}
+              {waitingOnKit ? null : (
+                <TakeoffForm
+                  work={work}
+                  paintScope={takeoff.paint_scope}
+                  inputs={takeoff}
+                  onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
+                  book={book}
+                />
+              )}
+            </>
+          )}
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => goToStep(2)}>
               Back
             </Button>
-            <Button type="button" onClick={() => goToStep(4)}>
+            <Button type="button" disabled={waitingOnKit} onClick={() => goToStep(4)}>
               Review quote
             </Button>
           </div>
@@ -446,7 +530,9 @@ function NewQuote() {
       {shownStep === 4 && work && (
         <div className="space-y-5">
           <div>
-            <p className="font-display text-2xl font-medium">{work.name}</p>
+            <p className="font-display text-2xl font-medium">
+              {takeoff.__kit_name ? `${work.name} — ${takeoff.__kit_name}` : work.name}
+            </p>
             <p className="text-sm text-muted-foreground">
               {propertyId
                 ? `${existing?.address_line} · ${existing?.homeowner_name}`
@@ -566,6 +652,60 @@ function normalizeStreet(value: string) {
     .replace(/\b(boulevard|blvd)\b/g, "blvd")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function KitPicker({
+  kits,
+  selectedId,
+  onPick,
+  onSkip,
+  skipped,
+}: {
+  kits: WorkKit[];
+  selectedId?: string;
+  onPick: (kit: WorkKit) => void;
+  onSkip: () => void;
+  skipped: boolean;
+}) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="font-display text-xl font-medium">Sub-category</p>
+        <p className="text-sm text-muted-foreground">
+          Starts the quote with that bundle. Every line stays editable.
+        </p>
+      </div>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {kits.map((kit) => {
+          const on = selectedId === kit.id;
+          return (
+            <li key={kit.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedId === kit.id) return;
+                  onPick(kit);
+                }}
+                className={cn(
+                  "flex min-h-20 w-full flex-col items-start rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
+                  "transition-[box-shadow,opacity] duration-150 hover:opacity-95",
+                  on ? "bg-primary text-primary-foreground" : "bg-card",
+                )}
+              >
+                <p className="font-display text-lg font-medium">{kit.name}</p>
+                <p className={cn("text-sm", on ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                  {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
+                </p>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <Button type="button" variant={skipped ? "secondary" : "outline"} onClick={onSkip}>
+        {skipped ? "Using a blank starter" : "Start without a kit"}
+      </Button>
+    </div>
+  );
 }
 
 function Field({

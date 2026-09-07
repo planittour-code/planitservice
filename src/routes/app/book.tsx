@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ import {
   type PriceBookItem,
 } from "@/lib/housefile/book";
 import { money } from "@/lib/housefile/format";
+import { WorkKitEditor } from "@/components/work-kit-editor";
+import { shopCsvTemplate } from "@/lib/housefile/kits";
 import {
   archivePriceBookItem,
   importPriceBookCsv,
@@ -27,6 +29,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/app/book")({ component: PriceBookPage });
 
 function PriceBookPage() {
+  const queryClient = useQueryClient();
   const q = useQuery({ queryKey: ["price-book"], queryFn: () => listPriceBook() });
   const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<Partial<PriceBookItem> | "new" | null>(null);
@@ -111,9 +114,14 @@ function PriceBookPage() {
   const upload = useMutation({
     mutationFn: () => importPriceBookCsv({ data: csv }),
     onSuccess: (res) => {
-      toast.success(`${res.count} rows in materials`);
+      toast.success(
+        res.kits
+          ? `${res.count} catalog rows · ${res.kits} sub-categories`
+          : `${res.count} rows in materials`,
+      );
       setCsv("");
       void q.refetch();
+      void queryClient.invalidateQueries({ queryKey: ["work-kits"] });
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not import"),
   });
@@ -127,8 +135,8 @@ function PriceBookPage() {
         <div>
           <h1 className="font-display text-3xl font-medium tracking-tight">Materials</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            Add materials and set what you pay and what you sell. Quotes pick from this list. Cost
-            stays in the shop — the homeowner sees the sell price.
+            Products and the line-item bundles behind each work category. Quotes pick products from
+            this list. Cost stays in the shop — the homeowner sees the sell price.
           </p>
         </div>
         {owner && (
@@ -250,30 +258,37 @@ function PriceBookPage() {
         )}
       </div>
 
+      {owner && <WorkKitEditor owner={owner} />}
+
       {owner && (
         <section className="space-y-3">
           <h2 className="font-display text-xl font-medium">Upload a CSV</h2>
           <p className="text-sm text-muted-foreground">
-            Columns: trade, slot, manufacturer, product_name, sku, color, unit, cost, sell,
-            warranty_years, warranty_terms.{" "}
-            <button
-              type="button"
-              className="underline"
-              onClick={() => setCsv(bookCsvTemplate())}
-            >
-              Paste a template
+            One file for the catalog: work category, sub-category, line items, and materials.
+            Columns are work_category, sub_category, item, description, qty, unit, slot,
+            manufacturer, product_name, sku, color, cost, sell, warranty_years, warranty_terms.
+            A kit row needs sub_category and item. A product row needs slot and product_name. Both
+            can live on the same row. The older trade / slot / product_name file still imports as
+            materials only.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <button type="button" className="underline" onClick={() => setCsv(shopCsvTemplate())}>
+              Paste the Gutters catalog
             </button>
-            .
+            {" · "}
+            <button type="button" className="underline" onClick={() => setCsv(bookCsvTemplate())}>
+              Short sample
+            </button>
           </p>
           <textarea
             value={csv}
             onChange={(e) => setCsv(e.target.value)}
-            rows={6}
-            className="w-full rounded-md bg-card p-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            placeholder="Paste from the yard…"
+            rows={8}
+            className="w-full rounded-md bg-card p-3 font-mono text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            placeholder="work_category,sub_category,item,description,qty,unit,slot,manufacturer,product_name,sku,color,cost,sell,warranty_years,warranty_terms"
           />
           <Button type="button" disabled={!csv.trim() || upload.isPending} onClick={() => upload.mutate()}>
-            {upload.isPending ? "Importing…" : "Import into materials"}
+            {upload.isPending ? "Importing…" : "Import catalog"}
           </Button>
         </section>
       )}

@@ -3,6 +3,14 @@ import { authMiddleware, optionalAuthMiddleware } from "@/lib/auth/middleware";
 import { getSql, type Sql } from "@/lib/db";
 import { LEGAL_EMAIL } from "@/lib/legal";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, STARTER_BOOK, type PriceBookItem } from "./book";
+import {
+  GUTTER_KIT_SEED,
+  catalogHeaderFromCsv,
+  isCatalogCsvHeader,
+  parseCatalogCsv,
+  type WorkKit,
+  type WorkKitItem,
+} from "./kits";
 import { FIELD_CATALOG } from "./fields";
 import { coverLetter } from "./cover-letter";
 import { num, slugToken } from "./format";
@@ -70,6 +78,7 @@ function asCompany(row: Company): Company {
     shop_paid_at: row.shop_paid_at ?? null,
     payment_terms: row.payment_terms ?? null,
     payment_link: row.payment_link ?? null,
+    kits_seeded_at: row.kits_seeded_at ?? null,
   };
 }
 
@@ -1825,6 +1834,63 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can edit materials.");
+    const header = catalogHeaderFromCsv(csv);
+    if (isCatalogCsvHeader(header)) {
+      const catalog = parseCatalogCsv(csv);
+      for (const row of catalog.products) {
+        assertBookPrices(row);
+        await sql`
+          insert into price_book (
+            id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
+            cost, sell, warranty_years, warranty_terms
+          ) values (
+            ${crypto.randomUUID()}, ${company.id}, ${row.trade}, ${row.slot}, ${row.manufacturer},
+            ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
+            ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}
+          )
+        `;
+      }
+      const grouped = new Map<string, typeof catalog.kitLines>();
+      for (const line of catalog.kitLines) {
+        const key = `${line.work_id}::${line.sub_category}`;
+        const list = grouped.get(key) ?? [];
+        list.push(line);
+        grouped.set(key, list);
+      }
+      for (const [key, lines] of grouped) {
+        const splitAt = key.indexOf("::");
+        const workId = key.slice(0, splitAt);
+        const name = key.slice(splitAt + 2);
+        const existing = await sql<{ id: string }>`
+          select id from work_kits where company_id = ${company.id} and work_id = ${workId} and name = ${name} limit 1
+        `;
+        let kitId = existing[0]?.id;
+        if (kitId) {
+          await sql`delete from work_kit_items where kit_id = ${kitId}`;
+        } else {
+          const max = await sql<{ n: number }>`
+            select coalesce(max(sort_order), -1)::int as n from work_kits where company_id = ${company.id} and work_id = ${workId}
+          `;
+          kitId = crypto.randomUUID();
+          await sql`
+            insert into work_kits (id, company_id, work_id, name, sort_order)
+            values (${kitId}, ${company.id}, ${workId}, ${name}, ${(max[0]?.n ?? -1) + 1})
+          `;
+        }
+        let order = 0;
+        for (const line of lines) {
+          await sql`
+            insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+            values (
+              ${crypto.randomUUID()}, ${kitId}, ${order}, ${line.name}, ${line.description || null},
+              ${line.qty || null}, ${line.unit || "ls"}, ${line.slot}
+            )
+          `;
+          order += 1;
+        }
+      }
+      return { count: catalog.products.length + catalog.kitLines.length, kits: grouped.size };
+    }
     const rows = parseBookCsv(csv);
     for (const row of rows) {
       await sql`
@@ -1838,7 +1904,147 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
         )
       `;
     }
-    return { count: rows.length };
+    return { count: rows.length, kits: 0 };
+  });
+
+async function seedGutterKits(sql: Sql, companyId: string) {
+  const flagged = await sql<{ kits_seeded_at: string | null }>`
+    select kits_seeded_at from companies where id = ${companyId} limit 1
+  `;
+  if (flagged[0]?.kits_seeded_at) return;
+  const existing = await sql<{ c: number }>`
+    select count(*)::int as c from work_kits where company_id = ${companyId} and work_id = ${"gutters"}
+  `;
+  if ((existing[0]?.c ?? 0) > 0) {
+    await sql`update companies set kits_seeded_at = now() where id = ${companyId}`;
+    return;
+  }
+  let order = 0;
+  for (const kit of GUTTER_KIT_SEED) {
+    const kitId = crypto.randomUUID();
+    await sql`
+      insert into work_kits (id, company_id, work_id, name, sort_order)
+      values (${kitId}, ${companyId}, ${"gutters"}, ${kit.name}, ${order})
+    `;
+    order += 1;
+    let lineOrder = 0;
+    for (const line of kit.lines) {
+      await sql`
+        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+        values (
+          ${crypto.randomUUID()}, ${kitId}, ${lineOrder}, ${line.name}, ${line.description},
+          ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}
+        )
+      `;
+      lineOrder += 1;
+    }
+  }
+  await sql`update companies set kits_seeded_at = now() where id = ${companyId}`;
+}
+
+async function kitsForCompany(sql: Sql, companyId: string, workId?: string): Promise<WorkKit[]> {
+  await seedGutterKits(sql, companyId);
+  const kits = workId
+    ? await sql<Omit<WorkKit, "items">>`
+        select * from work_kits where company_id = ${companyId} and work_id = ${workId} order by sort_order, name
+      `
+    : await sql<Omit<WorkKit, "items">>`
+        select * from work_kits where company_id = ${companyId} order by work_id, sort_order, name
+      `;
+  if (kits.length === 0) return [];
+  const items: WorkKitItem[] = [];
+  for (const kit of kits) {
+    const rows = await sql<WorkKitItem>`
+      select * from work_kit_items where kit_id = ${kit.id} order by sort_order
+    `;
+    items.push(...rows);
+  }
+  const byKit = new Map<string, WorkKitItem[]>();
+  for (const item of items) {
+    const list = byKit.get(item.kit_id) ?? [];
+    list.push(item);
+    byKit.set(item.kit_id, list);
+  }
+  return kits.map((kit) => ({ ...kit, items: byKit.get(kit.id) ?? [] }));
+}
+
+export const listWorkKits = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((input?: { workId?: string }) => input ?? {})
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    const kits = await kitsForCompany(sql, company.id, data.workId);
+    return { role, kits };
+  });
+
+export const saveWorkKit = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: {
+      id?: string;
+      workId: string;
+      name: string;
+      items: { name: string; description?: string; qty?: string; unit?: string; slot?: string }[];
+    }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can edit work categories.");
+    const name = data.name.trim();
+    if (!name) throw new Error("Name the sub-category.");
+    const workId = data.workId.trim();
+    if (!workId) throw new Error("Pick a work category.");
+    let kitId = data.id;
+    if (kitId) {
+      const owned = await sql<{ id: string }>`
+        select id from work_kits where id = ${kitId} and company_id = ${company.id} limit 1
+      `;
+      if (!owned[0]) throw new Error("Kit not found");
+      await sql`update work_kits set name = ${name}, work_id = ${workId} where id = ${kitId}`;
+      await sql`delete from work_kit_items where kit_id = ${kitId}`;
+    } else {
+      const max = await sql<{ n: number }>`
+        select coalesce(max(sort_order), -1)::int as n from work_kits where company_id = ${company.id} and work_id = ${workId}
+      `;
+      kitId = crypto.randomUUID();
+      await sql`
+        insert into work_kits (id, company_id, work_id, name, sort_order)
+        values (${kitId}, ${company.id}, ${workId}, ${name}, ${(max[0]?.n ?? -1) + 1})
+      `;
+    }
+    let order = 0;
+    for (const item of data.items) {
+      const itemName = item.name.trim();
+      if (!itemName) continue;
+      await sql`
+        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+        values (
+          ${crypto.randomUUID()}, ${kitId}, ${order}, ${itemName}, ${item.description?.trim() || null},
+          ${item.qty?.trim() || null}, ${item.unit?.trim() || "ls"}, ${item.slot?.trim() || null}
+        )
+      `;
+      order += 1;
+    }
+    return { id: kitId };
+  });
+
+export const deleteWorkKit = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((id: string) => id)
+  .handler(async ({ context, data: id }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can edit work categories.");
+    await sql`delete from work_kits where id = ${id} and company_id = ${company.id}`;
+    return { ok: true as const };
   });
 
 export const listTeam = createServerFn({ method: "GET" })

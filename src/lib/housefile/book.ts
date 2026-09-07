@@ -308,10 +308,10 @@ export function parseBookCsv(text: string) {
 
 export function bookCsvTemplate() {
   return [
-    "trade,slot,manufacturer,product_name,sku,color,unit,cost,sell,warranty_years,warranty_terms",
-    "roofing,shingle,GAF,Timberline HDZ,Charcoal,Charcoal,sq,112,300,50,50-year limited warranty",
-    "windows,window,Andersen,100 Series,,,ea,410,720,20,20-year glass",
-    "paint,interior_paint,Sherwin-Williams,Cashmere,SW 7029,Agreeable Gray,sf,0.42,, ,Lifetime washability",
+    "work_category,sub_category,item,description,qty,unit,slot,manufacturer,product_name,sku,color,cost,sell,warranty_years,warranty_terms",
+    "gutters,5-Inch New Install,Hang 5-inch K-style gutters,Seamless aluminum on the eaves,,lf,gutter,LeafFilter,5-inch aluminum,,White,3.8,11,25,25-year finish",
+    "gutters,5-Inch New Install,Downspouts and elbows,Leaders to grade,,ea,,,,,,,,",
+    "roofing,,Field shingles,Architectural shingles from materials,,sq,shingle,GAF,Timberline HDZ,Charcoal,Charcoal,112,300,50,50-year limited warranty",
   ].join("\n");
 }
 
