@@ -54,19 +54,9 @@ function HomePage() {
               <div className="rounded-xl bg-card p-2 text-left text-foreground shadow-[var(--shadow-border)]">
                 <AddressLookup onTease={setTease} />
               </div>
-              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <div className="flex justify-center">
                 <Button asChild size="lg">
                   <Link to="/shop/open">Open a shop</Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-0 bg-card text-foreground"
-                >
-                  <Link to="/p/$token" params={{ token: "maple-paint-draft" }}>
-                    See a sample quote
-                  </Link>
                 </Button>
               </div>
             </div>
