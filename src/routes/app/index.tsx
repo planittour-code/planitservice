@@ -1,27 +1,16 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { HouseCard } from "@/components/site-chrome";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { adoptSampleHouse, getDashboard } from "@/lib/housefile/server";
+import { getDashboard } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/")({ component: ShopHome });
 
 function ShopHome() {
-  const navigate = useNavigate();
   const q = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
-  const adopt = useMutation({
-    mutationFn: () => adoptSampleHouse(),
-    onSuccess: (res) => {
-      toast.success(res.already ? "Sample house is already in your shop" : "142 Maple Street is in your shop");
-      void q.refetch();
-      void navigate({ to: "/app/properties/$id", params: { id: res.propertyId } });
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not load sample"),
-  });
   if (q.isLoading) {
     return (
       <div className="space-y-4">
@@ -77,20 +66,11 @@ function ShopHome() {
           <CardContent className="space-y-3 py-10 text-center">
             <h2 className="font-display text-2xl font-medium">No houses yet</h2>
             <p className="text-sm text-muted-foreground">
-              Enter an address, pick the work, and fill the measurements that price it. Or load the
-              sample — roof, paint, gutters, and an interior draft already on file.
+              Enter an address, pick the work, and fill the measurements that price it.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
                 <Link to="/app/new">Start a quote</Link>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={adopt.isPending}
-                onClick={() => adopt.mutate()}
-              >
-                {adopt.isPending ? "Loading…" : "Load 142 Maple Street"}
               </Button>
             </div>
           </CardContent>
