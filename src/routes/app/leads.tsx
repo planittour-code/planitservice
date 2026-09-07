@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { WORK_BY_ID } from "@/lib/housefile/quote";
+import { workFromId } from "@/lib/housefile/quote";
 import { listQuoteLeads } from "@/lib/housefile/server";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,7 +27,7 @@ function LeadsPage() {
       ) : (
         <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
           {leads.map((lead) => {
-            const work = lead.work_id ? WORK_BY_ID[lead.work_id] : null;
+            const work = lead.work_id ? workFromId(lead.work_id) : null;
             const place = [lead.city, lead.state, lead.zip].filter(Boolean).join(" ");
             return (
               <li key={lead.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between">

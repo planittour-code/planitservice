@@ -52,7 +52,7 @@ function PropertyPage() {
         <div className="flex flex-wrap gap-2">
           <Button asChild>
             <Link to="/app/new" search={{ property: p.id }}>
-              New quote for this house
+              Start a Quote for this house
             </Link>
           </Button>
         </div>

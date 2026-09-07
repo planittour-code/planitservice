@@ -1,5 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
+import { CustomWorkDialog } from "@/components/custom-work-dialog";
 import { HouseCard } from "@/components/site-chrome";
 import { StatusBadge } from "@/components/status-badge";
 import { TradeGrid } from "@/components/trade-face";
@@ -7,12 +10,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { workTypesFor } from "@/lib/housefile/quote";
-import { getDashboard } from "@/lib/housefile/server";
+import { addCustomWork, getDashboard } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/")({ component: ShopHome });
 
 function ShopHome() {
+  const navigate = useNavigate();
   const q = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
+  const [adding, setAdding] = useState(false);
+  const addWork = useMutation({
+    mutationFn: (name: string) => addCustomWork({ data: { name } }),
+    onSuccess: (res) => {
+      toast.success(res.already ? "That category is already on your list" : "Category added");
+      setAdding(false);
+      void q.refetch();
+      void navigate({ to: "/app/new", search: { work: res.workId } });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add category"),
+  });
   if (q.isLoading) {
     return (
       <div className="space-y-4">
@@ -29,19 +44,19 @@ function ShopHome() {
 
   return (
     <div className="space-y-10">
+      {company.logo_src ? (
+        <div className="-mx-4 overflow-hidden bg-card shadow-[var(--shadow-border)] sm:-mx-5 sm:rounded-xl">
+          <img
+            src={company.logo_src}
+            alt={company.name}
+            className="h-44 w-full object-contain p-4 sm:h-56 sm:p-6 md:h-72"
+          />
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-4">
-          {company.logo_src ? (
-            <img
-              src={company.logo_src}
-              alt=""
-              className="h-16 w-16 shrink-0 rounded-lg bg-card object-contain p-1.5 shadow-[var(--shadow-border)] sm:h-20 sm:w-20"
-            />
-          ) : null}
-          <div className="min-w-0">
-            <p className="text-sm text-muted-foreground">{company.trade.replace(/-/g, " ")}</p>
-            <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
-          </div>
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{company.trade.replace(/-/g, " ")}</p>
+          <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
         </div>
         <Button asChild variant="outline">
           <Link to="/app/book">Materials</Link>
@@ -50,11 +65,17 @@ function ShopHome() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="font-display text-xl font-medium">New quote</h2>
-          <p className="text-sm text-muted-foreground">Pick the work. Address and measurements come next.</p>
+          <h2 className="font-display text-xl font-medium">Start a Quote</h2>
+          <p className="text-sm text-muted-foreground">Pick the work. Address and details come next.</p>
         </div>
-        <TradeGrid types={trades} />
+        <TradeGrid types={trades} onAddCustom={() => setAdding(true)} />
       </section>
+      <CustomWorkDialog
+        open={adding}
+        onClose={() => setAdding(false)}
+        onSave={(name) => addWork.mutateAsync(name)}
+        busy={addWork.isPending}
+      />
 
       {role === "owner" && (pending?.length ?? 0) > 0 && (
         <section className="space-y-3">
@@ -86,11 +107,11 @@ function ShopHome() {
           <CardContent className="space-y-3 py-10 text-center">
             <h2 className="font-display text-2xl font-medium">No houses yet</h2>
             <p className="text-sm text-muted-foreground">
-              Enter an address, pick the work, and fill the measurements that price it.
+              Enter an address, pick the work, and fill the details that price it.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
-                <Link to="/app/new">Start a quote</Link>
+                <Link to="/app/new">Start a Quote</Link>
               </Button>
             </div>
           </CardContent>

@@ -87,7 +87,11 @@ export function startersFor(workId: string, paintScope?: string): Starter[] {
     case "porch":
       return PORCH;
     default:
-      return [];
+      return [
+        { item: "Scope of work", description: "Describe the work at this address.", qty: "1" },
+        { item: "Materials", description: "Named products and quantities.", qty: "1" },
+        { item: "Labor", description: "Install, finish, and cleanup.", qty: "1" },
+      ];
   }
 }
 

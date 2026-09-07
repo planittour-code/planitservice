@@ -271,18 +271,63 @@ export const WORK_TYPES: WorkType[] = [
 
 export const WORK_BY_ID = Object.fromEntries(WORK_TYPES.map((w) => [w.id, w]));
 
-export function workTypesFor(trades: string | null | undefined) {
-  const ids = (trades ?? "")
+export const CUSTOM_WORK_PREFIX = "custom:";
+export const CUSTOM_TEMPLATE_ID = "tmpl_custom";
+
+export function isCustomWorkId(id: string) {
+  return id.startsWith(CUSTOM_WORK_PREFIX);
+}
+
+export function customWorkName(id: string) {
+  return id.slice(CUSTOM_WORK_PREFIX.length).replace(/,/g, "").trim();
+}
+
+export function customWorkId(name: string) {
+  return `${CUSTOM_WORK_PREFIX}${name.replace(/,/g, "").trim()}`;
+}
+
+export function customWorkType(name: string): WorkType {
+  const trimmed = name.trim() || "Custom work";
+  return {
+    id: customWorkId(trimmed),
+    templateId: CUSTOM_TEMPLATE_ID,
+    trade: "custom",
+    name: trimmed,
+    blurb: "Your own category. Write the details and price the lines.",
+    fields: [
+      f("custom_scope", "What is the work", "text", "Pools, fencing, irrigation — whatever you quote."),
+      f("custom_notes", "Notes for the house", "text", "What the next shop should know at this address."),
+    ],
+  };
+}
+
+export function parseTradeTokens(trades: string | null | undefined) {
+  return (trades ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+export function workFromId(id: string | undefined | null): WorkType | undefined {
+  if (!id) return undefined;
+  if (WORK_BY_ID[id]) return WORK_BY_ID[id];
+  if (isCustomWorkId(id)) {
+    const name = customWorkName(id);
+    if (name) return customWorkType(name);
+  }
+  return undefined;
+}
+
+export function workTypesFor(trades: string | null | undefined) {
+  const ids = parseTradeTokens(trades);
   if (ids.length === 0) return WORK_TYPES;
-  const picked = WORK_TYPES.filter((w) => ids.includes(w.id));
+  const picked = ids.map((id) => workFromId(id)).filter((w): w is WorkType => Boolean(w));
   return picked.length ? picked : WORK_TYPES;
 }
 
 export function workForTemplate(templateId: string): WorkType | undefined {
   if (templateId === "tmpl_int_paint" || templateId === "tmpl_ext_paint") return WORK_BY_ID.paint;
+  if (templateId === CUSTOM_TEMPLATE_ID) return undefined;
   return WORK_TYPES.find((w) => w.templateId === templateId);
 }
 

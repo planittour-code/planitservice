@@ -63,7 +63,7 @@ function AppLayout() {
           )}
           {!onboardPath && (
             <Button asChild size="sm" className="ml-auto sm:ml-3">
-              <Link to="/app/new">New quote</Link>
+              <Link to="/app/new">Start a Quote</Link>
             </Button>
           )}
           <div className={onboardPath ? "ml-auto" : ""}>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { CustomWorkDialog } from "@/components/custom-work-dialog";
 import { QuoteHouseBanner, MAPLE_DEMO } from "@/components/quote-house-banner";
 import { TradeGrid } from "@/components/trade-face";
 import { QuotePreview, TakeoffForm } from "@/components/quote-takeoff";
@@ -25,17 +26,19 @@ import {
 } from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
 import {
-  WORK_BY_ID,
   buildQuote,
+  customWorkId,
   defaultsFor,
   quoteTotal,
   takeoffReady,
   templateFor,
   workForTemplate,
+  workFromId,
   workTypesFor,
 } from "@/lib/housefile/quote";
 import { formatLine } from "@/lib/housefile/geocode";
 import {
+  addCustomWork,
   createProposalFromWizard,
   getDashboard,
   getQuoteHouse,
@@ -63,7 +66,7 @@ const searchSchema = z.object({
 const STEPS = [
   { n: 1, label: "Address" },
   { n: 2, label: "Work" },
-  { n: 3, label: "Measure" },
+  { n: 3, label: "Details" },
   { n: 4, label: "Quote" },
 ];
 
@@ -105,9 +108,24 @@ function NewQuote() {
   const [takeoff, setTakeoff] = useState<Record<string, string>>({});
   const [coverPhoto, setCoverPhoto] = useState<string | null>(null);
   const [sent, setSent] = useState<Awaited<ReturnType<typeof createProposalFromWizard>> | null>(null);
+  const [addingWork, setAddingWork] = useState(false);
+  const [localCustom, setLocalCustom] = useState<string[]>([]);
 
-  const offered = workTypesFor(dash.data?.company.trades);
-  const work = WORK_BY_ID[workId];
+  const offered = workTypesFor(
+    [...(dash.data?.company.trades ? dash.data.company.trades.split(",") : []), ...localCustom].join(","),
+  );
+  const work = workFromId(workId);
+  const addWork = useMutation({
+    mutationFn: (name: string) => addCustomWork({ data: { name } }),
+    onSuccess: (res) => {
+      setLocalCustom((cur) => (cur.includes(res.workId) ? cur : [...cur, res.workId]));
+      setWorkId(res.workId);
+      setAddingWork(false);
+      setStep(3);
+      void dash.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add category"),
+  });
   const templateId = work ? templateFor(work, takeoff) : "";
   const existing = dash.data?.properties.find((p) => p.id === propertyId);
   const jobAddress = existing?.address_line || addressLine;
@@ -204,6 +222,7 @@ function NewQuote() {
           state: existing?.state || state,
           zip: existing?.zip || zip,
           templateId,
+          title: work?.name,
           takeoff,
           coverPhoto: coverPhoto || undefined,
           rfpToken: search.rfp,
@@ -285,7 +304,7 @@ function NewQuote() {
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="space-y-4">
         <h1 className="font-display text-3xl font-medium tracking-tight">
-          {work ? `${work.name} quote` : "New quote"}
+          {work ? `${work.name} quote` : "Start a Quote"}
         </h1>
         <QuoteHouseBanner
           guest={!user}
@@ -348,7 +367,7 @@ function NewQuote() {
             </p>
           )}
           <Button type="button" disabled={user ? !addressReady : false} onClick={() => needShop(() => setStep(workId ? 3 : 2))}>
-            Next — {workId ? "measure" : "type of work"}
+            Next — {workId ? "details" : "type of work"}
           </Button>
         </div>
       )}
@@ -362,6 +381,23 @@ function NewQuote() {
               setWorkId(id);
               setStep(3);
             }}
+            onAddCustom={() => setAddingWork(true)}
+          />
+          <CustomWorkDialog
+            open={addingWork}
+            onClose={() => setAddingWork(false)}
+            onSave={async (name) => {
+              if (user) {
+                await addWork.mutateAsync(name);
+                return;
+              }
+              const id = customWorkId(name);
+              setLocalCustom((cur) => (cur.includes(id) ? cur : [...cur, id]));
+              setWorkId(id);
+              setAddingWork(false);
+              setStep(3);
+            }}
+            busy={addWork.isPending}
           />
           <Button type="button" variant="ghost" onClick={() => setStep(1)}>
             Back

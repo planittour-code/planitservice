@@ -15,8 +15,8 @@ function TemplatesPage() {
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Work types</h1>
         <p className="mt-2 max-w-xl text-muted-foreground">
-          Paint, roof, windows, gutters, siding, decks, porches. Each one asks the house for the
-          numbers that price it.
+          Paint, roof, windows, gutters, siding, decks, porches, plus any category you add. Each one
+          asks the house for the numbers that price it.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">

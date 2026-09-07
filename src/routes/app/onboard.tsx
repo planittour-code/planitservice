@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomWorkDialog } from "@/components/custom-work-dialog";
 import { compressImage } from "@/lib/housefile/image";
-import { WORK_TYPES } from "@/lib/housefile/quote";
+import { customWorkId, isCustomWorkId, workFromId, WORK_TYPES } from "@/lib/housefile/quote";
 import { completeOnboard, getDashboard } from "@/lib/housefile/server";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ function Onboard() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [trades, setTrades] = useState<string[]>(["paint", "roof", "gutters"]);
+  const [addingWork, setAddingWork] = useState(false);
   const [book, setBook] = useState<"homedepot" | "lowes" | "starter">("homedepot");
   const [logo, setLogo] = useState<string | null>(null);
   const [agreement, setAgreement] = useState(DEFAULT_AGREEMENT);
@@ -115,7 +117,12 @@ function Onboard() {
           </div>
           <p className="text-sm font-medium">What do you quote?</p>
           <ul className="grid gap-3 sm:grid-cols-2">
-            {WORK_TYPES.map((w) => {
+            {[
+              ...WORK_TYPES,
+              ...trades
+                .map((id) => workFromId(id))
+                .filter((w): w is NonNullable<typeof w> => Boolean(w && isCustomWorkId(w.id))),
+            ].map((w) => {
               const on = trades.includes(w.id);
               return (
                 <li key={w.id}>
@@ -135,7 +142,26 @@ function Onboard() {
                 </li>
               );
             })}
+            <li>
+              <button
+                type="button"
+                onClick={() => setAddingWork(true)}
+                className="h-full w-full rounded-xl bg-card p-4 text-left shadow-[var(--shadow-border)]"
+              >
+                <p className="font-display text-lg font-medium">Other work</p>
+                <p className="mt-1 text-sm text-muted-foreground">Pools, fencing, or anything you quote.</p>
+              </button>
+            </li>
           </ul>
+          <CustomWorkDialog
+            open={addingWork}
+            onClose={() => setAddingWork(false)}
+            onSave={(label) => {
+              const id = customWorkId(label);
+              setTrades((cur) => (cur.includes(id) ? cur : [...cur, id]));
+              setAddingWork(false);
+            }}
+          />
           <Button type="button" disabled={trades.length === 0} onClick={() => setStep(2)}>
             Next — stand out
           </Button>

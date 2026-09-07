@@ -7,9 +7,12 @@ import {
   House,
   Layers,
   PaintRoller,
+  Plus,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { WorkType } from "@/lib/housefile/quote";
+import { isCustomWorkId } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
 
 export const TRADE_FACE: Record<string, { icon: LucideIcon; surface: string }> = {
@@ -22,6 +25,8 @@ export const TRADE_FACE: Record<string, { icon: LucideIcon; surface: string }> =
   porch: { icon: Columns2, surface: "bg-trade-porch text-primary-foreground" },
 };
 
+const CUSTOM_FACE = { icon: Wrench, surface: "bg-ink text-primary-foreground" };
+
 export function TradeTile({
   work,
   onPick,
@@ -31,7 +36,7 @@ export function TradeTile({
   onPick?: (workId: string) => void;
   compact?: boolean;
 }) {
-  const face = TRADE_FACE[work.id] ?? TRADE_FACE.paint;
+  const face = TRADE_FACE[work.id] ?? (isCustomWorkId(work.id) ? CUSTOM_FACE : TRADE_FACE.paint);
   const Icon = face.icon;
   const className = cn(
     "flex w-full flex-col items-start text-left shadow-[var(--shadow-border)]",
@@ -67,10 +72,12 @@ export function TradeGrid({
   types,
   onPick,
   compact = false,
+  onAddCustom,
 }: {
   types: WorkType[];
   onPick?: (workId: string) => void;
   compact?: boolean;
+  onAddCustom?: () => void;
 }) {
   return (
     <ul className={cn("grid gap-3", compact ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4")}>
@@ -79,6 +86,27 @@ export function TradeGrid({
           <TradeTile work={work} onPick={onPick} compact={compact} />
         </li>
       ))}
+      {onAddCustom ? (
+        <li>
+          <button
+            type="button"
+            onClick={onAddCustom}
+            className={cn(
+              "flex w-full flex-col items-start text-left shadow-[var(--shadow-border)]",
+              "transition-[box-shadow,opacity] duration-150 hover:opacity-95 hover:shadow-[var(--shadow-border-hover)]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+              "bg-card text-foreground",
+              compact ? "min-h-20 rounded-lg p-3" : "min-h-28 rounded-xl p-4",
+            )}
+          >
+            <Plus className={compact ? "size-5" : "size-7"} aria-hidden />
+            <p className={cn("font-display font-medium leading-tight", compact ? "mt-2 text-base" : "mt-3 text-lg")}>
+              Other work
+            </p>
+            {!compact && <p className="mt-1 text-sm text-muted-foreground">Pools, fencing, or anything you quote.</p>}
+          </button>
+        </li>
+      ) : null}
     </ul>
   );
 }

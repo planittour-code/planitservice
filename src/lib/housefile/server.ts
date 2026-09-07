@@ -15,7 +15,16 @@ import {
   parseEstimateLines,
   toQuoteLines,
 } from "./estimate-lines";
-import { buildQuote, factsFromTakeoff, workForTemplate, WORK_BY_ID } from "./quote";
+import {
+  buildQuote,
+  customWorkId,
+  factsFromTakeoff,
+  parseTradeTokens,
+  workForTemplate,
+  workFromId,
+  WORK_BY_ID,
+  WORK_TYPES,
+} from "./quote";
 import type {
   AddressTease,
   Company,
@@ -516,6 +525,33 @@ export const updateCompany = createServerFn({ method: "POST" })
     return asCompany(rows[0]!);
   });
 
+export const addCustomWork = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { name: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can add a work category.");
+    const name = data.name.trim();
+    if (!name) throw new Error("Name the work.");
+    if (name.length > 40) throw new Error("Keep the category name under 40 characters.");
+    const id = customWorkId(name);
+    const existing = parseTradeTokens(company.trades);
+    const tokens = existing.length ? existing : WORK_TYPES.map((w) => w.id);
+    if (tokens.some((token) => token.toLowerCase() === id.toLowerCase() || token.toLowerCase() === name.toLowerCase())) {
+      return { workId: id, already: true as const };
+    }
+    const next = [...tokens, id];
+    await sql`
+      update companies
+      set trades = ${next.join(",")}
+      where id = ${company.id}
+    `;
+    return { workId: id, already: false as const };
+  });
+
 export const completeOnboard = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(
@@ -569,7 +605,9 @@ export const completeOnboard = createServerFn({ method: "POST" })
       where id = ${company.id}
     `;
     await sql`update price_book set active = false, updated_at = now() where company_id = ${company.id}`;
-    const allowed = new Set(trades.map((id) => WORK_BY_ID[id]?.trade).filter(Boolean));
+    const allowed = new Set(
+      trades.map((id) => WORK_BY_ID[id]?.trade).filter((trade): trade is string => Boolean(trade)),
+    );
     const rows = catalogFor(data.book).filter((r) => allowed.has(r.trade));
     for (const row of rows.length ? rows : catalogFor(data.book)) {
       assertBookPrices(row);
@@ -700,7 +738,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       select * from template_items where template_id = ${template.id} order by sort_order
     `;
     const takeoff = data.takeoff ?? {};
-    const work = workForTemplate(template.id);
+    const work = workFromId(takeoff.__work) ?? workForTemplate(template.id);
     const bookRows = await sql<PriceBookItem>`
       select * from price_book where company_id = ${company.id} and active = true
     `;
