@@ -24,18 +24,27 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
+function isShopDestination(path: string) {
+  return path === "/app" || path.startsWith("/app/");
+}
+
+function isHouseDestination(path: string) {
+  return path === "/home" || path.startsWith("/home/");
+}
+
 function Login() {
   const search = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
-  const { audience } = useAudience();
+  const { audience, isPending: audiencePending } = useAudience();
   const homeowner = Boolean(search.invite) || search.role === "homeowner";
+  const next = safeNextPath(search.next, homeowner ? "/home" : "/app");
+  // Land back on /login after auth so a paid contractor is not sent to /home
+  // just because the public Sign in button asked for the house dashboard.
   const after = search.invite
     ? `/invite/${search.invite}`
-    : search.next
-      ? safeNextPath(search.next, homeowner ? "/home" : "/app")
-      : homeowner
-        ? "/home"
-        : "/app";
+    : isShopDestination(next) || next.startsWith("/home/add") || next === "/account"
+      ? next
+      : "/login";
   const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
@@ -44,11 +53,39 @@ function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!isPending && user) {
+  if (isPending || (user && audiencePending)) {
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto max-w-5xl px-5 py-8">
+          <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
+        </div>
+      </main>
+    );
+  }
+
+  if (user) {
     if (search.invite) {
       return <Navigate to="/invite/$token" params={{ token: search.invite }} />;
     }
-    const next = safeNextPath(search.next);
+    if (audience.kind === "contractor" && audience.paying) {
+      if (next.startsWith("/app/new")) {
+        const params = new URLSearchParams(next.split("?")[1] ?? "");
+        return (
+          <Navigate
+            to="/app/new"
+            search={{
+              work: params.get("work") ?? undefined,
+              address: params.get("address") ?? undefined,
+              city: params.get("city") ?? undefined,
+              state: params.get("state") ?? undefined,
+              zip: params.get("zip") ?? undefined,
+              rfp: params.get("rfp") ?? undefined,
+            }}
+          />
+        );
+      }
+      return <Navigate to="/app" />;
+    }
     if (next.startsWith("/app/new")) {
       const params = new URLSearchParams(next.split("?")[1] ?? "");
       return (
@@ -65,10 +102,13 @@ function Login() {
         />
       );
     }
-    if (homeowner || next === "/home") {
+    if (audience.kind === "homeowner" && audience.paying) {
+      if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
       return <Navigate to="/home" />;
     }
-    if (audience.paying && audience.kind === "homeowner") {
+    if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
+    if (next === "/account") return <Navigate to="/account" />;
+    if (homeowner || isHouseDestination(next)) {
       return <Navigate to="/home" />;
     }
     return <Navigate to="/app" />;
