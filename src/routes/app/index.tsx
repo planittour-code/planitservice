@@ -102,10 +102,47 @@ function ShopHome() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+            {company.slug ? (
+              <p className="mt-2 break-all text-sm text-muted-foreground">
+                Public page{" "}
+                <a
+                  className="underline underline-offset-4"
+                  href={`/s/${company.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  https://planitservice.com/s/{company.slug}
+                </a>
+              </p>
+            ) : null}
           </div>
-          <Button asChild variant="outline">
-            <Link to="/app/book">Materials</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {company.slug ? (
+              <>
+                <Button asChild variant="outline">
+                  <a href={`/s/${company.slug}`} target="_blank" rel="noreferrer">
+                    View public shop
+                  </a>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const url = `https://planitservice.com/s/${company.slug}`;
+                    void navigator.clipboard.writeText(url).then(
+                      () => toast.success("Public URL copied"),
+                      () => toast.error("Could not copy the URL"),
+                    );
+                  }}
+                >
+                  Copy URL
+                </Button>
+              </>
+            ) : null}
+            <Button asChild variant="outline">
+              <Link to="/app/book">Materials</Link>
+            </Button>
+          </div>
         </div>
       </div>
       <TradeSelectDialog

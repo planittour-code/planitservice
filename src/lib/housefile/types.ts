@@ -25,6 +25,7 @@ export type Company = {
   payment_terms: string | null;
   payment_link: string | null;
   kits_seeded_at: string | null;
+  slug: string | null;
   created_at: string;
 };
 

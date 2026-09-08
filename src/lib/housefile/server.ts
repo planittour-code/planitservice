@@ -13,7 +13,7 @@ import {
 } from "./kits";
 import { FIELD_CATALOG } from "./fields";
 import { coverLetter } from "./cover-letter";
-import { num, slugToken } from "./format";
+import { num, shopSlugFromName, slugToken } from "./format";
 import { asPaymentTerms, normalizePaymentLink } from "./payment";
 import { parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
@@ -30,6 +30,7 @@ import {
   parseTradeTokens,
   workForTemplate,
   workFromId,
+  workTypesFor,
   WORK_BY_ID,
   WORK_TYPES,
 } from "./quote";
@@ -81,7 +82,30 @@ function asCompany(row: Company): Company {
     payment_terms: row.payment_terms ?? null,
     payment_link: row.payment_link ?? null,
     kits_seeded_at: row.kits_seeded_at ?? null,
+    slug: row.slug ?? null,
   };
+}
+
+async function ensureShopSlug(sql: Sql, company: Company): Promise<Company> {
+  if (company.slug) return company;
+  let slug = shopSlugFromName(company.name);
+  for (let i = 0; i < 8; i++) {
+    const taken = await sql<{ id: string }>`
+      select id from companies where slug = ${slug} and id <> ${company.id} limit 1
+    `;
+    if (!taken[0]) {
+      try {
+        await sql`update companies set slug = ${slug} where id = ${company.id}`;
+        return { ...company, slug };
+      } catch {
+        // Unique race — pick another slug.
+      }
+    }
+    slug = `${shopSlugFromName(company.name)}-${slugToken().slice(0, 4)}`;
+  }
+  slug = `shop-${slugToken()}`;
+  await sql`update companies set slug = ${slug} where id = ${company.id}`;
+  return { ...company, slug };
 }
 
 function publicCompany(c: Company): HouseCompany {
@@ -127,7 +151,7 @@ async function shopFor(
   if (owned[0]) {
     await ensureOwnerMember(sql, owned[0], email);
     await ensureStarterBook(sql, owned[0].id);
-    return { company: asCompany(owned[0]), role: "owner" };
+    return { company: await ensureShopSlug(sql, asCompany(owned[0])), role: "owner" };
   }
   const byUser = await sql<(Company & { member_role: string })>`
     select c.*, m.role as member_role
@@ -138,7 +162,10 @@ async function shopFor(
   `;
   if (byUser[0]) {
     const { member_role, ...rest } = byUser[0];
-    return { company: asCompany(rest as Company), role: member_role === "owner" ? "owner" : "sales" };
+    return {
+      company: await ensureShopSlug(sql, asCompany(rest as Company)),
+      role: member_role === "owner" ? "owner" : "sales",
+    };
   }
   const normalized = email?.trim().toLowerCase() ?? "";
   if (normalized) {
@@ -152,7 +179,10 @@ async function shopFor(
     if (byEmail[0]) {
       await sql`update company_members set user_id = ${userId} where id = ${byEmail[0].member_id}`;
       const { member_id: _id, member_role, ...rest } = byEmail[0];
-      return { company: asCompany(rest as Company), role: member_role === "owner" ? "owner" : "sales" };
+      return {
+        company: await ensureShopSlug(sql, asCompany(rest as Company)),
+        role: member_role === "owner" ? "owner" : "sales",
+      };
     }
   }
   throw new Error("Open a shop to send estimates.");
@@ -1569,6 +1599,63 @@ export const listQuoteLeads = createServerFn({ method: "GET" })
       select * from quote_leads order by created_at desc limit 100
     `;
     return { leads: rows };
+  });
+
+export type PublicShop = {
+  slug: string;
+  name: string;
+  trade: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  logo_src: string | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  years_in_business: number | null;
+  associations: string | null;
+  review_google: string | null;
+  review_trustpilot: string | null;
+  review_nextdoor: string | null;
+  review_other: string | null;
+  trades: string[];
+};
+
+export const getPublicShop = createServerFn({ method: "GET" })
+  .validator((slug: string) => slug)
+  .handler(async ({ data: slug }): Promise<PublicShop> => {
+    const sql = await getSql();
+    const needle = slug.trim().toLowerCase();
+    if (!needle) throw new Error("Shop not found");
+    const rows = await sql<Company>`
+      select * from companies
+      where slug = ${needle} and shop_paid_at is not null and id <> ${HOUSEHOLD_COMPANY}
+      limit 1
+    `;
+    const company = rows[0];
+    if (!company) throw new Error("Shop not found");
+    const hydrated = asCompany(company);
+    return {
+      slug: hydrated.slug!,
+      name: hydrated.name,
+      trade: hydrated.trade,
+      phone: hydrated.phone,
+      email: hydrated.email,
+      website: hydrated.website,
+      logo_src: hydrated.logo_src,
+      street: hydrated.street,
+      city: hydrated.city,
+      state: hydrated.state,
+      zip: hydrated.zip,
+      years_in_business: hydrated.years_in_business,
+      associations: hydrated.associations,
+      review_google: hydrated.review_google,
+      review_trustpilot: hydrated.review_trustpilot,
+      review_nextdoor: hydrated.review_nextdoor,
+      review_other: hydrated.review_other,
+      trades: workTypesFor(hydrated.trades).map((w) => w.id),
+    };
   });
 
 export const getHouseByToken = createServerFn({ method: "GET" })

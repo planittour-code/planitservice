@@ -38,7 +38,7 @@ export function PublicHeader({
   children?: ReactNode;
   compact?: boolean;
   home?: "/" | "/shop";
-  path?: "choose" | "homeowner" | "contractor";
+  path?: "choose" | "homeowner" | "contractor" | "public";
 }) {
   const lane = path ?? (home === "/shop" ? "contractor" : "choose");
   return (

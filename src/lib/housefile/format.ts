@@ -29,6 +29,16 @@ export function slugToken() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 }
 
+export function shopSlugFromName(name: string) {
+  const base = name
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return base || "shop";
+}
+
 export function fullAddress(p: {
   address_line: string;
   city: string;
