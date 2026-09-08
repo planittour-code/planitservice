@@ -5,11 +5,12 @@ import { toast } from "sonner";
 import { CustomWorkDialog } from "@/components/custom-work-dialog";
 import { StatusBadge } from "@/components/status-badge";
 import { TradeGrid } from "@/components/trade-face";
+import { TradeSelectDialog } from "@/components/trade-select-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { workTypesFor } from "@/lib/housefile/quote";
-import { addCustomWork, getDashboard } from "@/lib/housefile/server";
+import { parseTradeTokens, workTypesFor } from "@/lib/housefile/quote";
+import { addCustomWork, getDashboard, updateCompany } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/")({ component: ShopHome });
 
@@ -17,6 +18,7 @@ function ShopHome() {
   const navigate = useNavigate();
   const q = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
   const [adding, setAdding] = useState(false);
+  const [pickingTrades, setPickingTrades] = useState(false);
   const addWork = useMutation({
     mutationFn: (name: string) => addCustomWork({ data: { name } }),
     onSuccess: (res) => {
@@ -26,6 +28,27 @@ function ShopHome() {
       void navigate({ to: "/app/new", search: { work: res.workId } });
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add category"),
+  });
+  const saveTrades = useMutation({
+    mutationFn: (ids: string[]) => {
+      const company = q.data?.company;
+      if (!company) throw new Error("Shop not loaded");
+      return updateCompany({
+        data: {
+          name: company.name,
+          trade: company.trade,
+          phone: company.phone ?? "",
+          email: company.email ?? "",
+          trades: ids.join(","),
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Trades updated");
+      setPickingTrades(false);
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save trades"),
   });
   if (q.isLoading) {
     return (
@@ -40,27 +63,58 @@ function ShopHome() {
   }
   const { company, properties, proposals, pending, role } = q.data;
   const trades = workTypesFor(company.trades);
+  const tradeIds = parseTradeTokens(company.trades);
 
   return (
     <div className="space-y-10">
-      {company.logo_src ? (
-        <div className="-mx-4 overflow-hidden bg-card shadow-[var(--shadow-border)] sm:-mx-5 sm:rounded-xl">
-          <img
-            src={company.logo_src}
-            alt={company.name}
-            className="h-44 w-full object-contain p-4 sm:h-56 sm:p-6 md:h-72"
-          />
+      <div className="space-y-4">
+        {company.logo_src ? (
+          <div className="-mx-4 overflow-hidden bg-card shadow-[var(--shadow-border)] sm:-mx-5 sm:rounded-xl">
+            <img
+              src={company.logo_src}
+              alt={company.name}
+              className="h-44 w-full object-contain p-4 sm:h-56 sm:p-6 md:h-72"
+            />
+          </div>
+        ) : null}
+        <ul className="flex flex-wrap gap-2">
+          {trades.map((work) => (
+            <li key={work.id}>
+              <button
+                type="button"
+                onClick={() => setPickingTrades(true)}
+                className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
+              >
+                {work.name}
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => setPickingTrades(true)}
+              className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
+            >
+              +Add
+            </button>
+          </li>
+        </ul>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/app/book">Materials</Link>
+          </Button>
         </div>
-      ) : null}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{company.trade.replace(/-/g, " ")}</p>
-          <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/app/book">Materials</Link>
-        </Button>
       </div>
+      <TradeSelectDialog
+        open={pickingTrades}
+        selected={tradeIds.length ? tradeIds : trades.map((w) => w.id)}
+        onClose={() => setPickingTrades(false)}
+        onSave={(ids) => saveTrades.mutate(ids)}
+        busy={saveTrades.isPending}
+      />
 
       <section className="space-y-4">
         <div>
