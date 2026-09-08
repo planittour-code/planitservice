@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { TradeSelectDialog } from "@/components/trade-select-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
 import { PAYMENT_TERM_LABELS, PAYMENT_TERMS, asPaymentTerms } from "@/lib/housefile/payment";
+import { parseTradeTokens, workTypesFor } from "@/lib/housefile/quote";
 import { addTeamMember, getDashboard, listTeam, updateCompany } from "@/lib/housefile/server";
 import { startBillingPortal } from "@/lib/housefile/stripe-billing";
 import { cn } from "@/lib/utils";
@@ -26,6 +28,7 @@ function SettingsPage() {
   const [terms, setTerms] = useState("");
   const [paymentTerms, setPaymentTerms] = useState<(typeof PAYMENT_TERMS)[number]>("due_completion");
   const [paymentLink, setPaymentLink] = useState("");
+  const [pickingTrades, setPickingTrades] = useState(false);
 
   useEffect(() => {
     if (!q.data) return;
@@ -61,8 +64,34 @@ function SettingsPage() {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
+  const saveTrades = useMutation({
+    mutationFn: (ids: string[]) => {
+      const company = q.data?.company;
+      if (!company) throw new Error("Shop not loaded");
+      return updateCompany({
+        data: {
+          name: company.name,
+          trade: company.trade,
+          phone: company.phone ?? "",
+          email: company.email ?? "",
+          trades: ids.join(","),
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Services updated");
+      setPickingTrades(false);
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save services"),
+  });
 
   if (q.isLoading) return <Skeleton className="h-40 w-full" />;
+  if (q.error || !q.data) return <p className="text-destructive">Could not load the shop.</p>;
+  const company = q.data.company;
+  const trades = workTypesFor(company.trades);
+  const tradeIds = parseTradeTokens(company.trades);
+  const publicUrl = company.slug ? `https://planitservice.com/s/${company.slug}` : "";
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -70,8 +99,76 @@ function SettingsPage() {
         <h1 className="font-display text-3xl font-medium tracking-tight">Shop settings</h1>
         <p className="text-muted-foreground">This name appears on proposals and invitations.</p>
       </div>
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-xl font-medium">Services Offered</h2>
+          <p className="text-sm text-muted-foreground">
+            These trades show on your public shop page and in Start a Quote.
+          </p>
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {trades.map((work) => (
+            <li key={work.id}>
+              <button
+                type="button"
+                onClick={() => setPickingTrades(true)}
+                className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
+              >
+                {work.name}
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => setPickingTrades(true)}
+              className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
+            >
+              +Add
+            </button>
+          </li>
+        </ul>
+      </section>
+      <TradeSelectDialog
+        open={pickingTrades}
+        selected={tradeIds.length ? tradeIds : trades.map((w) => w.id)}
+        onClose={() => setPickingTrades(false)}
+        onSave={(ids) => saveTrades.mutate(ids)}
+        busy={saveTrades.isPending}
+      />
+      {publicUrl ? (
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-display text-xl font-medium">Public page</h2>
+            <p className="break-all text-sm text-muted-foreground">
+              <a className="underline underline-offset-4" href={`/s/${company.slug}`} target="_blank" rel="noreferrer">
+                {publicUrl}
+              </a>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <a href={`/s/${company.slug}`} target="_blank" rel="noreferrer">
+                View public shop
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void navigator.clipboard.writeText(publicUrl).then(
+                  () => toast.success("Public URL copied"),
+                  () => toast.error("Could not copy the URL"),
+                );
+              }}
+            >
+              Copy URL
+            </Button>
+          </div>
+        </section>
+      ) : null}
       <form
-        className="space-y-4"
+        className="space-y-4 border-t border-border pt-8"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();

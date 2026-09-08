@@ -510,17 +510,19 @@ export const getDashboard = createServerFn({ method: "GET" })
       where pr.company_id = ${company.id} and pr.status = ${"pending"}
       order by pr.created_at desc
     `;
+    const houses = properties.map((p) => ({
+      ...p,
+      fact_count: num(p.fact_count),
+      photo_count: num(p.photo_count),
+      job_count: num(p.job_count),
+      open_proposal_count: num(p.open_proposal_count),
+    }));
     return {
       company,
       role,
       pending,
-      properties: properties.map((p) => ({
-        ...p,
-        fact_count: num(p.fact_count),
-        photo_count: num(p.photo_count),
-        job_count: num(p.job_count),
-        open_proposal_count: num(p.open_proposal_count),
-      })),
+      properties: houses,
+      clients: clientsFromHouses(houses),
       proposals,
       templateCount: num(templates[0]?.c),
     };

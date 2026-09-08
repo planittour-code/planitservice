@@ -59,6 +59,7 @@ const queryString = z.preprocess(
 const searchSchema = z.object({
   template: queryString,
   work: queryString,
+  kit: queryString,
   property: queryString,
   address: queryString,
   city: queryString,
@@ -215,6 +216,16 @@ function NewQuote() {
     const scope = search.template === "tmpl_ext_paint" ? "exterior" : "interior";
     setTakeoff((prev) => {
       if (prev.__work === work.id) return prev;
+      const preset = search.kit ? workKits.find((kit) => kit.id === search.kit) : undefined;
+      if (preset) {
+        return {
+          __work: work.id,
+          paint_scope: work.id === "paint" ? scope : "",
+          __kit: preset.id,
+          __kit_name: preset.name,
+          [ESTIMATE_KEY]: serializeEstimateLines(linesFromKitItems(preset.items, items)),
+        };
+      }
       if (workKits.length > 0) {
         return {
           __work: work.id,
@@ -229,7 +240,7 @@ function NewQuote() {
         [ESTIMATE_KEY]: serializeEstimateLines(seedEstimateLines(work.id, items, scope)),
       };
     });
-  }, [work?.id, user, kitsQ.isFetched, workKits.length, bookQ.data?.items.length, search.template]);
+  }, [work?.id, user, kitsQ.isFetched, workKits.length, bookQ.data?.items.length, search.template, search.kit]);
 
   const book = user ? (bookQ.data?.items ?? []) : guestBook();
   const role = user ? (bookQ.data?.role ?? dash.data?.role ?? "owner") : "owner";

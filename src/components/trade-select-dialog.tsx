@@ -44,7 +44,7 @@ export function TradeSelectDialog({
         <div>
           <p className="font-display text-xl font-medium">What do you quote?</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            These are the trades this shop offers. They show above the shop name and on Start a Quote.
+            These are the trades this shop offers. They appear on the public shop page and in Start a Quote.
           </p>
         </div>
         <ul className="grid gap-3 sm:grid-cols-2">
