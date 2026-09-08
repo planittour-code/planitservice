@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BOOK_SLOTS } from "@/lib/housefile/book";
-import { kitsToCsv, workLabel, type WorkKit } from "@/lib/housefile/kits";
+import { hasKitSeed, kitsToCsv, workLabel, type WorkKit } from "@/lib/housefile/kits";
 import { workTypesFor } from "@/lib/housefile/quote";
-import { deleteWorkKit, getDashboard, listWorkKits, saveWorkKit } from "@/lib/housefile/server";
+import { deleteWorkKit, getDashboard, listWorkKits, saveWorkKit, seedWorkKits } from "@/lib/housefile/server";
 
 type DraftLine = { name: string; description: string; qty: string; unit: string; slot: string };
 
@@ -16,17 +16,18 @@ const emptyLine = (): DraftLine => ({ name: "", description: "", qty: "", unit: 
 export function WorkKitEditor({ owner }: { owner: boolean }) {
   const dash = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
   const q = useQuery({ queryKey: ["work-kits"], queryFn: () => listWorkKits({ data: {} }) });
-  const categories = workTypesFor(dash.data?.company.trades);
+  const categories = dash.data ? workTypesFor(dash.data.company.trades) : [];
   const kits = q.data?.kits ?? [];
   const grouped = useMemo(() => {
     const map = new Map<string, WorkKit[]>();
+    for (const cat of categories) map.set(cat.id, []);
     for (const kit of kits) {
       const list = map.get(kit.work_id) ?? [];
       list.push(kit);
       map.set(kit.work_id, list);
     }
     return [...map.entries()];
-  }, [kits]);
+  }, [kits, categories]);
 
   const [editing, setEditing] = useState<WorkKit | "new" | null>(null);
 
@@ -52,6 +53,14 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
   });
+  const seed = useMutation({
+    mutationFn: (workId: string) => seedWorkKits({ data: { workId } }),
+    onSuccess: () => {
+      toast.success("Starter sub-categories loaded");
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not load starters"),
+  });
 
   return (
     <section className="space-y-4">
@@ -59,8 +68,8 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
         <div>
           <h2 className="font-display text-xl font-medium">Sub-categories</h2>
           <p className="text-sm text-muted-foreground">
-            Bundle line items under a work category so a quote starts faster. Gutters ships with
-            5-inch and 6-inch new and replacement kits — edit them any time.
+            Quotes pick a work category, then a sub-category. Starters load for each trade you
+            offer — edit the lines any time.
           </p>
         </div>
         {owner && (
@@ -91,34 +100,55 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
       {q.isLoading && <p className="text-sm text-muted-foreground">Loading sub-categories…</p>}
       {!q.isLoading && grouped.length === 0 && (
         <p className="rounded-xl bg-card px-4 py-6 text-sm text-muted-foreground shadow-[var(--shadow-border)]">
-          No sub-categories yet. Add one, or paste the Gutters catalog in the CSV box below.
+          No work categories yet. Add services under Shop settings, then load starters here.
         </p>
       )}
       {grouped.map(([workId, rows]) => (
         <div key={workId} className="space-y-2">
           <h3 className="text-xs tracking-wide text-muted-foreground uppercase">{workLabel(workId)}</h3>
-          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
-            {rows.map((kit) => (
-              <li key={kit.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-medium">{kit.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
-                  </p>
-                </div>
-                {owner && (
-                  <div className="flex gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setEditing(kit)}>
-                      Edit
-                    </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => remove.mutate(kit.id)}>
-                      Remove
-                    </Button>
+          {rows.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card px-4 py-4 text-sm shadow-[var(--shadow-border)]">
+              <p className="text-muted-foreground">No sub-categories yet.</p>
+              {owner && hasKitSeed(workId) ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={seed.isPending}
+                  onClick={() => seed.mutate(workId)}
+                >
+                  {seed.isPending ? "Loading…" : "Load starters"}
+                </Button>
+              ) : owner ? (
+                <Button type="button" size="sm" variant="outline" onClick={() => setEditing("new")}>
+                  Add a sub-category
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+              {rows.map((kit) => (
+                <li key={kit.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">{kit.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
+                    </p>
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
+                  {owner && (
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => setEditing(kit)}>
+                        Edit
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => remove.mutate(kit.id)}>
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       ))}
     </section>

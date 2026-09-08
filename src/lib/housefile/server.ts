@@ -4,7 +4,7 @@ import { getSql, type Sql } from "@/lib/db";
 import { LEGAL_EMAIL } from "@/lib/legal";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, STARTER_BOOK, type PriceBookItem } from "./book";
 import {
-  GUTTER_KIT_SEED,
+  KIT_SEEDS,
   catalogHeaderFromCsv,
   isCatalogCsvHeader,
   parseCatalogCsv,
@@ -812,6 +812,7 @@ export const completeOnboard = createServerFn({ method: "POST" })
         )
       `;
     }
+    await seedStarterKits(sql, company.id, trades);
     return { ok: true as const };
   });
 
@@ -2145,43 +2146,43 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
     return { count: rows.length, kits: 0 };
   });
 
-async function seedGutterKits(sql: Sql, companyId: string) {
-  const flagged = await sql<{ kits_seeded_at: string | null }>`
-    select kits_seeded_at from companies where id = ${companyId} limit 1
-  `;
-  if (flagged[0]?.kits_seeded_at) return;
-  const existing = await sql<{ c: number }>`
-    select count(*)::int as c from work_kits where company_id = ${companyId} and work_id = ${"gutters"}
-  `;
-  if ((existing[0]?.c ?? 0) > 0) {
-    await sql`update companies set kits_seeded_at = now() where id = ${companyId}`;
-    return;
-  }
-  let order = 0;
-  for (const kit of GUTTER_KIT_SEED) {
-    const kitId = crypto.randomUUID();
-    await sql`
-      insert into work_kits (id, company_id, work_id, name, sort_order)
-      values (${kitId}, ${companyId}, ${"gutters"}, ${kit.name}, ${order})
+async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[]) {
+  const ids = (workIds === undefined ? Object.keys(KIT_SEEDS) : workIds).filter((id) => KIT_SEEDS[id]?.length);
+  for (const workId of ids) {
+    const seed = KIT_SEEDS[workId];
+    if (!seed?.length) continue;
+    const existing = await sql<{ c: number }>`
+      select count(*)::int as c from work_kits where company_id = ${companyId} and work_id = ${workId}
     `;
-    order += 1;
-    let lineOrder = 0;
-    for (const line of kit.lines) {
+    if ((existing[0]?.c ?? 0) > 0) continue;
+    let order = 0;
+    for (const kit of seed) {
+      const kitId = crypto.randomUUID();
       await sql`
-        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
-        values (
-          ${crypto.randomUUID()}, ${kitId}, ${lineOrder}, ${line.name}, ${line.description},
-          ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}
-        )
+        insert into work_kits (id, company_id, work_id, name, sort_order)
+        values (${kitId}, ${companyId}, ${workId}, ${kit.name}, ${order})
       `;
-      lineOrder += 1;
+      order += 1;
+      let lineOrder = 0;
+      for (const line of kit.lines) {
+        await sql`
+          insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+          values (
+            ${crypto.randomUUID()}, ${kitId}, ${lineOrder}, ${line.name}, ${line.description},
+            ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}
+          )
+        `;
+        lineOrder += 1;
+      }
     }
   }
-  await sql`update companies set kits_seeded_at = now() where id = ${companyId}`;
 }
 
 async function kitsForCompany(sql: Sql, companyId: string, workId?: string): Promise<WorkKit[]> {
-  await seedGutterKits(sql, companyId);
+  const company = await sql<{ trades: string | null }>`
+    select trades from companies where id = ${companyId} limit 1
+  `;
+  await seedStarterKits(sql, companyId, parseTradeTokens(company[0]?.trades));
   const kits = workId
     ? await sql<Omit<WorkKit, "items">>`
         select * from work_kits where company_id = ${companyId} and work_id = ${workId} order by sort_order, name
@@ -2216,6 +2217,21 @@ export const listWorkKits = createServerFn({ method: "GET" })
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     const kits = await kitsForCompany(sql, company.id, data.workId);
     return { role, kits };
+  });
+
+export const seedWorkKits = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { workId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can load starter sub-categories.");
+    const workId = data.workId.trim();
+    if (!KIT_SEEDS[workId]?.length) throw new Error("No starters for that category.");
+    await seedStarterKits(sql, company.id, [workId]);
+    return { ok: true as const };
   });
 
 export const saveWorkKit = createServerFn({ method: "POST" })

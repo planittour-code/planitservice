@@ -55,12 +55,219 @@ function gutterReplace(size: "5-Inch" | "6-Inch"): SeedLine[] {
   ];
 }
 
-export const GUTTER_KIT_SEED: { name: string; lines: SeedLine[] }[] = [
+export type KitSeed = { name: string; lines: SeedLine[] };
+
+const ls = (name: string, description: string): SeedLine => ({
+  name,
+  description,
+  unit: "ls",
+  qty: "1",
+});
+
+export const GUTTER_KIT_SEED: KitSeed[] = [
   { name: "5-Inch New Install", lines: gutterNew("5-Inch") },
   { name: "5-Inch Replacement", lines: gutterReplace("5-Inch") },
   { name: "6-Inch New Install", lines: gutterNew("6-Inch") },
   { name: "6-Inch Replacement", lines: gutterReplace("6-Inch") },
 ];
+
+const PAINT_KIT_SEED: KitSeed[] = [
+  {
+    name: "Interior walls and trim",
+    lines: [
+      ls("Protect floors and furniture", "Cover, mask, and move what has to move."),
+      { name: "Prime as needed", description: "Spot prime repairs and bare stock.", unit: "sf" },
+      { name: "Paint walls", description: "Body color in the rooms.", unit: "sf", slot: "interior_paint" },
+      { name: "Paint trim and doors", description: "Casing, base, and doors.", unit: "room", slot: "interior_trim" },
+      ls("Cleanup", "Pull paper and leave the rooms ready."),
+    ],
+  },
+  {
+    name: "Interior cabinets",
+    lines: [
+      ls("Remove doors and hardware", "Label and store for rehang."),
+      ls("Prime cabinets", "Doors and frames."),
+      ls("Paint doors and frames", "Enamel on the kitchen or bath boxes."),
+      ls("Rehang and hardware", "Doors, pulls, and catches."),
+    ],
+  },
+  {
+    name: "Exterior body and trim",
+    lines: [
+      { name: "Wash and scrape", description: "Prep the elevations.", unit: "sf" },
+      { name: "Paint body", description: "Siding and field.", unit: "sf", slot: "exterior_paint" },
+      { name: "Paint trim", description: "Fascia, soffit, and casing.", unit: "sf", slot: "exterior_trim" },
+      ls("Cleanup", "Site and beds."),
+    ],
+  },
+  {
+    name: "Front door",
+    lines: [
+      ls("Prep the door", "Sand, fill, and mask the opening."),
+      { name: "Enamel the door", description: "One opening, both faces as quoted.", unit: "ea", qty: "1", slot: "door_paint" },
+    ],
+  },
+];
+
+const reroofLines: SeedLine[] = [
+  { name: "Install shingles", description: "Field, hips, and ridges.", unit: "sq", slot: "shingle" },
+  ls("Drip edge and flashing", "Eaves, walls, and penetrations."),
+  ls("Vents and pipe boots", "Intake, exhaust, and boots."),
+  ls("Cleanup", "Magnets and haul-off of scraps."),
+];
+
+const ROOF_KIT_SEED: KitSeed[] = [
+  {
+    name: "Tear-off and reroof",
+    lines: [
+      { name: "Tear off one layer", description: "Shingles and felt to the deck.", unit: "sq" },
+      ls("Haul-off", "Debris from one layer."),
+      ...reroofLines,
+    ],
+  },
+  {
+    name: "Two-layer tear-off",
+    lines: [
+      { name: "Tear off two layers", description: "Second layer is slower.", unit: "sq" },
+      ls("Extra haul-off", "Two layers of debris."),
+      ...reroofLines,
+    ],
+  },
+  {
+    name: "New construction",
+    lines: reroofLines,
+  },
+  {
+    name: "Leak repair",
+    lines: [
+      ls("Isolate the leak", "Find the path, not just the stain."),
+      ls("Repair the roof", "Shingles, flashing, or boot as needed."),
+      ls("Seal and test", "Close the repair and water-test if we can."),
+    ],
+  },
+];
+
+function windowLines(kind: "replace" | "new"): SeedLine[] {
+  const start: SeedLine[] =
+    kind === "replace"
+      ? [{ name: "Remove existing units", description: "Pull sash, frame, and old flashing.", unit: "ea" }]
+      : [];
+  return [
+    ...start,
+    { name: "Set new windows", description: "Plumb, shim, and fasten.", unit: "ea", slot: "window" },
+    { name: "Insulate and flash", description: "Foam, tape, and pan at each opening.", unit: "ea" },
+    { name: "Interior casing", description: "Casing and stool at each unit.", unit: "ea" },
+    { name: "Screens", description: "Full screens on each unit.", unit: "ea" },
+    ls("Haul-off", "Old units and debris."),
+  ];
+}
+
+const WINDOW_KIT_SEED: KitSeed[] = [
+  { name: "Full-house replacement", lines: windowLines("replace") },
+  { name: "Partial replacement", lines: windowLines("replace") },
+  { name: "New construction openings", lines: windowLines("new") },
+];
+
+const SIDING_KIT_SEED: KitSeed[] = [
+  {
+    name: "Full elevation replacement",
+    lines: [
+      { name: "Tear off existing siding", description: "Cladding off the elevations in this quote.", unit: "sf" },
+      { name: "Housewrap", description: "Wrap and tape at openings.", unit: "sf" },
+      { name: "Hang new siding", description: "The product that stays with the house.", unit: "sf", slot: "siding" },
+      ls("Trim and corners", "Outside corners, windows, and doors."),
+      ls("Cleanup", "Haul-off and site."),
+    ],
+  },
+  {
+    name: "Partial / repair",
+    lines: [
+      ls("Isolate failed siding", "Cut back to sound stock."),
+      { name: "Replace failed siding", description: "Blend into the elevation.", unit: "sf", slot: "siding" },
+      ls("Trim and seal", "Joints, corners, and openings."),
+    ],
+  },
+  {
+    name: "New construction",
+    lines: [
+      { name: "Housewrap", description: "Wrap and tape at openings.", unit: "sf" },
+      { name: "Hang new siding", description: "The product that stays with the house.", unit: "sf", slot: "siding" },
+      ls("Trim and corners", "Outside corners, windows, and doors."),
+      ls("Cleanup", "Site."),
+    ],
+  },
+];
+
+const DECK_KIT_SEED: KitSeed[] = [
+  {
+    name: "New deck",
+    lines: [
+      ls("Frame the deck", "Posts, beams, and joists."),
+      { name: "Decking", description: "Walking surface.", unit: "sf" },
+      ls("Rail", "Pickets, cap, and posts."),
+      { name: "Stain", description: "The coat that stays with the house.", unit: "sf", slot: "stain" },
+    ],
+  },
+  {
+    name: "Redeck",
+    lines: [
+      { name: "Pull existing boards", description: "Keep the frame if it is sound.", unit: "sf" },
+      { name: "New decking", description: "Walking surface.", unit: "sf" },
+      { name: "Stain", description: "The coat that stays with the house.", unit: "sf", slot: "stain" },
+    ],
+  },
+  {
+    name: "Stain and repair",
+    lines: [
+      { name: "Replace failed boards", description: "Swap what will not take stain.", unit: "ea" },
+      { name: "Clean the deck", description: "Wash and dull the old coat.", unit: "sf" },
+      { name: "Stain", description: "The coat that stays with the house.", unit: "sf", slot: "stain" },
+    ],
+  },
+];
+
+const PORCH_KIT_SEED: KitSeed[] = [
+  {
+    name: "Open porch",
+    lines: [
+      { name: "Porch floor", description: "Boards or overlay on this porch.", unit: "sf" },
+      ls("Rail", "Pickets, cap, and posts."),
+      { name: "Stain the floor", description: "The coat on the walking surface.", unit: "sf", slot: "stain" },
+    ],
+  },
+  {
+    name: "Covered porch",
+    lines: [
+      { name: "Porch floor", description: "Boards or overlay on this porch.", unit: "sf" },
+      ls("Ceiling", "Beadboard or the existing ceiling."),
+      ls("Rail", "Pickets, cap, and posts."),
+      { name: "Stain or paint", description: "Floor, ceiling, and rail as quoted.", unit: "sf", slot: "stain" },
+    ],
+  },
+  {
+    name: "Screened porch",
+    lines: [
+      { name: "Porch floor", description: "Boards or overlay on this porch.", unit: "sf" },
+      ls("Screen panels", "Walls of this porch."),
+      ls("Screen door", "One door in the run."),
+      { name: "Stain or paint", description: "Floor and trim as quoted.", unit: "sf", slot: "stain" },
+    ],
+  },
+];
+
+export const KIT_SEEDS: Record<string, KitSeed[]> = {
+  gutters: GUTTER_KIT_SEED,
+  paint: PAINT_KIT_SEED,
+  roof: ROOF_KIT_SEED,
+  windows: WINDOW_KIT_SEED,
+  siding: SIDING_KIT_SEED,
+  deck: DECK_KIT_SEED,
+  porch: PORCH_KIT_SEED,
+};
+
+export function hasKitSeed(workId: string) {
+  return Boolean(KIT_SEEDS[workId]?.length);
+}
 
 const WORK_ALIASES: Record<string, string> = {
   gutter: "gutters",

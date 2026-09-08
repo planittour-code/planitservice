@@ -135,8 +135,8 @@ function PriceBookPage() {
         <div>
           <h1 className="font-display text-3xl font-medium tracking-tight">Materials</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            Products and the line-item bundles behind each work category. Quotes pick products from
-            this list. Cost stays in the shop — the homeowner sees the sell price.
+            Quotes pick a work category, then a sub-category. Edit the lines here. Cost and sell stay
+            in the shop — the homeowner sees the sell price.
           </p>
         </div>
         {owner && (
@@ -144,6 +144,15 @@ function PriceBookPage() {
             Add a product
           </Button>
         )}
+      </div>
+
+      {owner && <WorkKitEditor owner={owner} />}
+
+      <div>
+        <h2 className="font-display text-xl font-medium">Products</h2>
+        <p className="text-sm text-muted-foreground">
+          What this shop buys and sells. Sub-category lines can pick from these slots.
+        </p>
       </div>
 
       {(health.errors > 0 || health.missing > 0 || health.warns > 0) && (
@@ -257,8 +266,6 @@ function PriceBookPage() {
           </div>
         )}
       </div>
-
-      {owner && <WorkKitEditor owner={owner} />}
 
       {owner && (
         <section className="space-y-3">
