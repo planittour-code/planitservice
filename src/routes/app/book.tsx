@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,19 +34,6 @@ function PriceBookPage() {
   const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<Partial<PriceBookItem> | "new" | null>(null);
   const [csv, setCsv] = useState("");
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!editing) return;
-    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    const id = window.setTimeout(() => {
-      const field = editorRef.current?.querySelector<HTMLElement>(
-        "input:not([type=hidden]), select, textarea",
-      );
-      field?.focus();
-    }, 280);
-    return () => window.clearTimeout(id);
-  }, [editing]);
 
   const items = useMemo(() => {
     const list = (q.data?.items ?? []).filter((i) => i.active !== false);
@@ -183,16 +170,14 @@ function PriceBookPage() {
         onChange={(e) => setFilter(e.target.value)}
       />
 
-      {editing && owner && (
-        <div ref={editorRef} id="book-editor" className="scroll-mt-6">
-          <BookForm
-            key={editing === "new" ? "new" : editing.id}
-            initial={editing === "new" ? null : editing}
-            pending={save.isPending}
-            onCancel={() => setEditing(null)}
-            onSave={(row) => save.mutate(row)}
-          />
-        </div>
+      {editing === "new" && owner && items.length > 0 && (
+        <BookForm
+          key="new"
+          initial={null}
+          pending={save.isPending}
+          onCancel={() => setEditing(null)}
+          onSave={(row) => save.mutate(row)}
+        />
       )}
 
       <div className="space-y-6">
@@ -204,48 +189,61 @@ function PriceBookPage() {
                 <li
                   key={item.id}
                   className={cn(
-                    "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
-                    editingId === item.id && "bg-muted/70 ring-1 ring-inset ring-ring",
+                    editingId === item.id
+                      ? "bg-muted/70 p-3 ring-1 ring-inset ring-ring"
+                      : "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
                   )}
                 >
-                  <div>
-                    <p className="font-medium">{bookLabel(item)}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Cost {item.cost == null ? "—" : money(item.cost)} / {item.unit}
-                      {item.sell != null ? ` · sell ${money(item.sell)}` : ""}
-                    </p>
-                    {priceIssues(item).map((issue) => (
-                      <p
-                        key={issue.code}
-                        className={
-                          issue.severity === "error"
-                            ? "text-sm text-destructive"
-                            : "text-sm text-muted-foreground"
-                        }
-                      >
-                        {issue.message}
-                      </p>
-                    ))}
-                  </div>
-                  {owner && (
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditing(item)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => archive.mutate(item.id)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
+                  {editingId === item.id && owner ? (
+                    <BookForm
+                      key={item.id}
+                      initial={item}
+                      pending={save.isPending}
+                      onCancel={() => setEditing(null)}
+                      onSave={(row) => save.mutate(row)}
+                    />
+                  ) : (
+                    <>
+                      <div>
+                        <p className="font-medium">{bookLabel(item)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Cost {item.cost == null ? "—" : money(item.cost)} / {item.unit}
+                          {item.sell != null ? ` · sell ${money(item.sell)}` : ""}
+                        </p>
+                        {priceIssues(item).map((issue) => (
+                          <p
+                            key={issue.code}
+                            className={
+                              issue.severity === "error"
+                                ? "text-sm text-destructive"
+                                : "text-sm text-muted-foreground"
+                            }
+                          >
+                            {issue.message}
+                          </p>
+                        ))}
+                      </div>
+                      {owner && (
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditing(item)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => archive.mutate(item.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </li>
               ))}
@@ -255,13 +253,24 @@ function PriceBookPage() {
         {items.length === 0 && (
           <div className="rounded-xl bg-card px-4 py-10 text-center shadow-[var(--shadow-border)]">
             <p className="font-display text-xl font-medium">No materials yet.</p>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            <p className="mx-auto mt-2 max-w-sm text-muted-foreground text-sm">
               Add a product with cost and sell, or paste a CSV from the yard.
             </p>
-            {owner && (
+            {owner && editing !== "new" && (
               <Button type="button" className="mt-4" onClick={() => setEditing("new")}>
                 Add a product
               </Button>
+            )}
+            {owner && editing === "new" && (
+              <div className="mt-4 text-left">
+                <BookForm
+                  key="new"
+                  initial={null}
+                  pending={save.isPending}
+                  onCancel={() => setEditing(null)}
+                  onSave={(row) => save.mutate(row)}
+                />
+              </div>
             )}
           </div>
         )}

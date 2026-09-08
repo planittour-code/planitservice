@@ -86,10 +86,10 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
         )}
       </div>
 
-      {editing && owner && (
+      {editing === "new" && owner && (
         <KitForm
-          key={editing === "new" ? "new" : editing.id}
-          initial={editing === "new" ? null : editing}
+          key="new"
+          initial={null}
           categories={categories.map((c) => ({ id: c.id, name: c.name }))}
           pending={save.isPending}
           onCancel={() => setEditing(null)}
@@ -127,26 +127,49 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
             </div>
           ) : (
             <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
-              {rows.map((kit) => (
-                <li key={kit.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium">{kit.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
-                    </p>
-                  </div>
-                  {owner && (
-                    <div className="flex gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => setEditing(kit)}>
-                        Edit
-                      </Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => remove.mutate(kit.id)}>
-                        Remove
-                      </Button>
-                    </div>
+              {rows.map((kit) => {
+                const open = editing !== "new" && editing?.id === kit.id;
+                return (
+                <li
+                  key={kit.id}
+                  className={
+                    open
+                      ? "bg-muted/70 p-3 ring-1 ring-inset ring-ring"
+                      : "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  }
+                >
+                  {open && owner ? (
+                    <KitForm
+                      key={kit.id}
+                      initial={kit}
+                      categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                      pending={save.isPending}
+                      onCancel={() => setEditing(null)}
+                      onSave={(row) => save.mutate(row)}
+                    />
+                  ) : (
+                    <>
+                      <div>
+                        <p className="font-medium">{kit.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
+                        </p>
+                      </div>
+                      {owner && (
+                        <div className="flex gap-2">
+                          <Button type="button" size="sm" variant="outline" onClick={() => setEditing(kit)}>
+                            Edit
+                          </Button>
+                          <Button type="button" size="sm" variant="ghost" onClick={() => remove.mutate(kit.id)}>
+                            Remove
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>
