@@ -30,10 +30,14 @@ export function priceIdFor(kind: CheckoutKind): string {
       process.env.STRIPE_PRICE_SHOP_ANNUAL?.trim() || "price_1U84obA3tQnfBXBTHrOLzQ6m",
     seat_monthly:
       process.env.STRIPE_PRICE_SEAT_MONTHLY?.trim() || "price_1U84pZA3tQnfBXBT68DvtKj0",
-    manage_monthly: process.env.STRIPE_PRICE_MANAGE_MONTHLY?.trim() || "",
-    manage_annual: process.env.STRIPE_PRICE_MANAGE_ANNUAL?.trim() || "",
-    manage_extra_monthly: process.env.STRIPE_PRICE_MANAGE_EXTRA_MONTHLY?.trim() || "",
-    manage_extra_annual: process.env.STRIPE_PRICE_MANAGE_EXTRA_ANNUAL?.trim() || "",
+    manage_monthly:
+      process.env.STRIPE_PRICE_MANAGE_MONTHLY?.trim() || "price_1UDW4FPNiO3QnmB4qD1pdm0x",
+    manage_annual:
+      process.env.STRIPE_PRICE_MANAGE_ANNUAL?.trim() || "price_1UDW5NPNiO3QnmB4d6Ze4U59",
+    manage_extra_monthly:
+      process.env.STRIPE_PRICE_MANAGE_EXTRA_MONTHLY?.trim() || "price_1UDW7cPNiO3QnmB4sTmTb7lp",
+    manage_extra_annual:
+      process.env.STRIPE_PRICE_MANAGE_EXTRA_ANNUAL?.trim() || "price_1UDW8FPNiO3QnmB4NRMYNdI4",
   };
   const id = map[kind]?.trim();
   if (!id) {
