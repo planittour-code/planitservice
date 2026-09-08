@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Navigate } from "@tanstack/react-router";
+import { Link, Navigate } from "@tanstack/react-router";
 import { authEnabled, signOut } from "./client";
 import { useCurrentUser, useCurrentUserState } from "./use-current-user";
 
@@ -55,18 +55,24 @@ export function UserButton() {
   const label = user.displayName ?? user.primaryEmail ?? "Account";
   return (
     <div className="flex items-center gap-2">
-      {user.profileImageUrl ? (
-        <img
-          src={user.profileImageUrl}
-          alt=""
-          className="h-8 w-8 rounded-full object-cover"
-        />
-      ) : (
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-muted text-sm font-medium">
-          {label.charAt(0).toUpperCase()}
-        </span>
-      )}
-      <span className="hidden max-w-28 truncate text-sm font-medium sm:inline">{label}</span>
+      <Link
+        to="/account"
+        className="flex min-h-11 items-center gap-2 rounded-md px-1 hover:bg-muted"
+        aria-label="Account"
+      >
+        {user.profileImageUrl ? (
+          <img
+            src={user.profileImageUrl}
+            alt=""
+            className="h-8 w-8 rounded-full object-cover"
+          />
+        ) : (
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-muted text-sm font-medium">
+            {label.charAt(0).toUpperCase()}
+          </span>
+        )}
+        <span className="hidden max-w-28 truncate text-sm font-medium sm:inline">{label}</span>
+      </Link>
       {authEnabled && (
         <button
           type="button"

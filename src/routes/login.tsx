@@ -42,7 +42,7 @@ function Login() {
   // just because the public Sign in button asked for the house dashboard.
   const after = search.invite
     ? `/invite/${search.invite}`
-    : isShopDestination(next) || next.startsWith("/home/add") || next === "/account"
+    : isShopDestination(next) || next.startsWith("/home/add")
       ? next
       : "/login";
   const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
@@ -107,7 +107,6 @@ function Login() {
       return <Navigate to="/home" />;
     }
     if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
-    if (next === "/account") return <Navigate to="/account" />;
     if (homeowner || isHouseDestination(next)) {
       return <Navigate to="/home" />;
     }

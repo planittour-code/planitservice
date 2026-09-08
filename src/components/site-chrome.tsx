@@ -11,11 +11,7 @@ export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/home
   const { user, isPending } = useCurrentUserState();
   if (isPending) return <div className="h-11 w-24 animate-pulse rounded-md bg-muted" />;
   if (user) {
-    return (
-      <Button asChild>
-        <Link to="/account">Account</Link>
-      </Button>
-    );
+    return <UserButton />;
   }
   return (
     <Button asChild variant="outline">

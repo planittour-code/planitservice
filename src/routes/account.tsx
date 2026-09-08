@@ -41,7 +41,7 @@ function AccountPage() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" search={{ next: "/account" }} />;
+  if (!user) return <Navigate to="/login" />;
 
   const data = q.data;
   const isShop = Boolean(data?.shop);
