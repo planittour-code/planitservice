@@ -198,6 +198,42 @@ export type ProposalListRow = Proposal & {
   template_trade?: string | null;
 };
 
+export type ShopWorkRow = {
+  id: string;
+  kind: "proposal" | "job";
+  title: string;
+  status: string;
+  summary: string | null;
+  property_id: string;
+  proposal_id: string | null;
+  address_line: string;
+  city: string;
+  state: string;
+  zip: string;
+  homeowner_name: string;
+  homeowner_email: string;
+  homeowner_phone: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type ShopClientRow = {
+  key: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  houseCount: number;
+  jobCount: number;
+  openCount: number;
+  houses: {
+    id: string;
+    address_line: string;
+    city: string;
+    state: string;
+    zip: string;
+  }[];
+};
+
 export type HouseCompany = {
   id: string;
   name: string;

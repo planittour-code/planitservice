@@ -50,6 +50,8 @@ import type {
   ProposalBundle,
   ProposalItem,
   ProposalListRow,
+  ShopClientRow,
+  ShopWorkRow,
   ProposalMessage,
   Template,
   TemplateItem,
@@ -493,6 +495,153 @@ export const getDashboard = createServerFn({ method: "GET" })
       templateCount: num(templates[0]?.c),
     };
   });
+
+export const listShopIndex = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    const properties = await sql<PropertyListRow>`
+      select p.*,
+        (select count(*)::int from property_facts f where f.property_id = p.id) as fact_count,
+        (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
+        (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
+        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','pending','sent','revised','accepted')) as open_proposal_count,
+        (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src
+      from properties p
+      where p.company_id = ${company.id}
+      order by p.address_line
+    `;
+    const houses = properties.map((p) => ({
+      ...p,
+      fact_count: num(p.fact_count),
+      photo_count: num(p.photo_count),
+      job_count: num(p.job_count),
+      open_proposal_count: num(p.open_proposal_count),
+    }));
+    const proposalRows = await sql<{
+      id: string;
+      title: string;
+      status: string;
+      created_at: string;
+      accepted_at: string | null;
+      property_id: string;
+      address_line: string;
+      city: string;
+      state: string;
+      zip: string;
+      homeowner_name: string;
+      homeowner_email: string;
+      homeowner_phone: string | null;
+    }>`
+      select pr.id, pr.title, pr.status, pr.created_at, pr.accepted_at, pr.property_id,
+        p.address_line, p.city, p.state, p.zip, p.homeowner_name, p.homeowner_email, p.homeowner_phone
+      from proposals pr
+      join properties p on p.id = pr.property_id
+      where pr.company_id = ${company.id} and pr.status <> ${"completed"}
+      order by pr.created_at desc
+    `;
+    const jobRows = await sql<{
+      id: string;
+      title: string;
+      summary: string | null;
+      completed_at: string;
+      created_at: string;
+      property_id: string;
+      proposal_id: string | null;
+      address_line: string;
+      city: string;
+      state: string;
+      zip: string;
+      homeowner_name: string;
+      homeowner_email: string;
+      homeowner_phone: string | null;
+    }>`
+      select j.id, j.title, j.summary, j.completed_at, j.created_at, j.property_id, j.proposal_id,
+        p.address_line, p.city, p.state, p.zip, p.homeowner_name, p.homeowner_email, p.homeowner_phone
+      from jobs j
+      join properties p on p.id = j.property_id
+      where j.company_id = ${company.id}
+      order by j.completed_at desc
+    `;
+    const openWork: ShopWorkRow[] = proposalRows.map((row) => ({
+      id: row.id,
+      kind: "proposal",
+      title: row.title,
+      status: row.status,
+      summary: null,
+      property_id: row.property_id,
+      proposal_id: row.id,
+      address_line: row.address_line,
+      city: row.city,
+      state: row.state,
+      zip: row.zip,
+      homeowner_name: row.homeowner_name,
+      homeowner_email: row.homeowner_email,
+      homeowner_phone: row.homeowner_phone,
+      created_at: row.created_at,
+      completed_at: row.accepted_at,
+    }));
+    const completedWork: ShopWorkRow[] = jobRows.map((row) => ({
+      id: row.id,
+      kind: "job",
+      title: row.title,
+      status: "completed",
+      summary: row.summary,
+      property_id: row.property_id,
+      proposal_id: row.proposal_id,
+      address_line: row.address_line,
+      city: row.city,
+      state: row.state,
+      zip: row.zip,
+      homeowner_name: row.homeowner_name,
+      homeowner_email: row.homeowner_email,
+      homeowner_phone: row.homeowner_phone,
+      created_at: row.created_at,
+      completed_at: row.completed_at,
+    }));
+    const work = [...openWork, ...completedWork];
+    const clients = clientsFromHouses(houses);
+    return { role, houses, work, clients };
+  });
+
+function clientsFromHouses(houses: PropertyListRow[]): ShopClientRow[] {
+  const map = new Map<string, ShopClientRow>();
+  for (const house of houses) {
+    const email = house.homeowner_email.trim().toLowerCase();
+    const key = email || `name:${house.homeowner_name.trim().toLowerCase() || house.id}`;
+    const existing = map.get(key);
+    const place = {
+      id: house.id,
+      address_line: house.address_line,
+      city: house.city,
+      state: house.state,
+      zip: house.zip,
+    };
+    if (!existing) {
+      map.set(key, {
+        key,
+        name: house.homeowner_name.trim() || "Unnamed client",
+        email: house.homeowner_email.trim(),
+        phone: house.homeowner_phone,
+        houseCount: 1,
+        jobCount: house.job_count,
+        openCount: house.open_proposal_count,
+        houses: [place],
+      });
+      continue;
+    }
+    existing.houses.push(place);
+    existing.houseCount += 1;
+    existing.jobCount += house.job_count;
+    existing.openCount += house.open_proposal_count;
+    if (!existing.phone && house.homeowner_phone) existing.phone = house.homeowner_phone;
+    if (!existing.email && house.homeowner_email.trim()) existing.email = house.homeowner_email.trim();
+  }
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 export const updateCompany = createServerFn({ method: "POST" })
   .middleware([authMiddleware])

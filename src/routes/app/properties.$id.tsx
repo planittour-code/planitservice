@@ -32,12 +32,23 @@ function PropertyPage() {
   return (
     <div className="space-y-10">
       <header className="space-y-4">
-        <p className="text-sm text-muted-foreground">{file.company.name}</p>
+        <p className="text-sm text-muted-foreground">
+          <Link to="/app/properties" className="underline-offset-4 hover:underline">
+            Jobs
+          </Link>
+          {" · "}
+          {file.company.name}
+        </p>
         <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
           {p.address_line}
         </h1>
         <p className="text-muted-foreground">
-          {p.city}, {p.state} {p.zip} · {p.homeowner_name} · {p.homeowner_email}
+          {p.city}, {p.state} {p.zip}
+        </p>
+        <p className="text-muted-foreground">
+          Client {p.homeowner_name}
+          {p.homeowner_email ? ` · ${p.homeowner_email}` : ""}
+          {p.homeowner_phone ? ` · ${p.homeowner_phone}` : ""}
         </p>
         <div className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
           <QuoteTypePicker
@@ -60,7 +71,7 @@ function PropertyPage() {
 
       {file.proposals.length > 0 && (
         <section className="space-y-3">
-          <h2 className="font-display text-xl font-medium">Proposals</h2>
+          <h2 className="font-display text-xl font-medium">Quotes at this house</h2>
           <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
             {file.proposals.map((pr) => (
               <li key={pr.id}>

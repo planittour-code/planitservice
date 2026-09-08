@@ -3,7 +3,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CustomWorkDialog } from "@/components/custom-work-dialog";
-import { HouseCard } from "@/components/site-chrome";
 import { StatusBadge } from "@/components/status-badge";
 import { TradeGrid } from "@/components/trade-face";
 import { Button } from "@/components/ui/button";
@@ -105,9 +104,10 @@ function ShopHome() {
       {properties.length === 0 ? (
         <Card>
           <CardContent className="space-y-3 py-10 text-center">
-            <h2 className="font-display text-2xl font-medium">No houses yet</h2>
+            <h2 className="font-display text-2xl font-medium">No jobs yet</h2>
             <p className="text-sm text-muted-foreground">
-              Enter an address, pick the work, and fill the details that price it.
+              Enter an address, pick the work, and fill the details that price it. The house, the
+              client, and the job all open from that quote.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
@@ -117,32 +117,55 @@ function ShopHome() {
           </CardContent>
         </Card>
       ) : (
-        <section className="grid gap-4 md:grid-cols-2">
-          {properties.map((p) => (
-            <HouseCard
-              key={p.id}
-              to="/app/properties/$id"
-              params={{ id: p.id }}
-              address={p.address_line}
-              city={p.city}
-              state={p.state}
-              zip={p.zip}
-              name={p.homeowner_name}
-              coverSrc={p.cover_src}
-              factCount={p.fact_count}
-              jobCount={p.job_count}
-              photoCount={p.photo_count}
-              openCount={p.open_proposal_count}
-            />
-          ))}
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-medium">On the books</h2>
+              <p className="text-sm text-muted-foreground">
+                {properties.length} {properties.length === 1 ? "house" : "houses"} on file.
+                Search by job, client, or address under Jobs.
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/app/properties">Open Jobs</Link>
+            </Button>
+          </div>
+          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            {properties.slice(0, 6).map((p) => (
+              <li key={p.id}>
+                <Link
+                  to="/app/properties/$id"
+                  params={{ id: p.id }}
+                  className="flex min-h-14 flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{p.address_line}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {p.homeowner_name}
+                      {p.open_proposal_count ? ` · ${p.open_proposal_count} open` : ""}
+                      {p.job_count ? ` · ${p.job_count} completed` : ""}
+                    </p>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {p.city}, {p.state}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
       {proposals.length > 0 && (
         <section className="space-y-3">
-          <h2 className="font-display text-xl font-medium">Recent proposals</h2>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-xl font-medium">Recent quotes</h2>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/app/properties">All jobs</Link>
+            </Button>
+          </div>
           <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
-            {proposals.map((pr) => (
+            {proposals.slice(0, 6).map((pr) => (
               <li key={pr.id}>
                 <Link
                   to="/app/proposals/$id"
