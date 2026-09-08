@@ -1,3 +1,4 @@
+import { Camera } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PriceBookItem } from "@/lib/housefile/book";
 import {
@@ -173,15 +174,33 @@ function LineCard({
   onRemove: () => void;
 }) {
   const heading = row.item.trim() || "New line";
+  const photoInput = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-3 rounded-xl bg-background p-3 shadow-[var(--shadow-border)] sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="min-w-0 truncate font-medium">{heading}</p>
-        {canRemove && (
-          <button type="button" className="shrink-0 text-sm text-muted-foreground hover:text-foreground" onClick={onRemove}>
-            Remove
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={() => photoInput.current?.click()}>
+            <Camera className="size-4" />
+            Add photo
+          </Button>
+          <input
+            ref={photoInput}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={(e) => {
+              onPhotos(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          {canRemove && (
+            <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={onRemove}>
+              Remove
+            </button>
+          )}
+        </div>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={`item-${row.id}`}>Item</Label>
@@ -212,42 +231,22 @@ function LineCard({
           <p className="flex h-11 items-center tabular-nums">{money(lineAmount(row))}</p>
         </div>
       </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <Label>Photos</Label>
-          <label className="inline-flex min-h-9 cursor-pointer items-center rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)]">
-            Add photos
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="sr-only"
-              onChange={(e) => {
-                onPhotos(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
+      {(row.photos ?? []).length > 0 && (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {row.photos.map((src, i) => (
+            <div key={`${row.id}-ph-${i}`} className="relative overflow-hidden rounded-lg bg-muted">
+              <img src={src} alt="" className="aspect-square w-full object-cover" />
+              <button
+                type="button"
+                className="absolute top-1 right-1 rounded bg-background/90 px-2 text-xs"
+                onClick={() => onPatch({ photos: row.photos.filter((_, idx) => idx !== i) })}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
         </div>
-        {(row.photos ?? []).length > 0 ? (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {row.photos.map((src, i) => (
-              <div key={`${row.id}-ph-${i}`} className="relative overflow-hidden rounded-lg bg-muted">
-                <img src={src} alt="" className="aspect-square w-full object-cover" />
-                <button
-                  type="button"
-                  className="absolute top-1 right-1 rounded bg-background/90 px-2 text-xs"
-                  onClick={() => onPatch({ photos: row.photos.filter((_, idx) => idx !== i) })}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">No photos on this line yet.</p>
-        )}
-      </div>
+      )}
     </div>
   );
 }
