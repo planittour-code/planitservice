@@ -7,6 +7,7 @@ import type { PriceBookItem } from "@/lib/housefile/book";
 import {
   ESTIMATE_KEY,
   blankEstimateLine,
+  catalogLinesForWork,
   parseEstimateLines,
   seedEstimateLines,
   serializeEstimateLines,
@@ -26,16 +27,28 @@ export function TakeoffForm({
   inputs,
   onChange,
   book,
+  kits = [],
 }: {
   work: WorkType;
   paintScope?: string;
   inputs: Record<string, string>;
   onChange: (key: string, value: string) => void;
   book: PriceBookItem[];
+  kits?: {
+    work_id: string;
+    items: {
+      name: string;
+      description?: string | null;
+      qty?: string | null;
+      unit?: string | null;
+      slot?: string | null;
+    }[];
+  }[];
 }) {
   const [showMeasures, setShowMeasures] = useState(false);
   const estimate = parseEstimateLines(inputs[ESTIMATE_KEY]);
   const rows = estimate.length > 0 ? estimate : seedEstimateLines(work.id, book, paintScope);
+  const catalog = catalogLinesForWork(work.id, kits, paintScope);
   const measureFields = work.fields.filter(
     (field) => field.key !== "paint_scope" && fieldVisible(field, inputs),
   );
@@ -66,6 +79,7 @@ export function TakeoffForm({
       )}
       <EstimateSheet
         book={book}
+        catalog={catalog}
         lines={rows.length ? rows : [blankEstimateLine()]}
         onChange={(next) => onChange(ESTIMATE_KEY, serializeEstimateLines(next))}
         workId={work.id}

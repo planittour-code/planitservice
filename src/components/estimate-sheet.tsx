@@ -1,11 +1,13 @@
-import { bookLabel, type PriceBookItem } from "@/lib/housefile/book";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { PriceBookItem } from "@/lib/housefile/book";
 import {
-  applyBookToLine,
+  applyCatalogToLine,
   blankEstimateLine,
   estimateTotal,
   lineAmount,
   linesForOption,
   optionsFor,
+  type CatalogLine,
   type EstimateLine,
 } from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
@@ -18,12 +20,14 @@ import { toast } from "sonner";
 
 export function EstimateSheet({
   book,
+  catalog,
   lines,
   onChange,
   workId,
   paintScope,
 }: {
   book: PriceBookItem[];
+  catalog: CatalogLine[];
   lines: EstimateLine[];
   onChange: (next: EstimateLine[]) => void;
   workId?: string;
@@ -38,14 +42,8 @@ export function EstimateSheet({
     onChange(lines.map((row) => (row.id === id ? { ...row, ...next } : row)));
   }
 
-  function pickItem(id: string, bookId: string) {
-    const row = lines.find((l) => l.id === id);
-    if (!row) return;
-    if (!bookId) {
-      onChange(lines.map((l) => (l.id === id ? { ...l, bookId: "" } : l)));
-      return;
-    }
-    onChange(lines.map((l) => (l.id === id ? applyBookToLine(l, items.find((b) => b.id === bookId)) : l)));
+  function pickCatalog(id: string, pick: CatalogLine) {
+    onChange(lines.map((l) => (l.id === id ? applyCatalogToLine(l, pick, items) : l)));
   }
 
   async function addPhotos(id: string, files: FileList | null) {
@@ -79,19 +77,19 @@ export function EstimateSheet({
       <div>
         <h2 className="font-display text-2xl font-medium tracking-tight">Line items</h2>
         <p className="text-sm text-muted-foreground">
-          Pick from materials or type a custom item. Amount is quantity × price.
+          Search this work category's line items. A name that is not in the list stays on the quote.
+          Amount is quantity × price.
         </p>
       </div>
       <div className="space-y-4">
-        {core.map((row, index) => (
+        {core.map((row) => (
           <LineCard
             key={row.id}
             row={row}
-            index={index}
-            items={items}
+            catalog={catalog}
             canRemove={core.length > 1}
             onPatch={(next) => patch(row.id, next)}
-            onPick={(bookId) => pickItem(row.id, bookId)}
+            onPick={(pick) => pickCatalog(row.id, pick)}
             onPhotos={(files) => void addPhotos(row.id, files)}
             onRemove={() => onChange(lines.filter((l) => l.id !== row.id))}
           />
@@ -125,15 +123,14 @@ export function EstimateSheet({
                   </label>
                   {on && (
                     <div className="mt-4 space-y-3 border-l-2 border-border pl-4">
-                      {optionLines.map((row, index) => (
+                      {optionLines.map((row) => (
                         <LineCard
                           key={row.id}
                           row={row}
-                          index={index}
-                          items={items}
+                          catalog={catalog}
                           canRemove={optionLines.length > 1}
                           onPatch={(next) => patch(row.id, next)}
-                          onPick={(bookId) => pickItem(row.id, bookId)}
+                          onPick={(pick) => pickCatalog(row.id, pick)}
                           onPhotos={(files) => void addPhotos(row.id, files)}
                           onRemove={() => onChange(lines.filter((l) => l.id !== row.id))}
                         />
@@ -160,8 +157,7 @@ export function EstimateSheet({
 
 function LineCard({
   row,
-  index,
-  items,
+  catalog,
   canRemove,
   onPatch,
   onPick,
@@ -169,41 +165,33 @@ function LineCard({
   onRemove,
 }: {
   row: EstimateLine;
-  index: number;
-  items: PriceBookItem[];
+  catalog: CatalogLine[];
   canRemove: boolean;
   onPatch: (next: Partial<EstimateLine>) => void;
-  onPick: (bookId: string) => void;
+  onPick: (pick: CatalogLine) => void;
   onPhotos: (files: FileList | null) => void;
   onRemove: () => void;
 }) {
+  const heading = row.item.trim() || "New line";
   return (
     <div className="space-y-3 rounded-xl bg-background p-3 shadow-[var(--shadow-border)] sm:p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs tracking-wide text-muted-foreground uppercase">Line {index + 1}</p>
+        <p className="min-w-0 truncate font-medium">{heading}</p>
         {canRemove && (
-          <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={onRemove}>
+          <button type="button" className="shrink-0 text-sm text-muted-foreground hover:text-foreground" onClick={onRemove}>
             Remove
           </button>
         )}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={`item-${row.id}`}>Item</Label>
-        <select
+        <ItemSearch
           id={`item-${row.id}`}
-          value={row.bookId}
-          onChange={(e) => onPick(e.target.value)}
-          className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        >
-          <option value="">Custom item</option>
-          {items.map((item) => (
-            <option key={item.id} value={item.id}>
-              {bookLabel(item)}
-              {item.cost == null ? " — no cost" : ""}
-            </option>
-          ))}
-        </select>
-        <Input value={row.item} onChange={(e) => onPatch({ item: e.target.value })} placeholder="Item name" />
+          value={row.item}
+          catalog={catalog}
+          onChange={(item) => onPatch({ item, bookId: "" })}
+          onPick={onPick}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={`desc-${row.id}`}>Description</Label>
@@ -260,6 +248,113 @@ function LineCard({
           <p className="text-xs text-muted-foreground">No photos on this line yet.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function ItemSearch({
+  id,
+  value,
+  catalog,
+  onChange,
+  onPick,
+}: {
+  id: string;
+  value: string;
+  catalog: CatalogLine[];
+  onChange: (item: string) => void;
+  onPick: (pick: CatalogLine) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const wrap = useRef<HTMLDivElement>(null);
+  const matches = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    const list = q
+      ? catalog.filter(
+          (row) =>
+            row.name.toLowerCase().includes(q) ||
+            row.description.toLowerCase().includes(q),
+        )
+      : catalog;
+    return list.slice(0, 12);
+  }, [catalog, value]);
+
+  useEffect(() => {
+    setHighlight(0);
+  }, [value]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  function choose(pick: CatalogLine) {
+    onPick(pick);
+    setOpen(false);
+  }
+
+  return (
+    <div ref={wrap} className="relative">
+      <Input
+        id={id}
+        value={value}
+        autoComplete="off"
+        placeholder="Search line items"
+        onFocus={() => setOpen(true)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+            setOpen(true);
+            return;
+          }
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setHighlight((i) => Math.min(i + 1, Math.max(matches.length - 1, 0)));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHighlight((i) => Math.max(i - 1, 0));
+          } else if (e.key === "Enter" && open && matches[highlight]) {
+            e.preventDefault();
+            choose(matches[highlight]);
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+      />
+      {open && matches.length > 0 && (
+        <ul
+          className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-md bg-card py-1 shadow-[var(--shadow-border)]"
+          role="listbox"
+        >
+          {matches.map((row, i) => (
+            <li key={`${row.name}-${i}`}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === highlight}
+                className={`flex w-full flex-col items-start px-3 py-2 text-left text-sm ${
+                  i === highlight ? "bg-muted" : "hover:bg-muted"
+                }`}
+                onMouseEnter={() => setHighlight(i)}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => choose(row)}
+              >
+                <span className="font-medium">{row.name}</span>
+                {row.description ? (
+                  <span className="line-clamp-1 text-xs text-muted-foreground">{row.description}</span>
+                ) : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

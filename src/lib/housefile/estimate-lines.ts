@@ -438,6 +438,97 @@ export function applyBookToLine(line: EstimateLine, item: PriceBookItem | undefi
   };
 }
 
+export type CatalogLine = {
+  name: string;
+  description: string;
+  qty?: string;
+  unit?: string;
+  slot?: string | null;
+};
+
+type CatalogKit = {
+  work_id: string;
+  items: {
+    name: string;
+    description?: string | null;
+    qty?: string | null;
+    unit?: string | null;
+    slot?: string | null;
+  }[];
+};
+
+export function catalogLinesForWork(
+  workId: string,
+  kits: CatalogKit[],
+  paintScope?: string,
+): CatalogLine[] {
+  const fromKits = kits
+    .filter((kit) => kit.work_id === workId)
+    .flatMap((kit) => kit.items)
+    .map((row) => ({
+      name: row.name.trim(),
+      description: row.description ?? "",
+      qty: row.qty ?? "",
+      unit: row.unit ?? undefined,
+      slot: row.slot ?? null,
+    }))
+    .filter((row) => row.name);
+  const source =
+    fromKits.length > 0
+      ? fromKits
+      : startersFor(workId, paintScope).map((row) => ({
+          name: row.item,
+          description: row.description,
+          qty: row.qty ?? "",
+          unit: row.unit,
+          slot: row.slot ?? null,
+        }));
+  const seen = new Set<string>();
+  const unique: CatalogLine[] = [];
+  for (const row of source) {
+    const key = row.name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(row);
+  }
+  return unique;
+}
+
+export function applyCatalogToLine(
+  line: EstimateLine,
+  pick: CatalogLine,
+  book: PriceBookItem[],
+): EstimateLine {
+  const product = pick.slot
+    ? book.find((b) => b.active !== false && b.slot === pick.slot)
+    : undefined;
+  const extra = product
+    ? [
+        product.color ? `Color: ${product.color}` : "",
+        product.sku ? `SKU ${product.sku}` : "",
+        product.warranty_years ? `${product.warranty_years}-year warranty` : "",
+        product.warranty_terms ?? "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "";
+  return {
+    ...line,
+    bookId: product?.id ?? "",
+    item: pick.name,
+    description: [pick.description.trim(), extra].filter(Boolean).join("\n\n"),
+    qty: pick.qty != null ? pick.qty : line.qty,
+    unit: pick.unit || line.unit,
+    cost: product?.cost != null ? String(product.cost) : "",
+    price:
+      product?.sell != null
+        ? String(product.sell)
+        : product?.cost != null
+          ? String(product.cost)
+          : "",
+  };
+}
+
 export function estimateLineReady(line: EstimateLine): boolean {
   return Boolean(line.item.trim()) && num(line.qty) > 0 && String(line.price).trim() !== "";
 }

@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import {
   ESTIMATE_KEY,
   blankEstimateLine,
+  catalogLinesForWork,
   estimateReady,
   estimateTotal,
   linesFromKitItems,
@@ -523,6 +524,7 @@ function NewQuote() {
                   inputs={takeoff}
                   onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
                   book={book}
+                  kits={workKits}
                 />
               )}
             </>
@@ -552,6 +554,7 @@ function NewQuote() {
           </div>
           <EstimateSheet
             book={book}
+            catalog={catalogLinesForWork(work.id, workKits, takeoff.paint_scope)}
             lines={estimate.length ? estimate : [blankEstimateLine()]}
             onChange={(next) =>
               setTakeoff((s) => ({ ...s, [ESTIMATE_KEY]: serializeEstimateLines(next) }))
