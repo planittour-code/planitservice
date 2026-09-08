@@ -11,6 +11,10 @@ import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getAccount } from "@/lib/housefile/server";
 import {
+  MANAGE_ANNUAL,
+  MANAGE_EXTRA_MONTHLY,
+  MANAGE_INCLUDED,
+  MANAGE_MONTHLY,
   PROPERTY_ANNUAL,
   PROPERTY_MONTHLY,
   PRO_ANNUAL,
@@ -46,12 +50,14 @@ function AccountPage() {
   const data = q.data;
   const isShop = Boolean(data?.shop);
   const isHome = (data?.houses.length ?? 0) > 0;
+  const isManage = Boolean(data?.portfolio);
+  const homeTo = isShop ? "/app" : isManage ? "/manage" : "/home";
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-5 py-3">
-          <Wordmark to={isShop ? "/app" : "/home"} />
+          <Wordmark to={homeTo} />
           <div className="ml-auto">
             <UserButton />
           </div>
@@ -98,6 +104,21 @@ function AccountPage() {
                   </p>
                 </Link>
                 )}
+                {isManage && data.portfolio && (
+                  <Link
+                    to="/manage"
+                    className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] transition-[box-shadow] hover:shadow-[var(--shadow-border-hover)]"
+                  >
+                    <p className="text-xs tracking-wide text-muted-foreground uppercase">
+                      Property manager
+                    </p>
+                    <p className="mt-1 font-display text-lg font-medium">{data.portfolio.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {data.portfolio.houseCount}{" "}
+                      {data.portfolio.houseCount === 1 ? "house" : "houses"} in the portfolio
+                    </p>
+                  </Link>
+                )}
               </div>
             </section>
 
@@ -137,9 +158,22 @@ function AccountPage() {
                     </p>
                   </li>
                 ))}
-                {!isShop && !isHome && (
+                {isManage && data.portfolio && (
+                  <li className="px-5 py-4">
+                    <p className="font-medium">Portfolio · {data.portfolio.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      ${dollars(MANAGE_MONTHLY)}/month or ${dollars(MANAGE_ANNUAL)}/year for{" "}
+                      {MANAGE_INCLUDED} houses
+                      {data.portfolio.extraSlots > 0
+                        ? ` · ${data.portfolio.extraSlots} extra ${data.portfolio.extraSlots === 1 ? "house" : "houses"} at $${dollars(MANAGE_EXTRA_MONTHLY)}/month`
+                        : ""}
+                      .
+                    </p>
+                  </li>
+                )}
+                {!isShop && !isHome && !isManage && (
                   <li className="px-5 py-4 text-sm text-muted-foreground">
-                    No shop or house license on this login yet.
+                    No shop, house, or portfolio license on this login yet.
                   </li>
                 )}
               </ul>
@@ -177,7 +211,12 @@ function AccountPage() {
                       <Link to="/app/settings">Shop settings</Link>
                     </Button>
                   )}
-                  {!isHome && (
+                  {isManage && (
+                    <Button asChild variant="outline">
+                      <Link to="/manage">Open portfolio</Link>
+                    </Button>
+                  )}
+                  {!isHome && !isManage && (
                     <Button asChild variant="outline">
                       <Link to="/home/add">Add a house</Link>
                     </Button>

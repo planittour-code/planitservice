@@ -3,6 +3,7 @@ import { PaidLanding } from "@/components/paid-landing";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import {
+  MANAGE_MONTHLY,
   PROPERTY_MONTHLY,
   SHOP_MONTHLY,
   dollars,
@@ -46,7 +47,7 @@ function WelcomeSite() {
             <p className="text-center text-sm tracking-wide text-muted-foreground uppercase">
               Choose how you use it
             </p>
-            <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div className="mt-8 grid gap-6 md:grid-cols-3">
               <PathCard
                 kicker="Homeowners"
                 title="Own the Property Record."
@@ -63,6 +64,14 @@ function WelcomeSite() {
                 to="/shop"
                 cta="I’m a contractor"
                 emphasis
+              />
+              <PathCard
+                kicker="Property managers"
+                title="One file for every house you manage."
+                body="A portfolio of Property Records — photos, jobs, warranties, and issued estimates at the address. Shops still quote in their shop. The homeowner can claim the file later."
+                price={`Portfolio from $${dollars(MANAGE_MONTHLY)} / month for 10 houses`}
+                to="/manage"
+                cta="I’m a property manager"
               />
             </div>
           </div>
@@ -106,7 +115,7 @@ function PathCard({
   title: string;
   body: string;
   price: string;
-  to: "/homeowner" | "/shop";
+  to: "/homeowner" | "/shop" | "/manage";
   cta: string;
   emphasis?: boolean;
 }) {

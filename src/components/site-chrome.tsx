@@ -7,18 +7,25 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { cn } from "@/lib/utils";
 
-export function AuthSlot({ signedInTo = "/app" }: { signedInTo?: "/app" | "/home" | "/shop" }) {
+export function AuthSlot({
+  signedInTo = "/app",
+}: {
+  signedInTo?: "/app" | "/home" | "/shop" | "/manage";
+}) {
   const { user, isPending } = useCurrentUserState();
   if (isPending) return <div className="h-11 w-24 animate-pulse rounded-md bg-muted" />;
   if (user) {
     return <UserButton />;
   }
+  const search =
+    signedInTo === "/home"
+      ? { role: "homeowner", next: "/home" }
+      : signedInTo === "/manage"
+        ? { next: "/manage" }
+        : {};
   return (
     <Button asChild variant="outline">
-      <Link
-        to="/login"
-        search={signedInTo === "/home" ? { role: "homeowner", next: "/home" } : {}}
-      >
+      <Link to="/login" search={search}>
         Sign in
       </Link>
     </Button>
@@ -34,7 +41,7 @@ export function PublicHeader({
   children?: ReactNode;
   compact?: boolean;
   home?: "/" | "/shop";
-  path?: "choose" | "homeowner" | "contractor" | "public";
+  path?: "choose" | "homeowner" | "contractor" | "manager" | "public";
 }) {
   const lane = path ?? (home === "/shop" ? "contractor" : "choose");
   return (
@@ -55,6 +62,9 @@ export function PublicHeader({
               <Button asChild variant="outline" className="min-h-11">
                 <Link to="/shop">Contractor</Link>
               </Button>
+              <Button asChild variant="outline" className="min-h-11">
+                <Link to="/manage">Property manager</Link>
+              </Button>
             </>
           )}
           {lane === "homeowner" && (
@@ -64,6 +74,9 @@ export function PublicHeader({
                 Pricing
               </HeaderLink>
               <HeaderLink to="/shop">For contractors</HeaderLink>
+              <HeaderLink to="/manage" hideOnMobile>
+                For managers
+              </HeaderLink>
             </>
           )}
           {lane === "contractor" && (
@@ -74,6 +87,26 @@ export function PublicHeader({
                 Pricing
               </HeaderLink>
               <HeaderLink to="/homeowner">For homeowners</HeaderLink>
+              <HeaderLink to="/manage" hideOnMobile>
+                For managers
+              </HeaderLink>
+            </>
+          )}
+          {lane === "manager" && (
+            <>
+              <HeaderLink to="/manage" hideOnMobile>
+                The portfolio
+              </HeaderLink>
+              <HeaderLink to="/manage/open">Open a portfolio</HeaderLink>
+              <HeaderLink to="/manage" hash="pricing" hideOnMobile>
+                Pricing
+              </HeaderLink>
+              <HeaderLink to="/shop" hideOnMobile>
+                For contractors
+              </HeaderLink>
+              <HeaderLink to="/homeowner" hideOnMobile>
+                For homeowners
+              </HeaderLink>
             </>
           )}
           {children}
@@ -133,6 +166,9 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
               <Link to="/homeowner" className="hover:text-foreground">
                 For homeowners
               </Link>
+              <Link to="/manage" className="hover:text-foreground">
+                For managers
+              </Link>
             </>
           ) : (
             <>
@@ -141,6 +177,9 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
               </Link>
               <Link to="/shop" className="hover:text-foreground">
                 For contractors
+              </Link>
+              <Link to="/manage" className="hover:text-foreground">
+                For managers
               </Link>
             </>
           )}

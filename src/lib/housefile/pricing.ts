@@ -10,6 +10,13 @@ export const PROPERTY_ANNUAL = 79.99;
 export const PRO_MONTHLY = 9.99;
 export const PRO_ANNUAL = 99;
 
+/** Property manager portfolio. Base includes 10 houses. Extra houses are billed. */
+export const MANAGE_INCLUDED = 10;
+export const MANAGE_MONTHLY = 39.99;
+export const MANAGE_ANNUAL = 399;
+export const MANAGE_EXTRA_MONTHLY = 3.99;
+export const MANAGE_EXTRA_ANNUAL = 39.99;
+
 export function dollars(n: number) {
   return Number.isInteger(n) ? String(n) : n.toFixed(2);
 }

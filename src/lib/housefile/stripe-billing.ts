@@ -2,7 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import type { CheckoutKind } from "@/lib/housefile/stripe";
 import {
+  claimPaidManageSession,
   claimPaidShopSession,
+  confirmPaidManageSession,
   confirmPaidShopSession,
   createCheckoutSessionUrl,
   createPortalSessionUrl,
@@ -14,6 +16,8 @@ export const startCheckout = createServerFn({ method: "POST" })
     (input: {
       kind: CheckoutKind;
       propertyId?: string;
+      officeName?: string;
+      quantity?: number;
       successPath: string;
       cancelPath: string;
     }) => input,
@@ -25,6 +29,8 @@ export const startCheckout = createServerFn({ method: "POST" })
       kind: data.kind,
       userId: context.userId,
       propertyId: data.propertyId,
+      officeName: data.officeName,
+      quantity: data.quantity,
       customerEmail: session?.email,
       successPath: data.successPath,
       cancelPath: data.cancelPath,
@@ -49,6 +55,31 @@ export const claimShopCheckout = createServerFn({ method: "POST" })
   .validator((input: { sessionId: string; password: string; name?: string }) => input)
   .handler(async ({ data }) => {
     return claimPaidShopSession(data);
+  });
+
+export const startManageCheckout = createServerFn({ method: "POST" })
+  .validator((input: { kind: "manage_monthly" | "manage_annual"; officeName?: string }) => input)
+  .handler(async ({ data }) => {
+    const url = await createCheckoutSessionUrl({
+      kind: data.kind,
+      officeName: data.officeName,
+      successPath: "/manage/open",
+      cancelPath: "/manage/open",
+    });
+    return { url };
+  });
+
+export const claimManageCheckout = createServerFn({ method: "POST" })
+  .validator((input: { sessionId: string; password: string; name?: string }) => input)
+  .handler(async ({ data }) => {
+    return claimPaidManageSession(data);
+  });
+
+export const confirmManageCheckout = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((sessionId: string) => sessionId)
+  .handler(async ({ context, data: sessionId }) => {
+    return confirmPaidManageSession({ sessionId, userId: context.userId });
   });
 
 export const confirmShopCheckout = createServerFn({ method: "POST" })

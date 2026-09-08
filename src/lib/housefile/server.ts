@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware, optionalAuthMiddleware } from "@/lib/auth/middleware";
 import { getSql, type Sql } from "@/lib/db";
 import { LEGAL_EMAIL } from "@/lib/legal";
+import { MANAGE_INCLUDED } from "./pricing";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, STARTER_BOOK, type PriceBookItem } from "./book";
 import {
   KIT_SEEDS,
@@ -2997,6 +2998,22 @@ export const getAccount = createServerFn({ method: "GET" })
         `
       : [{ c: 0 }];
 
+    const portfolio = (
+      await sql<{
+        id: string;
+        name: string;
+        paid_at: string | null;
+        extra_slots: number;
+      }>`
+        select id, name, paid_at, extra_slots from portfolios where user_id = ${context.userId} limit 1
+      `
+    )[0] ?? null;
+    const portfolioCount = portfolio
+      ? await sql<{ c: number }>`
+          select count(*)::int as c from portfolio_properties where portfolio_id = ${portfolio.id}
+        `
+      : [{ c: 0 }];
+
     return {
       email,
       name: email?.split("@")[0] ?? "Account",
@@ -3011,14 +3028,22 @@ export const getAccount = createServerFn({ method: "GET" })
         status: h.status,
         renewsOn: h.renews_on,
       })),
+      portfolio: portfolio?.paid_at
+        ? {
+            id: portfolio.id,
+            name: portfolio.name,
+            houseCount: num(portfolioCount[0]?.c),
+            extraSlots: num(portfolio.extra_slots),
+          }
+        : null,
     };
   });
 
 export type Audience = {
   signedIn: boolean;
-  kind: "guest" | "homeowner" | "contractor";
+  kind: "guest" | "homeowner" | "contractor" | "manager";
   paying: boolean;
-  homePath: "/" | "/home" | "/app" | "/shop/open" | "/homeowner";
+  homePath: "/" | "/home" | "/app" | "/shop/open" | "/homeowner" | "/manage" | "/manage/open";
 };
 
 export const getAudience = createServerFn({ method: "GET" })
@@ -3045,6 +3070,10 @@ export const getAudience = createServerFn({ method: "GET" })
         `;
     const shop = owned[0] ?? member[0] ?? null;
     const contractorPaying = Boolean(shop?.shop_paid_at);
+    const portfolio = await sql<{ paid_at: string | null }>`
+      select paid_at from portfolios where user_id = ${userId} limit 1
+    `;
+    const managerPaying = Boolean(portfolio[0]?.paid_at);
     const plans = await sql<{ status: string }>`
       select pp.status
       from property_plans pp
@@ -3058,22 +3087,189 @@ export const getAudience = createServerFn({ method: "GET" })
       plans.some((p) => p.status === "active" || p.status === "paid" || p.status === "trialing") ||
       (houseCount[0]?.c ?? 0) > 0;
 
-    if (contractorPaying && !homeownerPaying) {
+    if (contractorPaying) {
       return { signedIn: true, kind: "contractor", paying: true, homePath: "/app" };
     }
-    if (homeownerPaying && !contractorPaying) {
+    if (managerPaying) {
+      return { signedIn: true, kind: "manager", paying: true, homePath: "/manage" };
+    }
+    if (homeownerPaying) {
       return { signedIn: true, kind: "homeowner", paying: true, homePath: "/home" };
-    }
-    if (contractorPaying && homeownerPaying) {
-      return { signedIn: true, kind: "contractor", paying: true, homePath: "/app" };
     }
     if (shop) {
       return { signedIn: true, kind: "contractor", paying: false, homePath: "/shop/open" };
+    }
+    if (portfolio[0]) {
+      return { signedIn: true, kind: "manager", paying: false, homePath: "/manage/open" };
     }
     return { signedIn: true, kind: "homeowner", paying: false, homePath: "/homeowner" };
     } catch {
       return { signedIn: true, kind: "guest", paying: false, homePath: "/" };
     }
+  });
+
+async function requirePaidPortfolio(sql: Sql, userId: string) {
+  const rows = await sql<{
+    id: string;
+    user_id: string;
+    name: string;
+    paid_at: string | null;
+    extra_slots: number;
+    included_count: number;
+  }>`
+    select * from portfolios where user_id = ${userId} limit 1
+  `;
+  const portfolio = rows[0];
+  if (!portfolio?.paid_at) throw new Error("Open a portfolio to continue.");
+  return portfolio;
+}
+
+export const getPortfolio = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const sql = await getSql();
+    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const houses = await sql<HomeownerHouse>`
+      select p.*,
+        c.name as company_name,
+        (select count(*)::int from property_facts f where f.property_id = p.id) as fact_count,
+        (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
+        (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
+        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted')) as open_proposal_count,
+        (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
+        (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_title,
+        (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_token
+      from portfolio_properties pp
+      join properties p on p.id = pp.property_id
+      join companies c on c.id = p.company_id
+      where pp.portfolio_id = ${portfolio.id}
+      order by p.address_line
+    `;
+    const cap = num(portfolio.included_count) || MANAGE_INCLUDED;
+    const extra = num(portfolio.extra_slots);
+    return {
+      id: portfolio.id,
+      name: portfolio.name,
+      included: cap,
+      extra,
+      cap: cap + extra,
+      houseCount: houses.length,
+      houses: houses.map((h) => ({
+        ...listRowFromCounts(h),
+        company_name: h.company_name,
+        open_title: h.open_title,
+        open_token: h.open_token,
+        homeowner_name: h.homeowner_name,
+      })),
+    };
+  });
+
+export const addPortfolioProperty = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: {
+      addressLine: string;
+      city: string;
+      state: string;
+      zip: string;
+      ownerName?: string;
+    }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const address = data.addressLine.trim();
+    if (address.length < 3) throw new Error("Need the street address.");
+    const count = await sql<{ c: number }>`
+      select count(*)::int as c from portfolio_properties where portfolio_id = ${portfolio.id}
+    `;
+    const cap = (num(portfolio.included_count) || MANAGE_INCLUDED) + num(portfolio.extra_slots);
+    if (num(count[0]?.c) >= cap) {
+      return { ok: false as const, needExtra: true as const };
+    }
+    const existing = (
+      await sql<Property>`
+        select p.*
+        from portfolio_properties pp
+        join properties p on p.id = pp.property_id
+        where pp.portfolio_id = ${portfolio.id}
+          and lower(trim(p.address_line)) = ${address.toLowerCase()}
+        limit 1
+      `
+    )[0];
+    if (existing) return { ok: true as const, propertyId: existing.id, needExtra: false as const };
+    const id = crypto.randomUUID();
+    const owner = data.ownerName?.trim() || "Owner";
+    await sql`
+      insert into properties (
+        id, company_id, share_token, invite_token, invite_status,
+        address_line, city, state, zip, homeowner_name, homeowner_email
+      ) values (
+        ${id}, ${HOUSEHOLD_COMPANY}, ${slugToken()}, ${slugToken()}, ${"pending"},
+        ${address}, ${data.city.trim() || "—"}, ${data.state.trim() || "GA"}, ${data.zip.trim() || "—"},
+        ${owner}, ${""}
+      )
+    `;
+    await sql`
+      insert into portfolio_properties (portfolio_id, property_id)
+      values (${portfolio.id}, ${id})
+    `;
+    await seedMaintenance(sql, id);
+    return { ok: true as const, propertyId: id, needExtra: false as const };
+  });
+
+export const getPortfolioRecord = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((id: string) => id)
+  .handler(async ({ context, data: id }) => {
+    const sql = await getSql();
+    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const rows = await sql<Property>`
+      select p.*
+      from properties p
+      join portfolio_properties pp on pp.property_id = p.id
+      where p.id = ${id} and pp.portfolio_id = ${portfolio.id}
+      limit 1
+    `;
+    if (!rows[0]) throw new Error("Property not found");
+    await seedMaintenance(sql, id);
+    const house = await loadHouse(sql, rows[0]);
+    const tasks = await sql<MaintenanceTask>`
+      select * from maintenance_tasks where property_id = ${id}
+      order by completed_at nulls first, due_on
+    `;
+    return { house, tasks, portfolioName: portfolio.name };
+  });
+
+export const completePortfolioMaintenance = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { taskId: string; notes?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const task = (
+      await sql<MaintenanceTask>`
+        select t.*
+        from maintenance_tasks t
+        join portfolio_properties pp on pp.property_id = t.property_id
+        where t.id = ${data.taskId} and pp.portfolio_id = ${portfolio.id}
+        limit 1
+      `
+    )[0];
+    if (!task) throw new Error("Task not found");
+    await sql`
+      update maintenance_tasks
+      set completed_at = now(), notes = ${data.notes?.trim() || task.notes}
+      where id = ${task.id}
+    `;
+    await sql`
+      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
+      values (
+        ${crypto.randomUUID()}, ${task.property_id}, ${task.title}, ${task.system_name}, ${task.cadence},
+        ${nextDue(task.cadence as "monthly" | "quarterly" | "semiannual" | "annual")}
+      )
+    `;
+    return { ok: true as const };
   });
 
 

@@ -17,6 +17,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as HomeownerRouteImport } from './routes/homeowner'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ManageRouteRouteImport } from './routes/manage/route'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SaasRouteImport } from './routes/saas'
 import { Route as ShopRouteImport } from './routes/shop'
@@ -37,6 +38,10 @@ import { Route as HomeIdRouteImport } from './routes/home/$id'
 import { Route as HomeAddRouteImport } from './routes/home/add'
 import { Route as HouseTokenRouteImport } from './routes/house.$token'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as ManageIndexRouteImport } from './routes/manage/index'
+import { Route as ManageIdRouteImport } from './routes/manage/$id'
+import { Route as ManageAddRouteImport } from './routes/manage/add'
+import { Route as ManageOpenRouteImport } from './routes/manage/open'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as RfpTokenRouteImport } from './routes/rfp.$token'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
@@ -85,6 +90,11 @@ const HomeownerRoute = HomeownerRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManageRouteRoute = ManageRouteRouteImport.update({
+  id: '/manage',
+  path: '/manage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -187,6 +197,26 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManageIndexRoute = ManageIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ManageRouteRoute,
+} as any)
+const ManageIdRoute = ManageIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ManageRouteRoute,
+} as any)
+const ManageAddRoute = ManageAddRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => ManageRouteRoute,
+} as any)
+const ManageOpenRoute = ManageOpenRouteImport.update({
+  id: '/open',
+  path: '/open',
+  getParentRoute: () => ManageRouteRoute,
+} as any)
 const PTokenRoute = PTokenRouteImport.update({
   id: '/p/$token',
   path: '/p/$token',
@@ -237,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
+  '/manage': typeof ManageRouteRouteWithChildren
   '/account': typeof AccountRoute
   '/aup': typeof AupRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -260,12 +291,16 @@ export interface FileRoutesByFullPath {
   '/home/add': typeof HomeAddRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/manage/$id': typeof ManageIdRoute
+  '/manage/add': typeof ManageAddRoute
+  '/manage/open': typeof ManageOpenRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
+  '/manage/': typeof ManageIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
@@ -297,12 +332,16 @@ export interface FileRoutesByTo {
   '/home/add': typeof HomeAddRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/manage/$id': typeof ManageIdRoute
+  '/manage/add': typeof ManageAddRoute
+  '/manage/open': typeof ManageOpenRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
   '/app': typeof AppIndexRoute
   '/home': typeof HomeIndexRoute
+  '/manage': typeof ManageIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
@@ -314,6 +353,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
+  '/manage': typeof ManageRouteRouteWithChildren
   '/account': typeof AccountRoute
   '/aup': typeof AupRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -337,12 +377,16 @@ export interface FileRoutesById {
   '/home/add': typeof HomeAddRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/manage/$id': typeof ManageIdRoute
+  '/manage/add': typeof ManageAddRoute
+  '/manage/open': typeof ManageOpenRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
+  '/manage/': typeof ManageIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
@@ -355,6 +399,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/home'
+    | '/manage'
     | '/account'
     | '/aup'
     | '/forgot-password'
@@ -378,12 +423,16 @@ export interface FileRouteTypes {
     | '/home/add'
     | '/house/$token'
     | '/invite/$token'
+    | '/manage/$id'
+    | '/manage/add'
+    | '/manage/open'
     | '/p/$token'
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
     | '/app/'
     | '/home/'
+    | '/manage/'
     | '/api/auth/$'
     | '/api/stripe/webhook'
     | '/app/properties/$id'
@@ -415,12 +464,16 @@ export interface FileRouteTypes {
     | '/home/add'
     | '/house/$token'
     | '/invite/$token'
+    | '/manage/$id'
+    | '/manage/add'
+    | '/manage/open'
     | '/p/$token'
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
     | '/app'
     | '/home'
+    | '/manage'
     | '/api/auth/$'
     | '/api/stripe/webhook'
     | '/app/properties/$id'
@@ -431,6 +484,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/home'
+    | '/manage'
     | '/account'
     | '/aup'
     | '/forgot-password'
@@ -454,12 +508,16 @@ export interface FileRouteTypes {
     | '/home/add'
     | '/house/$token'
     | '/invite/$token'
+    | '/manage/$id'
+    | '/manage/add'
+    | '/manage/open'
     | '/p/$token'
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
     | '/app/'
     | '/home/'
+    | '/manage/'
     | '/api/auth/$'
     | '/api/stripe/webhook'
     | '/app/properties/$id'
@@ -471,6 +529,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
+  ManageRouteRoute: typeof ManageRouteRouteWithChildren
   AccountRoute: typeof AccountRoute
   AupRoute: typeof AupRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -547,6 +606,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manage': {
+      id: '/manage'
+      path: '/manage'
+      fullPath: '/manage'
+      preLoaderRoute: typeof ManageRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -689,6 +755,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manage/': {
+      id: '/manage/'
+      path: '/'
+      fullPath: '/manage/'
+      preLoaderRoute: typeof ManageIndexRouteImport
+      parentRoute: typeof ManageRouteRoute
+    }
+    '/manage/$id': {
+      id: '/manage/$id'
+      path: '/$id'
+      fullPath: '/manage/$id'
+      preLoaderRoute: typeof ManageIdRouteImport
+      parentRoute: typeof ManageRouteRoute
+    }
+    '/manage/add': {
+      id: '/manage/add'
+      path: '/add'
+      fullPath: '/manage/add'
+      preLoaderRoute: typeof ManageAddRouteImport
+      parentRoute: typeof ManageRouteRoute
+    }
+    '/manage/open': {
+      id: '/manage/open'
+      path: '/open'
+      fullPath: '/manage/open'
+      preLoaderRoute: typeof ManageOpenRouteImport
+      parentRoute: typeof ManageRouteRoute
+    }
     '/p/$token': {
       id: '/p/$token'
       path: '/p/$token'
@@ -813,6 +907,24 @@ const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
   HomeRouteRouteChildren,
 )
 
+interface ManageRouteRouteChildren {
+  ManageIdRoute: typeof ManageIdRoute
+  ManageAddRoute: typeof ManageAddRoute
+  ManageOpenRoute: typeof ManageOpenRoute
+  ManageIndexRoute: typeof ManageIndexRoute
+}
+
+const ManageRouteRouteChildren: ManageRouteRouteChildren = {
+  ManageIdRoute: ManageIdRoute,
+  ManageAddRoute: ManageAddRoute,
+  ManageOpenRoute: ManageOpenRoute,
+  ManageIndexRoute: ManageIndexRoute,
+}
+
+const ManageRouteRouteWithChildren = ManageRouteRoute._addFileChildren(
+  ManageRouteRouteChildren,
+)
+
 interface ShopRouteChildren {
   ShopOpenRoute: typeof ShopOpenRoute
 }
@@ -838,6 +950,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
+  ManageRouteRoute: ManageRouteRouteWithChildren,
   AccountRoute: AccountRoute,
   AupRoute: AupRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,

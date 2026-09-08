@@ -30,6 +30,10 @@ export function priceIdFor(kind: CheckoutKind): string {
       process.env.STRIPE_PRICE_SHOP_ANNUAL?.trim() || "price_1U84obA3tQnfBXBTHrOLzQ6m",
     seat_monthly:
       process.env.STRIPE_PRICE_SEAT_MONTHLY?.trim() || "price_1U84pZA3tQnfBXBT68DvtKj0",
+    manage_monthly: process.env.STRIPE_PRICE_MANAGE_MONTHLY?.trim() || "",
+    manage_annual: process.env.STRIPE_PRICE_MANAGE_ANNUAL?.trim() || "",
+    manage_extra_monthly: process.env.STRIPE_PRICE_MANAGE_EXTRA_MONTHLY?.trim() || "",
+    manage_extra_annual: process.env.STRIPE_PRICE_MANAGE_EXTRA_ANNUAL?.trim() || "",
   };
   const id = map[kind]?.trim();
   if (!id) {
@@ -54,7 +58,9 @@ export async function createCheckoutSessionUrl(input: {
   customerEmail?: string | null;
   userId?: string;
   shopName?: string;
+  officeName?: string;
   propertyId?: string;
+  quantity?: number;
   successPath: string;
   cancelPath: string;
 }): Promise<string> {
@@ -63,7 +69,7 @@ export async function createCheckoutSessionUrl(input: {
   const origin = appOrigin();
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
+    line_items: [{ price, quantity: input.quantity && input.quantity > 1 ? input.quantity : 1 }],
     success_url: `${origin}${input.successPath}${input.successPath.includes("?") ? "&" : "?"}session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}${input.cancelPath}`,
     customer_email: input.customerEmail || undefined,
@@ -73,6 +79,7 @@ export async function createCheckoutSessionUrl(input: {
       kind: input.kind,
       propertyId: input.propertyId ?? "",
       shopName: input.shopName ?? "",
+      officeName: input.officeName ?? "",
     },
     subscription_data: {
       metadata: {
@@ -80,6 +87,7 @@ export async function createCheckoutSessionUrl(input: {
         kind: input.kind,
         propertyId: input.propertyId ?? "",
         shopName: input.shopName ?? "",
+        officeName: input.officeName ?? "",
       },
     },
   });
@@ -229,4 +237,137 @@ export async function confirmPaidShopSession(input: { sessionId: string; userId:
   const session = await getSessionUser();
   await markShopPaid(input.userId, session?.email ?? paid.email, paid.shopName);
   return { ok: true as const };
+}
+
+export async function markPortfolioPaid(
+  userId: string,
+  email?: string | null,
+  officeName?: string | null,
+) {
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const existing = await sql<{ id: string }>`
+    select id from portfolios where user_id = ${userId} limit 1
+  `;
+  if (existing[0]) {
+    await sql`
+      update portfolios
+      set paid_at = coalesce(paid_at, now())
+      where id = ${existing[0].id}
+    `;
+    return existing[0].id;
+  }
+  const id = crypto.randomUUID();
+  const local = officeName?.trim() || email?.split("@")[0]?.replace(/[._]/g, " ") || "My portfolio";
+  const name = local.replace(/\b\w/g, (c) => c.toUpperCase()) || "My portfolio";
+  await sql`
+    insert into portfolios (id, user_id, name, paid_at)
+    values (${id}, ${userId}, ${name}, now())
+  `;
+  return id;
+}
+
+export async function readPaidManageSession(sessionId: string) {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const kind = session.metadata?.kind ?? "";
+  const paid = session.payment_status === "paid" || session.status === "complete";
+  const base = kind === "manage_monthly" || kind === "manage_annual";
+  const extra = kind === "manage_extra_monthly" || kind === "manage_extra_annual";
+  if (!paid || (!base && !extra)) {
+    return { ok: false as const };
+  }
+  const email = shopEmailFromSession(session);
+  if (!email) return { ok: false as const };
+  let quantity = 1;
+  if (extra) {
+    const full = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["line_items"] });
+    quantity = full.line_items?.data[0]?.quantity ?? 1;
+  }
+  return {
+    ok: true as const,
+    email,
+    userId: session.metadata?.userId?.trim() || "",
+    officeName: session.metadata?.officeName?.trim() || "",
+    extra,
+    quantity,
+  };
+}
+
+export async function claimPaidManageSession(input: {
+  sessionId: string;
+  password: string;
+  name?: string;
+}) {
+  const paid = await readPaidManageSession(input.sessionId);
+  if (!paid.ok) throw new Error("Checkout did not finish. Open a portfolio to try again.");
+  if (paid.extra) throw new Error("Sign in, then add extra houses from the portfolio.");
+  if (input.password.trim().length < 8) throw new Error("Password must be at least 8 characters.");
+
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const existing = await sql<{ id: string }>`
+    select id from "user" where lower(email) = ${paid.email} limit 1
+  `;
+  if (existing[0]) {
+    throw new Error("That email already has an account. Sign in, then open a portfolio from the explainer.");
+  }
+
+  const { auth } = await import("@/lib/auth/server");
+  const name =
+    input.name?.trim() || paid.officeName || paid.email.split("@")[0] || "Property manager";
+  const signed = await auth.api.signUpEmail({
+    body: { email: paid.email, password: input.password, name },
+  });
+  const userId = signed.user.id;
+  await markPortfolioPaid(userId, paid.email, paid.officeName || name);
+  return { ok: true as const, email: paid.email };
+}
+
+export async function grantManageExtraSlots(input: {
+  userId: string;
+  sessionId: string;
+  quantity: number;
+}) {
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const rows = await sql<{ id: string }>`
+    select id from portfolios where user_id = ${input.userId} limit 1
+  `;
+  const portfolioId = rows[0]?.id;
+  if (!portfolioId) throw new Error("Open a portfolio before adding extra houses.");
+  const recorded = await sql<{ session_id: string }>`
+    insert into portfolio_billing_events (session_id, portfolio_id, kind, quantity)
+    values (${input.sessionId}, ${portfolioId}, ${"manage_extra"}, ${input.quantity})
+    on conflict (session_id) do nothing
+    returning session_id
+  `;
+  if (recorded[0]) {
+    await sql`
+      update portfolios
+      set extra_slots = extra_slots + ${input.quantity},
+          paid_at = coalesce(paid_at, now())
+      where id = ${portfolioId}
+    `;
+  }
+}
+
+export async function confirmPaidManageSession(input: { sessionId: string; userId: string }) {
+  const paid = await readPaidManageSession(input.sessionId);
+  if (!paid.ok) return { ok: false as const };
+  if (paid.userId && paid.userId !== input.userId) {
+    throw new Error("That checkout belongs to another account.");
+  }
+  const { getSessionUser } = await import("@/lib/auth/verify.server");
+  const session = await getSessionUser();
+  if (paid.extra) {
+    await grantManageExtraSlots({
+      userId: input.userId,
+      sessionId: input.sessionId,
+      quantity: paid.quantity,
+    });
+    return { ok: true as const, extra: true as const };
+  }
+  await markPortfolioPaid(input.userId, session?.email ?? paid.email, paid.officeName);
+  return { ok: true as const, extra: false as const };
 }

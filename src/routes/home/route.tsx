@@ -23,6 +23,9 @@ function HomeLayout() {
   if (audience.kind === "contractor" && audience.paying) {
     return <Navigate to="/app" />;
   }
+  if (audience.kind === "manager" && audience.paying) {
+    return <Navigate to="/manage" />;
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -38,6 +38,10 @@ function AppLayout() {
     return <Navigate to="/home" />;
   }
 
+  if (audience.kind === "manager" && audience.paying) {
+    return <Navigate to="/manage" />;
+  }
+
   if (!(audience.kind === "contractor" && audience.paying)) {
     return <Navigate to="/shop/open" />;
   }

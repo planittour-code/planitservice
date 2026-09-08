@@ -32,17 +32,22 @@ function isHouseDestination(path: string) {
   return path === "/home" || path.startsWith("/home/");
 }
 
+function isManageDestination(path: string) {
+  return path === "/manage" || path.startsWith("/manage/");
+}
+
 function Login() {
   const search = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const { audience, isPending: audiencePending } = useAudience();
   const homeowner = Boolean(search.invite) || search.role === "homeowner";
-  const next = safeNextPath(search.next, homeowner ? "/home" : "/app");
+  const manager = search.next === "/manage" || Boolean(search.next?.startsWith("/manage/"));
+  const next = safeNextPath(search.next, homeowner ? "/home" : manager ? "/manage" : "/app");
   // Land back on /login after auth so a paid contractor is not sent to /home
   // just because the public Sign in button asked for the house dashboard.
   const after = search.invite
     ? `/invite/${search.invite}`
-    : isShopDestination(next) || next.startsWith("/home/add")
+    : isShopDestination(next) || next.startsWith("/home/add") || next.startsWith("/manage/add")
       ? next
       : "/login";
   const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
@@ -102,9 +107,16 @@ function Login() {
         />
       );
     }
+    if (audience.kind === "manager" && audience.paying) {
+      if (next.startsWith("/manage/add")) return <Navigate to="/manage/add" />;
+      return <Navigate to="/manage" />;
+    }
     if (audience.kind === "homeowner" && audience.paying) {
       if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
       return <Navigate to="/home" />;
+    }
+    if (next.startsWith("/manage/add") || isManageDestination(next)) {
+      return <Navigate to="/manage/open" />;
     }
     if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
     if (homeowner || isHouseDestination(next)) {
@@ -148,15 +160,21 @@ function Login() {
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-8 md:grid-cols-2 md:items-center">
         <div className="space-y-4">
           <p className="text-sm tracking-wide text-muted-foreground uppercase">
-            {homeowner ? "For the homeowner" : "For contractors"}
+            {homeowner ? "For the homeowner" : manager ? "For property managers" : "For contractors"}
           </p>
           <h1 className="font-display text-4xl font-medium tracking-tight md:text-5xl">
-            {homeowner ? "Keep the record for every house you own." : "Sign in and quote the job."}
+            {homeowner
+              ? "Keep the record for every house you own."
+              : manager
+                ? "Sign in to the houses you manage."
+                : "Sign in and quote the job."}
           </h1>
           <p className="max-w-md text-muted-foreground">
             {homeowner
               ? "Jobs, warranties, and maintenance at the address. Add another property when you need to. Pro hands the Property Record to the next owner."
-              : "Pick the template. Enter while you talk. Price from materials. Send the estimate before you leave. The Property Record is how they call you back."}
+              : manager
+                ? "Photos, jobs, warranties, and issued estimates at each address. Add a house from the portfolio."
+                : "Pick the template. Enter while you talk. Price from materials. Send the estimate before you leave. The Property Record is how they call you back."}
           </p>
         </div>
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">
@@ -278,6 +296,11 @@ function Login() {
                   New shop?{" "}
                   <Link to="/shop/open" className="underline underline-offset-2 hover:text-foreground">
                     Open a shop
+                  </Link>
+                  {" · "}
+                  New portfolio?{" "}
+                  <Link to="/manage/open" className="underline underline-offset-2 hover:text-foreground">
+                    Open a portfolio
                   </Link>
                 </p>
               )}
