@@ -36,8 +36,8 @@ const LIVE_PRICES: Record<CheckoutKind, string> = {
   manage_annual: "price_1UDW5NPNiO3QnmB4d6Ze4U59",
   manage_extra_monthly: "price_1UDW7cPNiO3QnmB4sTmTb7lp",
   manage_extra_annual: "price_1UDW8FPNiO3QnmB4NRMYNdI4",
-  manage_seat_monthly: "",
-  manage_seat_annual: "",
+  manage_seat_monthly: "price_1U8nJaPNiO3QnmB44sb5Hjm8",
+  manage_seat_annual: "price_1UDqhQPNiO3QnmB4x9l2XbPr",
 };
 
 const PRICE_ENV: Record<CheckoutKind, string> = {
