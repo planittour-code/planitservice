@@ -16,6 +16,9 @@ export const MANAGE_MONTHLY = 39.99;
 export const MANAGE_ANNUAL = 399;
 export const MANAGE_EXTRA_MONTHLY = 3.99;
 export const MANAGE_EXTRA_ANNUAL = 39.99;
+/** Owner is one office seat. Extra seats are billed like extra houses. */
+export const MANAGE_SEAT_MONTHLY = 5;
+export const MANAGE_SEAT_ANNUAL = 50;
 
 export function dollars(n: number) {
   return Number.isInteger(n) ? String(n) : n.toFixed(2);

@@ -32,6 +32,8 @@ const catalog = [
   { env: "STRIPE_PRICE_MANAGE_ANNUAL", name: "PlanitService — Property Manager — Annual (TEST)", cents: 39900, interval: "year" },
   { env: "STRIPE_PRICE_MANAGE_EXTRA_MONTHLY", name: "PlanitService — Extra PM house — Monthly (TEST)", cents: 399, interval: "month" },
   { env: "STRIPE_PRICE_MANAGE_EXTRA_ANNUAL", name: "PlanitService — Extra PM house — Annual (TEST)", cents: 3999, interval: "year" },
+  { env: "STRIPE_PRICE_MANAGE_SEAT_MONTHLY", name: "PlanitService — Extra PM office seat — Monthly (TEST)", cents: 500, interval: "month" },
+  { env: "STRIPE_PRICE_MANAGE_SEAT_ANNUAL", name: "PlanitService — Extra PM office seat — Annual (TEST)", cents: 5000, interval: "year" },
 ];
 
 const lines = ["STRIPE_SECRET_KEY=" + key];

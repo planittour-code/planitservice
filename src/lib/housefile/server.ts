@@ -62,6 +62,8 @@ import type {
   HomeownerProfile,
   MaintenanceTask,
   Portfolio,
+  PortfolioMember,
+  PortfolioRole,
   PropertyPlan,
   PropertyTransfer,
   Rfp,
@@ -3013,16 +3015,55 @@ export const getAccount = createServerFn({ method: "GET" })
         `
       : [{ c: 0 }];
 
-    const portfolio = (
+    let portfolio: {
+      id: string;
+      name: string;
+      paid_at: string | null;
+      extra_slots: number;
+      extra_seats: number;
+      role: "owner" | "staff";
+    } | null = null;
+    const ownedPortfolio = (
       await sql<{
         id: string;
         name: string;
         paid_at: string | null;
         extra_slots: number;
+        extra_seats: number;
       }>`
-        select id, name, paid_at, extra_slots from portfolios where user_id = ${context.userId} limit 1
+        select id, name, paid_at, extra_slots, extra_seats from portfolios where user_id = ${context.userId} limit 1
       `
-    )[0] ?? null;
+    )[0];
+    if (ownedPortfolio) {
+      portfolio = { ...ownedPortfolio, extra_seats: num(ownedPortfolio.extra_seats), role: "owner" };
+    } else {
+      const byUser = (
+        await sql<{
+          id: string;
+          name: string;
+          paid_at: string | null;
+          extra_slots: number;
+          extra_seats: number;
+          member_role: string;
+        }>`
+          select p.id, p.name, p.paid_at, p.extra_slots, p.extra_seats, m.role as member_role
+          from portfolio_members m
+          join portfolios p on p.id = m.portfolio_id
+          where m.user_id = ${context.userId}
+          limit 1
+        `
+      )[0];
+      if (byUser) {
+        portfolio = {
+          id: byUser.id,
+          name: byUser.name,
+          paid_at: byUser.paid_at,
+          extra_slots: byUser.extra_slots,
+          extra_seats: num(byUser.extra_seats),
+          role: byUser.member_role === "owner" ? "owner" : "staff",
+        };
+      }
+    }
     const portfolioCount = portfolio
       ? await sql<{ c: number }>`
           select count(*)::int as c from portfolio_properties where portfolio_id = ${portfolio.id}
@@ -3055,6 +3096,8 @@ export const getAccount = createServerFn({ method: "GET" })
             name: portfolio.name,
             houseCount: num(portfolioCount[0]?.c),
             extraSlots: num(portfolio.extra_slots),
+            extraSeats: num(portfolio.extra_seats),
+            role: portfolio.role,
           }
         : null,
     };
@@ -3090,6 +3133,14 @@ export const getAudience = createServerFn({ method: "GET" })
     if (!userId) return guest;
     try {
     const sql = await getSql();
+    if (context.email) {
+      await sql`
+        update portfolio_members
+        set user_id = ${userId}
+        where lower(email) = ${context.email.trim().toLowerCase()}
+          and (user_id is null or user_id = ${userId})
+      `;
+    }
     const owned = await sql<Company>`
       select * from companies
       where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
@@ -3106,10 +3157,20 @@ export const getAudience = createServerFn({ method: "GET" })
         `;
     const shop = owned[0] ?? member[0] ?? null;
     const contractorPaying = Boolean(shop?.shop_paid_at);
-    const portfolio = await sql<{ paid_at: string | null }>`
+    const ownedPortfolio = await sql<{ paid_at: string | null }>`
       select paid_at from portfolios where user_id = ${userId} limit 1
     `;
-    const managerPaying = Boolean(portfolio[0]?.paid_at);
+    const memberPortfolio = ownedPortfolio[0]
+      ? []
+      : await sql<{ paid_at: string | null }>`
+          select p.paid_at
+          from portfolio_members m
+          join portfolios p on p.id = m.portfolio_id
+          where m.user_id = ${userId}
+          limit 1
+        `;
+    const portfolio = ownedPortfolio[0] ?? memberPortfolio[0] ?? null;
+    const managerPaying = Boolean(portfolio?.paid_at);
     const plans = await sql<{ status: string }>`
       select pp.status
       from property_plans pp
@@ -3140,7 +3201,7 @@ export const getAudience = createServerFn({ method: "GET" })
     if (shop) {
       return { signedIn: true, kind: "contractor", paying: false, homePath: "/shop/open", hats };
     }
-    if (portfolio[0]) {
+    if (portfolio) {
       return { signedIn: true, kind: "manager", paying: false, homePath: "/manage/open", hats };
     }
     return { signedIn: true, kind: "homeowner", paying: false, homePath: "/homeowner", hats };
@@ -3149,19 +3210,78 @@ export const getAudience = createServerFn({ method: "GET" })
     }
   });
 
-async function requirePaidPortfolio(sql: Sql, userId: string) {
-  const rows = await sql<Portfolio>`
+async function requirePaidPortfolio(
+  sql: Sql,
+  userId: string,
+): Promise<{ portfolio: Portfolio; role: PortfolioRole }> {
+  const { getSessionUser } = await import("@/lib/auth/verify.server");
+  const session = await getSessionUser();
+  const office = await portfolioFor(sql, userId, session?.email);
+  if (!office.portfolio.paid_at) throw new Error("Open a portfolio to continue.");
+  return office;
+}
+
+async function portfolioFor(
+  sql: Sql,
+  userId: string,
+  email?: string | null,
+): Promise<{ portfolio: Portfolio; role: PortfolioRole }> {
+  const owned = await sql<Portfolio>`
     select * from portfolios where user_id = ${userId} limit 1
   `;
-  const portfolio = rows[0];
-  if (!portfolio?.paid_at) throw new Error("Open a portfolio to continue.");
-  return asPortfolio(portfolio);
+  if (owned[0]) {
+    await ensurePortfolioOwnerMember(sql, owned[0], email);
+    return { portfolio: asPortfolio(owned[0]), role: "owner" };
+  }
+  const byUser = await sql<(Portfolio & { member_role: string })>`
+    select p.*, m.role as member_role
+    from portfolio_members m
+    join portfolios p on p.id = m.portfolio_id
+    where m.user_id = ${userId}
+    limit 1
+  `;
+  if (byUser[0]) {
+    const { member_role, ...rest } = byUser[0];
+    return {
+      portfolio: asPortfolio(rest as Portfolio),
+      role: member_role === "owner" ? "owner" : "staff",
+    };
+  }
+  const normalized = email?.trim().toLowerCase() ?? "";
+  if (normalized) {
+    const byEmail = await sql<(Portfolio & { member_id: string; member_role: string })>`
+      select p.*, m.id as member_id, m.role as member_role
+      from portfolio_members m
+      join portfolios p on p.id = m.portfolio_id
+      where lower(m.email) = ${normalized}
+      limit 1
+    `;
+    if (byEmail[0]) {
+      await sql`update portfolio_members set user_id = ${userId} where id = ${byEmail[0].member_id}`;
+      const { member_id: _id, member_role, ...rest } = byEmail[0];
+      return {
+        portfolio: asPortfolio(rest as Portfolio),
+        role: member_role === "owner" ? "owner" : "staff",
+      };
+    }
+  }
+  throw new Error("Open a portfolio to continue.");
+}
+
+async function ensurePortfolioOwnerMember(sql: Sql, portfolio: Portfolio, email?: string | null) {
+  const mail = (email || portfolio.email || `owner-${portfolio.id}@local`).trim().toLowerCase();
+  await sql`
+    insert into portfolio_members (id, portfolio_id, user_id, email, role)
+    values (${crypto.randomUUID()}, ${portfolio.id}, ${portfolio.user_id}, ${mail}, ${"owner"})
+    on conflict (portfolio_id, email) do update set user_id = excluded.user_id, role = ${"owner"}
+  `;
 }
 
 function asPortfolio(row: Portfolio): Portfolio {
   return {
     ...row,
     extra_slots: num(row.extra_slots),
+    extra_seats: num(row.extra_seats),
     included_count: num(row.included_count) || MANAGE_INCLUDED,
     phone: row.phone ?? null,
     email: row.email ?? null,
@@ -3194,7 +3314,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     const sql = await getSql();
-    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const { portfolio, role } = await requirePaidPortfolio(sql, context.userId);
     const houses = await sql<HomeownerHouse>`
       select p.*,
         c.name as company_name,
@@ -3213,6 +3333,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
     `;
     const cap = num(portfolio.included_count) || MANAGE_INCLUDED;
     const extra = num(portfolio.extra_slots);
+    const extraSeats = num(portfolio.extra_seats);
     return {
       id: portfolio.id,
       name: portfolio.name,
@@ -3221,6 +3342,9 @@ export const getPortfolio = createServerFn({ method: "GET" })
       logo_src: portfolio.logo_src,
       included: cap,
       extra,
+      extraSeats,
+      seatCap: 1 + extraSeats,
+      role,
       cap: cap + extra,
       houseCount: houses.length,
       houses: houses.map((h) => ({
@@ -3246,7 +3370,7 @@ export const addPortfolioProperty = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
-    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const { portfolio } = await requirePaidPortfolio(sql, context.userId);
     const address = data.addressLine.trim();
     if (address.length < 3) throw new Error("Need the street address.");
     const count = await sql<{ c: number }>`
@@ -3292,7 +3416,7 @@ export const getPortfolioRecord = createServerFn({ method: "GET" })
   .validator((id: string) => id)
   .handler(async ({ context, data: id }) => {
     const sql = await getSql();
-    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const { portfolio } = await requirePaidPortfolio(sql, context.userId);
     const rows = await sql<Property>`
       select p.*
       from properties p
@@ -3320,7 +3444,7 @@ export const completePortfolioMaintenance = createServerFn({ method: "POST" })
   .validator((input: { taskId: string; notes?: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
-    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const { portfolio } = await requirePaidPortfolio(sql, context.userId);
     const task = (
       await sql<MaintenanceTask>`
         select t.*
@@ -3358,7 +3482,8 @@ export const updatePortfolio = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
-    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const { portfolio, role } = await requirePaidPortfolio(sql, context.userId);
+    if (role !== "owner") throw new Error("Only the office owner can change office settings.");
     const name = data.name.trim() || portfolio.name;
     await sql`
       update portfolios
@@ -3397,7 +3522,7 @@ export const invitePortfolioOwner = createServerFn({ method: "POST" })
   .validator((input: { propertyId: string; email: string; name?: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
-    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const { portfolio } = await requirePaidPortfolio(sql, context.userId);
     const property = (
       await sql<Property>`
         select p.*
@@ -3446,6 +3571,51 @@ export const invitePortfolioOwner = createServerFn({ method: "POST" })
       emailed,
       claimed: Boolean(property.homeowner_user_id),
     };
+  });
+
+export const listOfficeTeam = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const sql = await getSql();
+    const { portfolio, role } = await requirePaidPortfolio(sql, context.userId);
+    const members = await sql<PortfolioMember>`
+      select * from portfolio_members where portfolio_id = ${portfolio.id} order by role, email
+    `;
+    return {
+      role,
+      extraSeats: num(portfolio.extra_seats),
+      seatCap: 1 + num(portfolio.extra_seats),
+      members,
+    };
+  });
+
+export const addOfficeMember = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { email: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { portfolio, role } = await requirePaidPortfolio(sql, context.userId);
+    if (role !== "owner") throw new Error("Only the office owner can add seats.");
+    const email = data.email.trim().toLowerCase();
+    if (!email.includes("@")) throw new Error("Need a real email");
+    const existing = await sql<{ email: string }>`
+      select email from portfolio_members where portfolio_id = ${portfolio.id} and lower(email) = ${email} limit 1
+    `;
+    if (existing[0]) return { ok: true as const, already: true as const, needSeat: false as const };
+    const count = await sql<{ c: number }>`
+      select count(*)::int as c from portfolio_members where portfolio_id = ${portfolio.id}
+    `;
+    const cap = 1 + num(portfolio.extra_seats);
+    if (num(count[0]?.c) >= cap) {
+      return { ok: false as const, already: false as const, needSeat: true as const };
+    }
+    const userId = await userIdForEmail(sql, email);
+    await sql`
+      insert into portfolio_members (id, portfolio_id, user_id, email, role)
+      values (${crypto.randomUUID()}, ${portfolio.id}, ${userId}, ${email}, ${"staff"})
+      on conflict (portfolio_id, email) do update set user_id = coalesce(excluded.user_id, portfolio_members.user_id)
+    `;
+    return { ok: true as const, already: false as const, needSeat: false as const };
   });
 
 

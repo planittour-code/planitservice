@@ -328,8 +328,10 @@ export function SaasContent() {
       <LegalSection id="saas-users" n="2" title="Authorized users">
         <p>
           Shop plans include the owner seat. Extra seats you purchase may be used only by people in
-          your shop who quote or administer the account. Homeowner plans are billed per Property
-          Record; household members you invite share that record, they do not get a second shop.
+          your shop who quote or administer the account. Property manager plans include the owner
+          seat. Extra office seats you purchase may be used only by people in that office who work
+          the portfolio. Homeowner plans are billed per Property Record; household members you
+          invite share that record, they do not get a second shop.
         </p>
         <p>
           You will not share logins to avoid a seat fee, exceed purchased seats, or let a competitor
@@ -355,7 +357,7 @@ export function SaasContent() {
       <LegalSection id="saas-your" n="4" title="Your obligations">
         <ul className="list-disc space-y-2 pl-5">
           <li>Use the Service only as permitted in this SaaS Agreement and the AUP.</li>
-          <li>Keep account credentials secret and revoke seats that leave the shop.</li>
+          <li>Keep account credentials secret and revoke seats that leave the shop or office.</li>
           <li>Enter content you have the right to use. Materials costs and estimates are yours.</li>
           <li>Maintain your own devices, browsers, and internet access.</li>
           <li>Pay fees when due. Configure Stripe with a valid payment method.</li>

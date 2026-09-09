@@ -18,7 +18,7 @@ export function PathSignInForm({
   onNewAccount,
 }: {
   next: string;
-  role?: "homeowner" | "manager";
+  role?: "homeowner" | "manager" | "contractor";
   kicker: string;
   title: string;
   submitLabel?: string;
@@ -124,7 +124,11 @@ export function PathSignInForm({
           <Link
             from="/"
             to={newAccountTo}
-            search={newAccountTo === "/manage/open" ? { intent: "up" } : undefined}
+            search={
+              newAccountTo === "/manage/open" || newAccountTo === "/shop/open"
+                ? { intent: "up" }
+                : undefined
+            }
             className="underline underline-offset-2 hover:text-foreground"
           >
             {newAccountLabel}

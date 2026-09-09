@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { TermsAgree } from "@/components/legal-doc";
 import { Button } from "@/components/ui/button";
@@ -106,12 +106,6 @@ export function ShopSignupForm() {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         Card details stay on Stripe. No PlanitService account until payment finishes.
-      </p>
-      <p className="text-center text-sm text-muted-foreground">
-        Already paid and set a password?{" "}
-        <Link to="/login" search={{ next: "/app" }} className="underline underline-offset-2">
-          Sign in
-        </Link>
       </p>
     </form>
   );

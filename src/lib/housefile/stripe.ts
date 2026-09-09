@@ -13,7 +13,9 @@ export type CheckoutKind =
   | "manage_monthly"
   | "manage_annual"
   | "manage_extra_monthly"
-  | "manage_extra_annual";
+  | "manage_extra_annual"
+  | "manage_seat_monthly"
+  | "manage_seat_annual";
 
 export function homeownerKind(tier: HomeownerTier, cadence: Cadence): CheckoutKind {
   if (tier === "pro") return cadence === "annual" ? "pro_annual" : "pro_monthly";
@@ -30,6 +32,10 @@ export function manageKind(cadence: Cadence): CheckoutKind {
 
 export function manageExtraKind(cadence: Cadence): CheckoutKind {
   return cadence === "annual" ? "manage_extra_annual" : "manage_extra_monthly";
+}
+
+export function manageSeatKind(cadence: Cadence): CheckoutKind {
+  return cadence === "annual" ? "manage_seat_annual" : "manage_seat_monthly";
 }
 
 /** After the Property Record is created, send the homeowner to their houses. */

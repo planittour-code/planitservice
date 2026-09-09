@@ -15,6 +15,7 @@ import {
   MANAGE_EXTRA_MONTHLY,
   MANAGE_INCLUDED,
   MANAGE_MONTHLY,
+  MANAGE_SEAT_MONTHLY,
   PROPERTY_ANNUAL,
   PROPERTY_MONTHLY,
   PRO_ANNUAL,
@@ -116,6 +117,7 @@ function AccountPage() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {data.portfolio.houseCount}{" "}
                       {data.portfolio.houseCount === 1 ? "house" : "houses"} in the portfolio
+                      {data.portfolio.role === "staff" ? " · Staff seat" : ""}
                     </p>
                   </Link>
                 )}
@@ -160,12 +162,18 @@ function AccountPage() {
                 ))}
                 {isManage && data.portfolio && (
                   <li className="px-5 py-4">
-                    <p className="font-medium">Portfolio · {data.portfolio.name}</p>
+                    <p className="font-medium">
+                      Portfolio · {data.portfolio.name}
+                      {data.portfolio.role === "staff" ? " · Staff seat" : " · Owner"}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       ${dollars(MANAGE_MONTHLY)}/month or ${dollars(MANAGE_ANNUAL)}/year for{" "}
                       {MANAGE_INCLUDED} houses
                       {data.portfolio.extraSlots > 0
                         ? ` · ${data.portfolio.extraSlots} extra ${data.portfolio.extraSlots === 1 ? "house" : "houses"} at $${dollars(MANAGE_EXTRA_MONTHLY)}/month`
+                        : ""}
+                      {data.portfolio.extraSeats > 0
+                        ? ` · ${data.portfolio.extraSeats} extra ${data.portfolio.extraSeats === 1 ? "seat" : "seats"} at $${dollars(MANAGE_SEAT_MONTHLY)}/month`
                         : ""}
                       .
                     </p>

@@ -1,10 +1,12 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { AuthSlot, PageFooter, PublicHeader, SignInCta } from "@/components/site-chrome";
+import { PathSignInForm } from "@/components/path-sign-in";
+import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { PaidLanding } from "@/components/paid-landing";
 import { AddressLookup, TeaseCard } from "@/components/address-lookup";
 import { TradeCarousel } from "@/components/trade-carousel";
 import { Button } from "@/components/ui/button";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   PROPERTY_MONTHLY,
   SEAT_MONTHLY,
@@ -40,25 +42,33 @@ function HomePage() {
           />
           <div className="absolute inset-0 bg-ink/55" />
           <div className="relative mx-auto max-w-6xl px-5 pb-16 pt-8 md:pt-14">
-            <div className="mx-auto max-w-3xl space-y-6 text-center">
-              <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
-                For general contractors
-              </p>
-              <h1 className="font-display text-4xl font-medium tracking-tight text-balance sm:text-5xl md:text-6xl">
-                If you could know before you go…
-              </h1>
-              <p className="mx-auto max-w-xl text-lg leading-relaxed text-pretty text-primary-foreground/80">
-                Save drive time with a quick search. Know what you are walking before you start
-                talking. Jump the line with fast, accurate quotes based on the last job.
-              </p>
-              <div className="rounded-xl bg-card p-2 text-left text-foreground shadow-[var(--shadow-border)]">
-                <AddressLookup onTease={setTease} />
+            <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+              <div className="space-y-6">
+                <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
+                  For general contractors
+                </p>
+                <h1 className="font-display text-4xl font-medium tracking-tight text-balance sm:text-5xl md:text-6xl">
+                  If you could know before you go…
+                </h1>
+                <p className="max-w-xl text-lg leading-relaxed text-pretty text-primary-foreground/80">
+                  Save drive time with a quick search. Know what you are walking before you start
+                  talking. Jump the line with fast, accurate quotes based on the last job.
+                </p>
+                <div className="rounded-xl bg-card p-2 text-left text-foreground shadow-[var(--shadow-border)]">
+                  <AddressLookup onTease={setTease} />
+                </div>
               </div>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button asChild size="lg">
-                  <Link to="/shop/open">Open a shop</Link>
-                </Button>
-                <SignInCta className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" />
+              <div className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
+                <PathSignInForm
+                  next="/app"
+                  role="contractor"
+                  kicker="Already have a shop"
+                  title="Sign in to the shop"
+                  submitLabel="Sign in to the shop"
+                  newAccountTo="/shop/open"
+                  newAccountLabel="Open a shop"
+                />
+                <SignedInOpenShop />
               </div>
             </div>
             {tease && (
@@ -141,15 +151,16 @@ function HomePage() {
                 <li>Jump the line — send it while you talk</li>
                 <li>The next trade is already yours</li>
               </ul>
-              <div className="mt-8 space-y-3">
+              <div className="mt-8">
                 <Button
                   asChild
                   size="lg"
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <Link to="/shop/open">Open a shop</Link>
+                  <Link to="/shop/open" search={{ intent: "up" }}>
+                    Open a shop
+                  </Link>
                 </Button>
-                <SignInCta className="w-full border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" />
               </div>
               <p className="mt-3 text-center text-xs opacity-80">
                 Annual is ${dollars(SHOP_ANNUAL)}. Extra seats ${dollars(SEAT_MONTHLY)}/month.
@@ -163,6 +174,25 @@ function HomePage() {
       </main>
 
       <PageFooter shop />
+    </div>
+  );
+}
+
+function SignedInOpenShop() {
+  const { user } = useCurrentUserState();
+  if (!user) return null;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>
+      <p className="font-display text-2xl font-medium tracking-tight">Open a shop on this login</p>
+      <p className="text-sm text-muted-foreground">
+        Pay for the shop, then quote from the Property Record. Card details stay on Stripe.
+      </p>
+      <Button asChild className="min-h-12 w-full">
+        <Link to="/shop/open" search={{ intent: "up" }}>
+          Continue to Stripe
+        </Link>
+      </Button>
     </div>
   );
 }

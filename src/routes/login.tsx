@@ -285,7 +285,11 @@ function Login() {
               ) : (
                 <p className="text-center text-sm text-muted-foreground">
                   New shop?{" "}
-                  <Link to="/shop/open" className="underline underline-offset-2 hover:text-foreground">
+                  <Link
+                    to="/shop/open"
+                    search={{ intent: "up" }}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
                     Open a shop
                   </Link>
                   {" · "}

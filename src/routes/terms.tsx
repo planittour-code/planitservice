@@ -134,13 +134,14 @@ function TermsPage() {
       <LegalSection id="accounts" n="3" title="Accounts">
         <p>
           Keep your email and password accurate and secret. You are responsible for activity under
-          your account, including extra shop seats you invite. If you forget the password, use the
-          reset link on the sign-in page. Tell us promptly at {LEGAL_EMAIL} if you believe the
-          account was used without permission.
+          your account, including extra shop seats and office seats you invite. If you forget the
+          password, use the reset link on the sign-in page. Tell us promptly at {LEGAL_EMAIL} if you
+          believe the account was used without permission.
         </p>
         <p>
-          Shop owners control materials, team seats, and billing for the shop. Homeowners control
-          the Property Records on their account. Do not share a login to dodge a seat or a per-property
+          Shop owners control materials, team seats, and billing for the shop. Property managers
+          control office seats, billing, and the houses in the portfolio. Homeowners control the
+          Property Records on their account. Do not share a login to dodge a seat or a per-property
           fee.
         </p>
       </LegalSection>
@@ -148,8 +149,9 @@ function TermsPage() {
       <LegalSection id="billing" n="4" title="Plans and billing">
         <p>
           Prices are shown at signup and in the account. Shop plans are billed per shop, with extra
-          seats billed separately. Homeowner plans are billed per Property Record. Annual plans are
-          prepaid for the year.
+          seats billed separately. Property manager plans are billed per portfolio, with extra
+          houses and extra office seats billed separately. Homeowner plans are billed per Property
+          Record. Annual plans are prepaid for the year.
         </p>
         <p>
           Payment is processed by Stripe. By paying, you authorize recurring charges until you

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { PathSignInForm } from "@/components/path-sign-in";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { ShopClaimForm, ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { useAudience } from "@/lib/housefile/use-audience";
 
 const searchSchema = z.object({
   session_id: z.string().optional(),
+  intent: z.enum(["in", "up"]).optional(),
 });
 
 export const Route = createFileRoute("/shop/open")({
@@ -27,6 +29,11 @@ function OpenShop() {
   const { audience, isPending } = useAudience();
   const [confirming, setConfirming] = useState(Boolean(user && search.session_id));
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [intent, setIntent] = useState<"in" | "up">(search.intent === "up" ? "up" : "in");
+
+  useEffect(() => {
+    setIntent(search.intent === "up" ? "up" : "in");
+  }, [search.intent]);
 
   useEffect(() => {
     if (!user || !search.session_id) {
@@ -93,27 +100,49 @@ function OpenShop() {
               </ul>
             </div>
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
-              <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a shop</p>
-              <p className="mt-2 font-display text-3xl font-medium tracking-tight">
-                ${dollars(SHOP_MONTHLY)}
-                <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                or ${dollars(SHOP_ANNUAL)} a year. Extra seats ${dollars(SEAT_MONTHLY)}/month. You pay
-                for the people who quote — not per house.
-              </p>
-              <div className="mt-5">
-                {confirming ? (
-                  <p className="text-sm text-muted-foreground">Confirming payment…</p>
-                ) : search.session_id && !user ? (
-                  <ShopClaimForm sessionId={search.session_id} />
-                ) : (
-                  <>
+              {confirming ? (
+                <p className="text-sm text-muted-foreground">Confirming payment…</p>
+              ) : search.session_id && !user ? (
+                <ShopClaimForm sessionId={search.session_id} />
+              ) : !user && intent === "in" ? (
+                <PathSignInForm
+                  next="/app"
+                  role="contractor"
+                  kicker="Already have a shop"
+                  title="Sign in to the shop"
+                  submitLabel="Sign in to the shop"
+                  newAccountLabel="Open a shop"
+                  onNewAccount={() => setIntent("up")}
+                />
+              ) : (
+                <>
+                  <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a shop</p>
+                  <p className="mt-2 font-display text-3xl font-medium tracking-tight">
+                    ${dollars(SHOP_MONTHLY)}
+                    <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    or ${dollars(SHOP_ANNUAL)} a year. Extra seats ${dollars(SEAT_MONTHLY)}/month. You pay
+                    for the people who quote — not per house.
+                  </p>
+                  <div className="mt-5">
                     {confirmError ? <p className="mb-3 text-sm text-destructive">{confirmError}</p> : null}
                     <ShopSignupForm />
-                  </>
-                )}
-              </div>
+                    {!user ? (
+                      <p className="mt-3 text-center text-sm text-muted-foreground">
+                        Already have a shop?{" "}
+                        <button
+                          type="button"
+                          className="underline underline-offset-2 hover:text-foreground"
+                          onClick={() => setIntent("in")}
+                        >
+                          Sign in
+                        </button>
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>

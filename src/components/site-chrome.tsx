@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 
 function signInSearch(signedInTo: "/app" | "/home" | "/shop" | "/manage") {
   if (signedInTo === "/home") return { role: "homeowner", next: "/home" };
-  if (signedInTo === "/manage") return { next: "/manage" };
-  return { next: "/app" };
+  if (signedInTo === "/manage") return { role: "manager", next: "/manage" };
+  return { role: "contractor", next: "/app" };
 }
 
 export function AuthSlot({
@@ -103,7 +103,9 @@ export function PublicHeader({
           {lane === "contractor" && (
             <>
               <HeaderLink to="/shop">Look up a house</HeaderLink>
-              <HeaderLink to="/shop/open">Open a shop</HeaderLink>
+              <HeaderLink to="/shop/open" search={{ intent: "up" }}>
+                Open a shop
+              </HeaderLink>
               <HeaderLink to="/shop" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>

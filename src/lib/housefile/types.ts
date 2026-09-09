@@ -311,10 +311,22 @@ export type Portfolio = {
   name: string;
   paid_at: string | null;
   extra_slots: number;
+  extra_seats: number;
   included_count: number;
   phone: string | null;
   email: string | null;
   logo_src: string | null;
+  created_at: string;
+};
+
+export type PortfolioRole = "owner" | "staff";
+
+export type PortfolioMember = {
+  id: string;
+  portfolio_id: string;
+  user_id: string | null;
+  email: string;
+  role: PortfolioRole;
   created_at: string;
 };
 

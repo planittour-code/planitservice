@@ -160,8 +160,9 @@ function ManageMarketing() {
                 A portfolio, not ten homeowner plans.
               </h2>
               <p className="text-muted-foreground">
-                Ten Standard houses would be billed one-by-one. The portfolio is one login, one
-                subscription, and the records you already walk.
+                Ten Standard houses would be billed one-by-one. The portfolio is one office, one
+                subscription, and the records you already walk. Extra seats for the people who walk
+                with you.
               </p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>{MANAGE_INCLUDED} Property Records on the base plan</li>

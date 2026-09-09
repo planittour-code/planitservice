@@ -36,6 +36,8 @@ const LIVE_PRICES: Record<CheckoutKind, string> = {
   manage_annual: "price_1UDW5NPNiO3QnmB4d6Ze4U59",
   manage_extra_monthly: "price_1UDW7cPNiO3QnmB4sTmTb7lp",
   manage_extra_annual: "price_1UDW8FPNiO3QnmB4NRMYNdI4",
+  manage_seat_monthly: "",
+  manage_seat_annual: "",
 };
 
 const PRICE_ENV: Record<CheckoutKind, string> = {
@@ -50,6 +52,8 @@ const PRICE_ENV: Record<CheckoutKind, string> = {
   manage_annual: "STRIPE_PRICE_MANAGE_ANNUAL",
   manage_extra_monthly: "STRIPE_PRICE_MANAGE_EXTRA_MONTHLY",
   manage_extra_annual: "STRIPE_PRICE_MANAGE_EXTRA_ANNUAL",
+  manage_seat_monthly: "STRIPE_PRICE_MANAGE_SEAT_MONTHLY",
+  manage_seat_annual: "STRIPE_PRICE_MANAGE_SEAT_ANNUAL",
 };
 
 /** Map plan kind -> Stripe Price id (Dashboard → Product → Price). */
@@ -309,13 +313,14 @@ export async function readPaidManageSession(sessionId: string) {
     session.status === "complete";
   const base = kind === "manage_monthly" || kind === "manage_annual";
   const extra = kind === "manage_extra_monthly" || kind === "manage_extra_annual";
-  if (!paid || (!base && !extra)) {
+  const seat = kind === "manage_seat_monthly" || kind === "manage_seat_annual";
+  if (!paid || (!base && !extra && !seat)) {
     return { ok: false as const };
   }
   const email = shopEmailFromSession(session);
   if (!email) return { ok: false as const };
   let quantity = 1;
-  if (extra) {
+  if (extra || seat) {
     const full = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["line_items"] });
     quantity = full.line_items?.data[0]?.quantity ?? 1;
   }
@@ -325,6 +330,7 @@ export async function readPaidManageSession(sessionId: string) {
     userId: session.metadata?.userId?.trim() || "",
     officeName: session.metadata?.officeName?.trim() || "",
     extra,
+    seat,
     quantity,
   };
 }
@@ -337,6 +343,7 @@ export async function claimPaidManageSession(input: {
   const paid = await readPaidManageSession(input.sessionId);
   if (!paid.ok) throw new Error("Checkout did not finish. Open a portfolio to try again.");
   if (paid.extra) throw new Error("Sign in, then add extra houses from the portfolio.");
+  if (paid.seat) throw new Error("Sign in, then add office seats from Office settings.");
   if (input.password.trim().length < 8) throw new Error("Password must be at least 8 characters.");
 
   const { getSql } = await import("@/lib/db");
@@ -387,6 +394,34 @@ export async function grantManageExtraSlots(input: {
   }
 }
 
+export async function grantManageExtraSeats(input: {
+  userId: string;
+  sessionId: string;
+  quantity: number;
+}) {
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const rows = await sql<{ id: string }>`
+    select id from portfolios where user_id = ${input.userId} limit 1
+  `;
+  const portfolioId = rows[0]?.id;
+  if (!portfolioId) throw new Error("Open a portfolio before adding office seats.");
+  const recorded = await sql<{ session_id: string }>`
+    insert into portfolio_billing_events (session_id, portfolio_id, kind, quantity)
+    values (${input.sessionId}, ${portfolioId}, ${"manage_seat"}, ${input.quantity})
+    on conflict (session_id) do nothing
+    returning session_id
+  `;
+  if (recorded[0]) {
+    await sql`
+      update portfolios
+      set extra_seats = extra_seats + ${input.quantity},
+          paid_at = coalesce(paid_at, now())
+      where id = ${portfolioId}
+    `;
+  }
+}
+
 export async function confirmPaidManageSession(input: { sessionId: string; userId: string }) {
   const paid = await readPaidManageSession(input.sessionId);
   if (!paid.ok) return { ok: false as const };
@@ -395,6 +430,14 @@ export async function confirmPaidManageSession(input: { sessionId: string; userI
   }
   const { getSessionUser } = await import("@/lib/auth/verify.server");
   const session = await getSessionUser();
+  if (paid.seat) {
+    await grantManageExtraSeats({
+      userId: input.userId,
+      sessionId: input.sessionId,
+      quantity: paid.quantity,
+    });
+    return { ok: true as const };
+  }
   if (paid.extra) {
     await grantManageExtraSlots({
       userId: input.userId,
