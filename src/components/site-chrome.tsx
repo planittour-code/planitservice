@@ -25,7 +25,7 @@ export function AuthSlot({
   }
   return (
     <Button asChild variant="outline">
-      <Link to="/login" search={signInSearch(signedInTo)}>
+      <Link from="/" to="/login" search={signInSearch(signedInTo)}>
         Sign in
       </Link>
     </Button>
@@ -46,7 +46,7 @@ export function SignInCta({
   if (isPending || user) return null;
   return (
     <Button asChild variant="outline" size={size} className={className}>
-      <Link to="/login" search={signInSearch(signedInTo)}>
+      <Link from="/" to="/login" search={signInSearch(signedInTo)}>
         Sign in
       </Link>
     </Button>
@@ -118,7 +118,9 @@ export function PublicHeader({
               <HeaderLink to="/manage" hideOnMobile>
                 The portfolio
               </HeaderLink>
-              <HeaderLink to="/manage/open">Open a portfolio</HeaderLink>
+              <HeaderLink to="/manage/open" search={{ intent: "up" }}>
+                Open a portfolio
+              </HeaderLink>
               <HeaderLink to="/manage" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>
@@ -140,20 +142,24 @@ export function PublicHeader({
 function HeaderLink({
   to,
   params,
+  search,
   hash,
   hideOnMobile,
   children,
 }: {
   to: string;
   params?: Record<string, string>;
+  search?: Record<string, string>;
   hash?: string;
   hideOnMobile?: boolean;
   children: ReactNode;
 }) {
   return (
     <Link
+      from="/"
       to={to as never}
       params={params as never}
+      search={search as never}
       hash={hash}
       className={cn(
         "rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",

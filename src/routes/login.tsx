@@ -41,7 +41,10 @@ function Login() {
   const { user, isPending } = useCurrentUserState();
   const { audience, isPending: audiencePending } = useAudience();
   const homeowner = Boolean(search.invite) || search.role === "homeowner";
-  const manager = search.next === "/manage" || Boolean(search.next?.startsWith("/manage/"));
+  const manager =
+    search.role === "manager" ||
+    search.next === "/manage" ||
+    Boolean(search.next?.startsWith("/manage/"));
   const next = safeNextPath(search.next, homeowner ? "/home" : manager ? "/manage" : "/app");
   // Land back on /login after auth so a paid contractor is not sent to /home
   // just because the public Sign in button asked for the house dashboard.
@@ -287,7 +290,11 @@ function Login() {
                   </Link>
                   {" · "}
                   New portfolio?{" "}
-                  <Link to="/manage/open" className="underline underline-offset-2 hover:text-foreground">
+                  <Link
+                    to="/manage/open"
+                    search={{ intent: "up" }}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
                     Open a portfolio
                   </Link>
                 </p>

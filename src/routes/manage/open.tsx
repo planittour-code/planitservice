@@ -3,6 +3,7 @@ import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { ManageClaimForm, ManageSignupForm } from "@/components/manage-signup";
+import { PathSignInForm } from "@/components/path-sign-in";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
@@ -17,6 +18,7 @@ import { useAudience } from "@/lib/housefile/use-audience";
 
 const searchSchema = z.object({
   session_id: z.string().optional(),
+  intent: z.enum(["in", "up"]).optional(),
 });
 
 export const Route = createFileRoute("/manage/open")({
@@ -32,6 +34,11 @@ function OpenPortfolio() {
   const { audience, isPending } = useAudience();
   const [confirming, setConfirming] = useState(Boolean(user && search.session_id));
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [intent, setIntent] = useState<"in" | "up">(search.intent === "up" ? "up" : "in");
+
+  useEffect(() => {
+    setIntent(search.intent === "up" ? "up" : "in");
+  }, [search.intent]);
 
   useEffect(() => {
     if (!user || !search.session_id) {
@@ -98,26 +105,48 @@ function OpenPortfolio() {
               </ul>
             </div>
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
-              <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a portfolio</p>
-              <p className="mt-2 font-display text-3xl font-medium tracking-tight">
-                ${dollars(MANAGE_MONTHLY)}
-                <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                or ${dollars(MANAGE_ANNUAL)} a year. {MANAGE_INCLUDED} houses included.
-              </p>
-              <div className="mt-5">
-                {confirming ? (
-                  <p className="text-sm text-muted-foreground">Confirming payment…</p>
-                ) : search.session_id && !user ? (
-                  <ManageClaimForm sessionId={search.session_id} />
-                ) : (
-                  <>
+              {confirming ? (
+                <p className="text-sm text-muted-foreground">Confirming payment…</p>
+              ) : search.session_id && !user ? (
+                <ManageClaimForm sessionId={search.session_id} />
+              ) : !user && intent === "in" ? (
+                <PathSignInForm
+                  next="/manage"
+                  role="manager"
+                  kicker="Already have a portfolio"
+                  title="Sign in to the office"
+                  submitLabel="Sign in to the portfolio"
+                  newAccountLabel="Open a portfolio"
+                  onNewAccount={() => setIntent("up")}
+                />
+              ) : (
+                <>
+                  <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a portfolio</p>
+                  <p className="mt-2 font-display text-3xl font-medium tracking-tight">
+                    ${dollars(MANAGE_MONTHLY)}
+                    <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    or ${dollars(MANAGE_ANNUAL)} a year. {MANAGE_INCLUDED} houses included.
+                  </p>
+                  <div className="mt-5">
                     {confirmError ? <p className="mb-3 text-sm text-destructive">{confirmError}</p> : null}
                     <ManageSignupForm />
-                  </>
-                )}
-              </div>
+                    {!user ? (
+                      <p className="mt-3 text-center text-sm text-muted-foreground">
+                        Already have a portfolio?{" "}
+                        <button
+                          type="button"
+                          className="underline underline-offset-2 hover:text-foreground"
+                          onClick={() => setIntent("in")}
+                        >
+                          Sign in
+                        </button>
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>

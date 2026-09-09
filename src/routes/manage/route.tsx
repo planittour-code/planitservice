@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
-import { AuthSlot, PageFooter, PublicHeader, SignInCta } from "@/components/site-chrome";
+import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { PathSignInForm } from "@/components/path-sign-in";
 import { PaidLanding } from "@/components/paid-landing";
 import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,10 @@ function ManageFrame() {
     );
   }
 
-  if (pathname !== "/manage") {
+  if (pathname === "/manage") return <ManageMarketing />;
+
+  // Unpaid visitors on nested /manage/* pages (add, settings, a house).
+  if (pathname.startsWith("/manage/")) {
     if (!authReady) {
       return (
         <div className="min-h-screen bg-background">
@@ -77,7 +81,7 @@ function ManageFrame() {
     return <Navigate to="/manage/open" />;
   }
 
-  return <ManageMarketing />;
+  return <Outlet />;
 }
 
 function ManageMarketing() {
@@ -96,25 +100,35 @@ function ManageMarketing() {
             className="absolute inset-0 size-full object-cover outline-none"
           />
           <div className="absolute inset-0 bg-ink/60" />
-          <div className="relative mx-auto max-w-3xl space-y-6 px-4 py-16 text-center sm:px-5 md:py-24">
-            <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
-              For property managers
-            </p>
-            <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-6xl">
-              One record for every house you manage.
-            </h1>
-            <p className="mx-auto max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-              Photos, jobs, warranties, and issued estimates at the address. You keep the file.
-              Shops still quote in their shop. The homeowner can claim it later.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button asChild size="lg">
-                <Link to="/manage/open">Open a portfolio</Link>
-              </Button>
-              <SignInCta
-                signedInTo="/manage"
-                className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+          <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-5 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
+            <div className="space-y-5">
+              <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
+                For property managers
+              </p>
+              <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
+                One record for every house you manage.
+              </h1>
+              <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
+                Photos, jobs, warranties, and issued estimates at the address. You keep the file.
+                Shops still quote in their shop. The homeowner can claim it later.
+              </p>
+              <ul className="space-y-3 text-sm text-primary-foreground/80">
+                <li>{MANAGE_INCLUDED} Property Records on the base plan.</li>
+                <li>Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)} / month each.</li>
+                <li>No catalog. No quoting. The file is the product.</li>
+              </ul>
+            </div>
+            <div className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
+              <PathSignInForm
+                next="/manage"
+                role="manager"
+                kicker="Already have a portfolio"
+                title="Sign in to the office"
+                submitLabel="Sign in to the portfolio"
+                newAccountTo="/manage/open"
+                newAccountLabel="Open a portfolio"
               />
+              <SignedInOpenPortfolio />
             </div>
           </div>
         </section>
@@ -170,18 +184,16 @@ function ManageMarketing() {
                 <li>See estimates shops have already issued</li>
                 <li>Add house {MANAGE_INCLUDED + 1}+ at the bulk rate</li>
               </ul>
-              <div className="mt-8 space-y-3">
+              <div className="mt-8">
                 <Button
                   asChild
                   size="lg"
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
-                  <Link to="/manage/open">Open a portfolio</Link>
+                  <Link to="/manage/open" search={{ intent: "up" }}>
+                    Open a portfolio
+                  </Link>
                 </Button>
-                <SignInCta
-                  signedInTo="/manage"
-                  className="w-full border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                />
               </div>
               <p className="mt-3 text-center text-xs opacity-80">
                 Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)}/month or billed yearly.
@@ -191,6 +203,25 @@ function ManageMarketing() {
         </section>
       </main>
       <PageFooter />
+    </div>
+  );
+}
+
+function SignedInOpenPortfolio() {
+  const { user } = useCurrentUserState();
+  if (!user) return null;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>
+      <p className="font-display text-2xl font-medium tracking-tight">Open a portfolio on this login</p>
+      <p className="text-sm text-muted-foreground">
+        Pay for the office, then add the houses you manage. Card details stay on Stripe.
+      </p>
+      <Button asChild className="min-h-12 w-full">
+        <Link to="/manage/open" search={{ intent: "up" }}>
+          Continue to Stripe
+        </Link>
+      </Button>
     </div>
   );
 }
