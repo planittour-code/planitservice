@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PaidLanding } from "@/components/paid-landing";
-import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import {
   MANAGE_MONTHLY,
@@ -15,9 +15,7 @@ function WelcomeSite() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PaidLanding />
-      <PublicHeader path="choose">
-        <AuthSlot />
-      </PublicHeader>
+      <PublicHeader path="choose" />
 
       <main>
         <section className="relative isolate overflow-hidden bg-ink text-primary-foreground">

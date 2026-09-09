@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { TermsAgree } from "@/components/legal-doc";
-import { PageFooter, PublicHeader, AuthSlot } from "@/components/site-chrome";
+import { PageFooter, PublicHeader, AuthSlot, SignInCta } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,6 +97,10 @@ function StartHouseRecord() {
                 <li>Jobs, products, warranties, and maintenance live at the address.</li>
                 <li>Pro puts the next job in front of shops, or a property manager.</li>
               </ul>
+              <SignInCta
+                signedInTo="/home"
+                className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              />
             </div>
 
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">

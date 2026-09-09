@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { AuthSlot, PageFooter, PublicHeader, SignInCta } from "@/components/site-chrome";
 import { PaidLanding } from "@/components/paid-landing";
 import { AddressLookup, TeaseCard } from "@/components/address-lookup";
 import { TradeCarousel } from "@/components/trade-carousel";
@@ -54,10 +54,11 @@ function HomePage() {
               <div className="rounded-xl bg-card p-2 text-left text-foreground shadow-[var(--shadow-border)]">
                 <AddressLookup onTease={setTease} />
               </div>
-              <div className="flex justify-center">
+              <div className="flex flex-wrap justify-center gap-3">
                 <Button asChild size="lg">
                   <Link to="/shop/open">Open a shop</Link>
                 </Button>
+                <SignInCta className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" />
               </div>
             </div>
             {tease && (
@@ -140,7 +141,7 @@ function HomePage() {
                 <li>Jump the line — send it while you talk</li>
                 <li>The next trade is already yours</li>
               </ul>
-              <div className="mt-8">
+              <div className="mt-8 space-y-3">
                 <Button
                   asChild
                   size="lg"
@@ -148,6 +149,7 @@ function HomePage() {
                 >
                   <Link to="/shop/open">Open a shop</Link>
                 </Button>
+                <SignInCta className="w-full border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" />
               </div>
               <p className="mt-3 text-center text-xs opacity-80">
                 Annual is ${dollars(SHOP_ANNUAL)}. Extra seats ${dollars(SEAT_MONTHLY)}/month.

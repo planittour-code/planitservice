@@ -7,6 +7,12 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { FIELD_CATALOG } from "@/lib/housefile/fields";
 import { cn } from "@/lib/utils";
 
+function signInSearch(signedInTo: "/app" | "/home" | "/shop" | "/manage") {
+  if (signedInTo === "/home") return { role: "homeowner", next: "/home" };
+  if (signedInTo === "/manage") return { next: "/manage" };
+  return { next: "/app" };
+}
+
 export function AuthSlot({
   signedInTo = "/app",
 }: {
@@ -17,15 +23,30 @@ export function AuthSlot({
   if (user) {
     return <UserButton />;
   }
-  const search =
-    signedInTo === "/home"
-      ? { role: "homeowner", next: "/home" }
-      : signedInTo === "/manage"
-        ? { next: "/manage" }
-        : {};
   return (
     <Button asChild variant="outline">
-      <Link to="/login" search={search}>
+      <Link to="/login" search={signInSearch(signedInTo)}>
+        Sign in
+      </Link>
+    </Button>
+  );
+}
+
+/** Secondary CTA on the three user-path screens. Hidden when already signed in. */
+export function SignInCta({
+  signedInTo = "/app",
+  size = "lg",
+  className,
+}: {
+  signedInTo?: "/app" | "/home" | "/shop" | "/manage";
+  size?: "default" | "sm" | "lg";
+  className?: string;
+}) {
+  const { user, isPending } = useCurrentUserState();
+  if (isPending || user) return null;
+  return (
+    <Button asChild variant="outline" size={size} className={className}>
+      <Link to="/login" search={signInSearch(signedInTo)}>
         Sign in
       </Link>
     </Button>

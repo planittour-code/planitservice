@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
-import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { AuthSlot, PageFooter, PublicHeader, SignInCta } from "@/components/site-chrome";
 import { PaidLanding } from "@/components/paid-landing";
 import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -107,10 +107,14 @@ function ManageMarketing() {
               Photos, jobs, warranties, and issued estimates at the address. You keep the file.
               Shops still quote in their shop. The homeowner can claim it later.
             </p>
-            <div className="flex justify-center">
+            <div className="flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">
                 <Link to="/manage/open">Open a portfolio</Link>
               </Button>
+              <SignInCta
+                signedInTo="/manage"
+                className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              />
             </div>
           </div>
         </section>
@@ -166,7 +170,7 @@ function ManageMarketing() {
                 <li>See estimates shops have already issued</li>
                 <li>Add house {MANAGE_INCLUDED + 1}+ at the bulk rate</li>
               </ul>
-              <div className="mt-8">
+              <div className="mt-8 space-y-3">
                 <Button
                   asChild
                   size="lg"
@@ -174,6 +178,10 @@ function ManageMarketing() {
                 >
                   <Link to="/manage/open">Open a portfolio</Link>
                 </Button>
+                <SignInCta
+                  signedInTo="/manage"
+                  className="w-full border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                />
               </div>
               <p className="mt-3 text-center text-xs opacity-80">
                 Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)}/month or billed yearly.
