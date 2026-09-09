@@ -7,42 +7,64 @@ function requireEnv(name: string): string {
   return v;
 }
 
-export function getStripe(): Stripe {
-  // apiVersion pinned by the installed `stripe` package types
-  return new Stripe(requireEnv("STRIPE_SECRET_KEY"));
+function stripeSecret(): string {
+  return requireEnv("STRIPE_SECRET_KEY");
 }
+
+function stripeIsTest(): boolean {
+  return stripeSecret().startsWith("sk_test_");
+}
+
+export function getStripe(): Stripe {
+  const key = stripeSecret();
+  if (process.env.NETLIFY === "true" && key.startsWith("sk_test_")) {
+    throw new Error("Stripe test keys are not allowed on Netlify. Production uses live keys.");
+  }
+  return new Stripe(key);
+}
+
+/** Live catalog. Used only with sk_live. Test mode must set STRIPE_PRICE_* env. */
+const LIVE_PRICES: Record<CheckoutKind, string> = {
+  standard_monthly: "price_1U84eaA3tQnfBXBTvY1wUgHn",
+  standard_annual: "price_1U84fYA3tQnfBXBTe0TgpXgd",
+  pro_monthly: "price_1U84jMA3tQnfBXBTngBaqlfo",
+  pro_annual: "price_1U84k4A3tQnfBXBT8kRJMgGH",
+  shop_monthly: "price_1U84ntA3tQnfBXBTLOOhheMh",
+  shop_annual: "price_1U84obA3tQnfBXBTHrOLzQ6m",
+  seat_monthly: "price_1U84pZA3tQnfBXBT68DvtKj0",
+  manage_monthly: "price_1UDW4FPNiO3QnmB4qD1pdm0x",
+  manage_annual: "price_1UDW5NPNiO3QnmB4d6Ze4U59",
+  manage_extra_monthly: "price_1UDW7cPNiO3QnmB4sTmTb7lp",
+  manage_extra_annual: "price_1UDW8FPNiO3QnmB4NRMYNdI4",
+};
+
+const PRICE_ENV: Record<CheckoutKind, string> = {
+  standard_monthly: "STRIPE_PRICE_STANDARD_MONTHLY",
+  standard_annual: "STRIPE_PRICE_STANDARD_ANNUAL",
+  pro_monthly: "STRIPE_PRICE_PRO_MONTHLY",
+  pro_annual: "STRIPE_PRICE_PRO_ANNUAL",
+  shop_monthly: "STRIPE_PRICE_SHOP_MONTHLY",
+  shop_annual: "STRIPE_PRICE_SHOP_ANNUAL",
+  seat_monthly: "STRIPE_PRICE_SEAT_MONTHLY",
+  manage_monthly: "STRIPE_PRICE_MANAGE_MONTHLY",
+  manage_annual: "STRIPE_PRICE_MANAGE_ANNUAL",
+  manage_extra_monthly: "STRIPE_PRICE_MANAGE_EXTRA_MONTHLY",
+  manage_extra_annual: "STRIPE_PRICE_MANAGE_EXTRA_ANNUAL",
+};
 
 /** Map plan kind -> Stripe Price id (Dashboard → Product → Price). */
 export function priceIdFor(kind: CheckoutKind): string {
-  // Live catalog defaults (override with env for test mode or new prices)
-  const map: Record<CheckoutKind, string> = {
-    standard_monthly:
-      process.env.STRIPE_PRICE_STANDARD_MONTHLY?.trim() || "price_1U84eaA3tQnfBXBTvY1wUgHn",
-    standard_annual:
-      process.env.STRIPE_PRICE_STANDARD_ANNUAL?.trim() || "price_1U84fYA3tQnfBXBTe0TgpXgd",
-    pro_monthly:
-      process.env.STRIPE_PRICE_PRO_MONTHLY?.trim() || "price_1U84jMA3tQnfBXBTngBaqlfo",
-    pro_annual:
-      process.env.STRIPE_PRICE_PRO_ANNUAL?.trim() || "price_1U84k4A3tQnfBXBT8kRJMgGH",
-    shop_monthly:
-      process.env.STRIPE_PRICE_SHOP_MONTHLY?.trim() || "price_1U84ntA3tQnfBXBTLOOhheMh",
-    shop_annual:
-      process.env.STRIPE_PRICE_SHOP_ANNUAL?.trim() || "price_1U84obA3tQnfBXBTHrOLzQ6m",
-    seat_monthly:
-      process.env.STRIPE_PRICE_SEAT_MONTHLY?.trim() || "price_1U84pZA3tQnfBXBT68DvtKj0",
-    manage_monthly:
-      process.env.STRIPE_PRICE_MANAGE_MONTHLY?.trim() || "price_1UDW4FPNiO3QnmB4qD1pdm0x",
-    manage_annual:
-      process.env.STRIPE_PRICE_MANAGE_ANNUAL?.trim() || "price_1UDW5NPNiO3QnmB4d6Ze4U59",
-    manage_extra_monthly:
-      process.env.STRIPE_PRICE_MANAGE_EXTRA_MONTHLY?.trim() || "price_1UDW7cPNiO3QnmB4sTmTb7lp",
-    manage_extra_annual:
-      process.env.STRIPE_PRICE_MANAGE_EXTRA_ANNUAL?.trim() || "price_1UDW8FPNiO3QnmB4NRMYNdI4",
-  };
-  const id = map[kind]?.trim();
+  const fromEnv = process.env[PRICE_ENV[kind]]?.trim() || "";
+  if (fromEnv) return fromEnv;
+  if (stripeIsTest()) {
+    throw new Error(
+      `No Stripe test price for ${kind}. Run node scripts/stripe-test-catalog.mjs with sk_test, then set ${PRICE_ENV[kind]}.`,
+    );
+  }
+  const id = LIVE_PRICES[kind]?.trim();
   if (!id) {
     throw new Error(
-      `No Stripe price configured for ${kind}. Set STRIPE_PRICE_* in Netlify (see stripe.server.ts).`,
+      `No Stripe price configured for ${kind}. Set ${PRICE_ENV[kind]} in Netlify (see stripe.server.ts).`,
     );
   }
   return id;
