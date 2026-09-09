@@ -59,7 +59,7 @@ function ManageRecord() {
   if (q.isLoading) return <Skeleton className="h-64 w-full" />;
   if (!q.data) return <p className="text-destructive">Property not found.</p>;
 
-  const { house, tasks, claimed } = q.data;
+  const { house, tasks, claimed, acceptedEstimates } = q.data;
   const p = house.property;
   const open = tasks.filter((t) => !t.completed_at);
   const due = open.filter((t) => new Date(t.due_on) <= new Date(Date.now() + 14 * 86400000));
@@ -67,6 +67,7 @@ function ManageRecord() {
   const issued = house.proposals.filter(
     (pr) => pr.status !== "pending" && pr.status !== "draft",
   );
+  const agreed = acceptedEstimates ?? [];
 
   return (
     <div className="space-y-10">
@@ -114,6 +115,40 @@ function ManageRecord() {
       <SectionRule />
       <WarrantyList file={house} />
       <SectionRule />
+
+      {agreed.length > 0 ? (
+        <section className="space-y-4">
+          <div>
+            <h2 className="font-display text-xl font-medium">Agreed work</h2>
+            <p className="text-sm text-muted-foreground">
+              Estimates the owner has already accepted. They count as scheduled until the shop
+              logs the job complete.
+            </p>
+          </div>
+          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            {agreed.map((pr) => (
+              <li key={pr.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                <div>
+                  <p className="font-medium">{pr.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {pr.company_name} · accepted {shortDate(pr.accepted_at)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <MaintenanceBadge status="scheduled" />
+                  {pr.share_token ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/p/$token" params={{ token: pr.share_token }}>
+                        View estimate
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <div>

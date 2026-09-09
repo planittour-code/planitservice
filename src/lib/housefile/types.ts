@@ -394,6 +394,21 @@ export type PortfolioNextTask = {
   due_on: string;
   scheduled_on: string | null;
   status: MaintenanceStatus;
+  kind?: "maintenance" | "estimate";
+};
+
+export type PortfolioAcceptedEstimate = {
+  id: string;
+  property_id: string;
+  title: string;
+  share_token: string;
+  accepted_at: string;
+  company_name: string;
+  address_line: string;
+  city: string;
+  state: string;
+  zip: string;
+  homeowner_name: string;
 };
 
 export type PortfolioHouse = HomeownerHouse & {
@@ -402,6 +417,7 @@ export type PortfolioHouse = HomeownerHouse & {
   dueSoonCount: number;
   scheduledCount: number;
   nextTask: PortfolioNextTask | null;
+  acceptedEstimates: PortfolioAcceptedEstimate[];
 };
 
 export type PortfolioOwner = {
@@ -430,6 +446,8 @@ export type PortfolioUpcoming = {
   state: string;
   zip: string;
   homeowner_name: string;
+  kind?: "maintenance" | "estimate";
+  share_token?: string | null;
 };
 
 export type PropertyTransfer = {

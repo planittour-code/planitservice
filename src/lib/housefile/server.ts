@@ -62,6 +62,7 @@ import type {
   HomeownerProfile,
   MaintenanceTask,
   Portfolio,
+  PortfolioAcceptedEstimate,
   PortfolioHouse,
   PortfolioMember,
   PortfolioOwner,
@@ -3316,6 +3317,66 @@ function asMaintenanceTask(row: MaintenanceTask): MaintenanceTask {
   };
 }
 
+type AcceptedEstimateRow = {
+  id: string;
+  title: string;
+  share_token: string;
+  accepted_at: string;
+  property_id: string;
+  address_line: string;
+  city: string;
+  state: string;
+  zip: string;
+  homeowner_name: string;
+  company_name: string;
+};
+
+function estimateDateIso(value: string | null | undefined) {
+  if (!value) return todayIso();
+  return value.length >= 10 ? value.slice(0, 10) : todayIso();
+}
+
+async function acceptedEstimatesForPortfolio(sql: Sql, portfolioId: string, propertyId?: string) {
+  const rows = await sql<AcceptedEstimateRow>`
+    select pr.id, pr.title, pr.share_token, pr.accepted_at, office_p.id as property_id,
+      office_p.address_line, office_p.city, office_p.state, office_p.zip, office_p.homeowner_name,
+      c.name as company_name
+    from portfolio_properties pp
+    join properties office_p on office_p.id = pp.property_id
+    join properties shop_p
+      on lower(trim(shop_p.address_line)) = lower(trim(office_p.address_line))
+     and lower(trim(shop_p.zip)) = lower(trim(office_p.zip))
+    join proposals pr on pr.property_id = shop_p.id
+    join companies c on c.id = pr.company_id
+    where pp.portfolio_id = ${portfolioId}
+      and pr.status = ${"accepted"}
+      and pr.accepted_at is not null
+      and c.id <> ${HOUSEHOLD_COMPANY}
+    order by pr.accepted_at desc
+  `;
+  const seen = new Set<string>();
+  const out: PortfolioAcceptedEstimate[] = [];
+  for (const row of rows) {
+    if (propertyId && row.property_id !== propertyId) continue;
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    out.push({
+      id: row.id,
+      property_id: row.property_id,
+      title: row.title,
+      share_token: row.share_token,
+      accepted_at: row.accepted_at,
+      company_name: row.company_name,
+      address_line: row.address_line,
+      city: row.city,
+      state: row.state,
+      zip: row.zip,
+      homeowner_name: row.homeowner_name,
+    });
+  }
+  return out;
+}
+
 function ownersFromPortfolioHouses(houses: PortfolioHouse[]): PortfolioOwner[] {
   const map = new Map<string, PortfolioOwner>();
   for (const house of houses) {
@@ -3437,20 +3498,48 @@ export const getPortfolio = createServerFn({ method: "GET" })
       list.push(task);
       tasksByHouse.set(task.property_id, list);
     }
+    const accepted = await acceptedEstimatesForPortfolio(sql, portfolio.id);
+    const acceptedByHouse = new Map<string, PortfolioAcceptedEstimate[]>();
+    for (const item of accepted) {
+      const list = acceptedByHouse.get(item.property_id) ?? [];
+      list.push(item);
+      acceptedByHouse.set(item.property_id, list);
+    }
     const listed: PortfolioHouse[] = houses.map((h) => {
       const tasks = tasksByHouse.get(h.id) ?? [];
-      const next = nextOpenTask(tasks, today);
+      const acceptedEstimates = acceptedByHouse.get(h.id) ?? [];
+      const nextMaint = nextOpenTask(tasks, today);
+      const nextEstimate = acceptedEstimates[0];
+      const estimateTask = nextEstimate
+        ? {
+            id: nextEstimate.id,
+            title: nextEstimate.title,
+            due_on: estimateDateIso(nextEstimate.accepted_at),
+            scheduled_on: estimateDateIso(nextEstimate.accepted_at),
+            status: "scheduled" as const,
+            kind: "estimate" as const,
+          }
+        : null;
+      const nextTask =
+        nextMaint && (nextMaint.status === "overdue" || nextMaint.status === "dueSoon")
+          ? { ...nextMaint, kind: "maintenance" as const }
+          : estimateTask ?? (nextMaint ? { ...nextMaint, kind: "maintenance" as const } : null);
+      const scheduledCount =
+        tasks.filter((t) => taskStatus(t, today) === "scheduled").length + acceptedEstimates.length;
+      const maintStatus = houseMaintenanceStatus(tasks, today);
+      const status = acceptedEstimates.length && maintStatus === "current" ? "scheduled" : maintStatus;
       return {
         ...listRowFromCounts(h),
         company_name: h.company_name,
         open_title: h.open_title,
         open_token: h.open_token,
         homeowner_name: h.homeowner_name,
-        status: houseMaintenanceStatus(tasks, today),
+        status,
         overdueCount: tasks.filter((t) => taskStatus(t, today) === "overdue").length,
         dueSoonCount: tasks.filter((t) => taskStatus(t, today) === "dueSoon").length,
-        scheduledCount: tasks.filter((t) => taskStatus(t, today) === "scheduled").length,
-        nextTask: next,
+        scheduledCount,
+        nextTask,
+        acceptedEstimates,
       };
     });
     listed.sort((a, b) => {
@@ -3458,28 +3547,48 @@ export const getPortfolio = createServerFn({ method: "GET" })
       if (rank !== 0) return rank;
       return a.address_line.localeCompare(b.address_line);
     });
-    const upcoming: PortfolioUpcoming[] = openTasks
-      .filter((t) => isUpcomingTask(t, today))
-      .map((t) => ({
-        id: t.id,
-        property_id: t.property_id,
-        title: t.title,
-        system_name: t.system_name,
-        due_on: t.due_on,
-        scheduled_on: t.scheduled_on,
-        scheduled_note: t.scheduled_note,
-        status: taskStatus(t, today),
-        address_line: t.address_line,
-        city: t.city,
-        state: t.state,
-        zip: t.zip,
-        homeowner_name: t.homeowner_name,
-      }))
-      .sort((a, b) => {
-        const rank = maintenanceRank(a.status) - maintenanceRank(b.status);
-        if (rank !== 0) return rank;
-        return relevantTaskDate(a).localeCompare(relevantTaskDate(b));
-      });
+    const upcoming: PortfolioUpcoming[] = [
+      ...openTasks
+        .filter((t) => isUpcomingTask(t, today))
+        .map((t) => ({
+          id: t.id,
+          property_id: t.property_id,
+          title: t.title,
+          system_name: t.system_name,
+          due_on: t.due_on,
+          scheduled_on: t.scheduled_on,
+          scheduled_note: t.scheduled_note,
+          status: taskStatus(t, today),
+          address_line: t.address_line,
+          city: t.city,
+          state: t.state,
+          zip: t.zip,
+          homeowner_name: t.homeowner_name,
+          kind: "maintenance" as const,
+          share_token: null,
+        })),
+      ...accepted.map((item) => ({
+        id: item.id,
+        property_id: item.property_id,
+        title: item.title,
+        system_name: item.company_name,
+        due_on: estimateDateIso(item.accepted_at),
+        scheduled_on: estimateDateIso(item.accepted_at),
+        scheduled_note: `Agreed estimate from ${item.company_name}`,
+        status: "scheduled" as const,
+        address_line: item.address_line,
+        city: item.city,
+        state: item.state,
+        zip: item.zip,
+        homeowner_name: item.homeowner_name,
+        kind: "estimate" as const,
+        share_token: item.share_token,
+      })),
+    ].sort((a, b) => {
+      const rank = maintenanceRank(a.status) - maintenanceRank(b.status);
+      if (rank !== 0) return rank;
+      return relevantTaskDate(a).localeCompare(relevantTaskDate(b));
+    });
     const owners = ownersFromPortfolioHouses(listed);
     const cap = num(portfolio.included_count) || MANAGE_INCLUDED;
     const extra = num(portfolio.extra_slots);
@@ -3583,9 +3692,11 @@ export const getPortfolioRecord = createServerFn({ method: "GET" })
       select * from maintenance_tasks where property_id = ${id}
       order by completed_at nulls first, due_on
     `).map(asMaintenanceTask);
+    const acceptedEstimates = await acceptedEstimatesForPortfolio(sql, portfolio.id, id);
     return {
       house,
       tasks,
+      acceptedEstimates,
       portfolioName: portfolio.name,
       claimed: Boolean(rows[0].homeowner_user_id),
     };

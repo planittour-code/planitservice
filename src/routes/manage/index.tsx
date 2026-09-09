@@ -72,7 +72,7 @@ function ManageDashboard() {
           <h1 className="font-display text-3xl font-medium tracking-tight">{name}</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
             {count} of {cap} houses. Work is grouped by owner so you can see what is current, due
-            soon, overdue, or already scheduled.
+            soon, overdue, or already scheduled — including estimates the owner has accepted.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -153,8 +153,8 @@ function ManageDashboard() {
             <div>
               <h2 className="font-display text-xl font-medium">Upcoming</h2>
               <p className="text-sm text-muted-foreground">
-                Overdue work first, then the next 60 days. Scheduled dates stay on this list even
-                after the due date.
+                Overdue work first, then the next 60 days. Accepted estimates stay here until the
+                shop logs the job complete.
               </p>
             </div>
             {upcoming.length === 0 ? (
@@ -172,9 +172,12 @@ function ManageDashboard() {
                         <p className="font-medium">{item.title}</p>
                         <p className="text-sm text-muted-foreground">
                           {item.homeowner_name} · {item.address_line}
-                          {item.scheduled_on
-                            ? ` · scheduled ${shortDate(item.scheduled_on)}`
-                            : ` · due ${shortDate(item.due_on)}`}
+                          {item.kind === "estimate"
+                            ? ` · agreed ${shortDate(item.scheduled_on ?? item.due_on)}`
+                            : item.scheduled_on
+                              ? ` · scheduled ${shortDate(item.scheduled_on)}`
+                              : ` · due ${shortDate(item.due_on)}`}
+                          {item.kind === "estimate" && item.system_name ? ` · ${item.system_name}` : ""}
                         </p>
                       </div>
                       <MaintenanceBadge status={item.status} />
@@ -249,13 +252,18 @@ function HouseRow({ house }: { house: PortfolioHouse }) {
           <p className="text-sm text-muted-foreground">
             {house.city}, {house.state} {house.zip}
             {next
-              ? next.scheduled_on
-                ? ` · ${next.title} scheduled ${shortDate(next.scheduled_on)}`
-                : ` · ${next.title} due ${shortDate(next.due_on)}`
+              ? next.kind === "estimate"
+                ? ` · ${next.title} agreed ${shortDate(next.scheduled_on ?? next.due_on)}`
+                : next.scheduled_on
+                  ? ` · ${next.title} scheduled ${shortDate(next.scheduled_on)}`
+                  : ` · ${next.title} due ${shortDate(next.due_on)}`
               : " · no open maintenance"}
+            {(house.acceptedEstimates?.length ?? 0)
+              ? ` · ${house.acceptedEstimates.length} agreed ${house.acceptedEstimates.length === 1 ? "estimate" : "estimates"}`
+              : ""}
             {house.job_count ? ` · ${house.job_count} ${house.job_count === 1 ? "job" : "jobs"}` : ""}
             {house.open_proposal_count
-              ? ` · ${house.open_proposal_count} ${house.open_proposal_count === 1 ? "estimate" : "estimates"}`
+              ? ` · ${house.open_proposal_count} ${house.open_proposal_count === 1 ? "open estimate" : "open estimates"}`
               : ""}
           </p>
         </div>
