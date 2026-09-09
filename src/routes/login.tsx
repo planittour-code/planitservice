@@ -47,7 +47,7 @@ function Login() {
   // just because the public Sign in button asked for the house dashboard.
   const after = search.invite
     ? `/invite/${search.invite}`
-    : isShopDestination(next) || next.startsWith("/home/add") || next.startsWith("/manage/add")
+    : isShopDestination(next) || isManageDestination(next) || next.startsWith("/home/add")
       ? next
       : "/login";
   const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
@@ -72,25 +72,6 @@ function Login() {
     if (search.invite) {
       return <Navigate to="/invite/$token" params={{ token: search.invite }} />;
     }
-    if (audience.kind === "contractor" && audience.paying) {
-      if (next.startsWith("/app/new")) {
-        const params = new URLSearchParams(next.split("?")[1] ?? "");
-        return (
-          <Navigate
-            to="/app/new"
-            search={{
-              work: params.get("work") ?? undefined,
-              address: params.get("address") ?? undefined,
-              city: params.get("city") ?? undefined,
-              state: params.get("state") ?? undefined,
-              zip: params.get("zip") ?? undefined,
-              rfp: params.get("rfp") ?? undefined,
-            }}
-          />
-        );
-      }
-      return <Navigate to="/app" />;
-    }
     if (next.startsWith("/app/new")) {
       const params = new URLSearchParams(next.split("?")[1] ?? "");
       return (
@@ -107,16 +88,23 @@ function Login() {
         />
       );
     }
-    if (audience.kind === "manager" && audience.paying) {
+    if (isManageDestination(next) || manager) {
+      if (audience.hats.manager) {
+        if (next.startsWith("/manage/add")) return <Navigate to="/manage/add" />;
+        return <Navigate to="/manage" />;
+      }
+      return <Navigate to="/manage/open" />;
+    }
+    if (audience.hats.contractor) {
+      return <Navigate to="/app" />;
+    }
+    if (audience.hats.manager) {
       if (next.startsWith("/manage/add")) return <Navigate to="/manage/add" />;
       return <Navigate to="/manage" />;
     }
-    if (audience.kind === "homeowner" && audience.paying) {
+    if (audience.hats.homeowner) {
       if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
       return <Navigate to="/home" />;
-    }
-    if (next.startsWith("/manage/add") || isManageDestination(next)) {
-      return <Navigate to="/manage/open" />;
     }
     if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
     if (homeowner || isHouseDestination(next)) {

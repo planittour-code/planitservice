@@ -20,10 +20,10 @@ function HomeLayout() {
     );
   }
   if (!user) return <Navigate to="/login" search={{ role: "homeowner", next: "/home" }} />;
-  if (audience.kind === "contractor" && audience.paying) {
+  if (audience.hats.contractor && !audience.hats.homeowner) {
     return <Navigate to="/app" />;
   }
-  if (audience.kind === "manager" && audience.paying) {
+  if (audience.hats.manager && !audience.hats.homeowner) {
     return <Navigate to="/manage" />;
   }
 

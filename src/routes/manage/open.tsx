@@ -63,11 +63,8 @@ function OpenPortfolio() {
     };
   }, [user, search.session_id, queryClient, navigate]);
 
-  if (!isPending && audience.kind === "manager" && audience.paying && !search.session_id) {
+  if (!isPending && audience.hats.manager && !search.session_id) {
     return <Navigate to="/manage" />;
-  }
-  if (!isPending && audience.kind === "contractor" && audience.paying && !search.session_id) {
-    return <Navigate to="/app" />;
   }
 
   return (

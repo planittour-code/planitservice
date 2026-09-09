@@ -18,7 +18,7 @@ function AppLayout() {
   const dash = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => getDashboard(),
-    enabled: Boolean(user) && audience.kind === "contractor" && audience.paying,
+    enabled: Boolean(user) && audience.hats.contractor,
   });
 
   if (isPending || (user && audiencePending)) {
@@ -34,15 +34,9 @@ function AppLayout() {
     return <Navigate to="/shop/open" />;
   }
 
-  if (audience.kind === "homeowner" && audience.paying) {
-    return <Navigate to="/home" />;
-  }
-
-  if (audience.kind === "manager" && audience.paying) {
-    return <Navigate to="/manage" />;
-  }
-
-  if (!(audience.kind === "contractor" && audience.paying)) {
+  if (!audience.hats.contractor) {
+    if (audience.hats.manager) return <Navigate to="/manage" />;
+    if (audience.hats.homeowner) return <Navigate to="/home" />;
     return <Navigate to="/shop/open" />;
   }
 

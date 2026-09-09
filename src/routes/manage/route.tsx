@@ -24,11 +24,7 @@ function ManageFrame() {
 
   if (pathname === "/manage/open") return <Outlet />;
 
-  if (authReady && audience.kind === "contractor" && audience.paying) {
-    return <Navigate to="/app" />;
-  }
-
-  if (authReady && audience.kind === "manager" && audience.paying) {
+  if (authReady && audience.hats.manager) {
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-card/50">

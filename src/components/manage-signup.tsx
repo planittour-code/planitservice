@@ -34,7 +34,7 @@ export function ManageSignupForm() {
     setError(null);
     setBusy(true);
     try {
-      if (user && audience.kind === "manager" && audience.paying) {
+      if (user && audience.hats.manager) {
         void navigate({ to: "/manage" });
         return;
       }
@@ -111,14 +111,18 @@ export function ManageSignupForm() {
         {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        Card details stay on Stripe. No PlanitService account until payment finishes.
+        {user
+          ? "Card details stay on Stripe. This login becomes the office."
+          : "Card details stay on Stripe. No PlanitService account until payment finishes."}
       </p>
-      <p className="text-center text-sm text-muted-foreground">
-        Already paid and set a password?{" "}
-        <Link to="/login" search={{ next: "/manage" }} className="underline underline-offset-2">
-          Sign in
-        </Link>
-      </p>
+      {!user && (
+        <p className="text-center text-sm text-muted-foreground">
+          Already paid and set a password?{" "}
+          <Link to="/login" search={{ next: "/manage" }} className="underline underline-offset-2">
+            Sign in
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

@@ -3060,17 +3060,32 @@ export const getAccount = createServerFn({ method: "GET" })
     };
   });
 
+export type AudienceHats = {
+  contractor: boolean;
+  manager: boolean;
+  homeowner: boolean;
+};
+
 export type Audience = {
   signedIn: boolean;
   kind: "guest" | "homeowner" | "contractor" | "manager";
   paying: boolean;
   homePath: "/" | "/home" | "/app" | "/shop/open" | "/homeowner" | "/manage" | "/manage/open";
+  hats: AudienceHats;
 };
+
+const EMPTY_HATS: AudienceHats = { contractor: false, manager: false, homeowner: false };
 
 export const getAudience = createServerFn({ method: "GET" })
   .middleware([optionalAuthMiddleware])
   .handler(async ({ context }): Promise<Audience> => {
-    const guest: Audience = { signedIn: false, kind: "guest", paying: false, homePath: "/" };
+    const guest: Audience = {
+      signedIn: false,
+      kind: "guest",
+      paying: false,
+      homePath: "/",
+      hats: EMPTY_HATS,
+    };
     const userId = context.userId;
     if (!userId) return guest;
     try {
@@ -3107,25 +3122,30 @@ export const getAudience = createServerFn({ method: "GET" })
     const homeownerPaying =
       plans.some((p) => p.status === "active" || p.status === "paid" || p.status === "trialing") ||
       (houseCount[0]?.c ?? 0) > 0;
+    const hats: AudienceHats = {
+      contractor: contractorPaying,
+      manager: managerPaying,
+      homeowner: homeownerPaying,
+    };
 
     if (contractorPaying) {
-      return { signedIn: true, kind: "contractor", paying: true, homePath: "/app" };
+      return { signedIn: true, kind: "contractor", paying: true, homePath: "/app", hats };
     }
     if (managerPaying) {
-      return { signedIn: true, kind: "manager", paying: true, homePath: "/manage" };
+      return { signedIn: true, kind: "manager", paying: true, homePath: "/manage", hats };
     }
     if (homeownerPaying) {
-      return { signedIn: true, kind: "homeowner", paying: true, homePath: "/home" };
+      return { signedIn: true, kind: "homeowner", paying: true, homePath: "/home", hats };
     }
     if (shop) {
-      return { signedIn: true, kind: "contractor", paying: false, homePath: "/shop/open" };
+      return { signedIn: true, kind: "contractor", paying: false, homePath: "/shop/open", hats };
     }
     if (portfolio[0]) {
-      return { signedIn: true, kind: "manager", paying: false, homePath: "/manage/open" };
+      return { signedIn: true, kind: "manager", paying: false, homePath: "/manage/open", hats };
     }
-    return { signedIn: true, kind: "homeowner", paying: false, homePath: "/homeowner" };
+    return { signedIn: true, kind: "homeowner", paying: false, homePath: "/homeowner", hats };
     } catch {
-      return { signedIn: true, kind: "guest", paying: false, homePath: "/" };
+      return { signedIn: true, kind: "guest", paying: false, homePath: "/", hats: EMPTY_HATS };
     }
   });
 
