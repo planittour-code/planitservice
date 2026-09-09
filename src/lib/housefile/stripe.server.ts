@@ -98,6 +98,9 @@ export async function createCheckoutSessionUrl(input: {
     line_items: [{ price, quantity: input.quantity && input.quantity > 1 ? input.quantity : 1 }],
     success_url: `${origin}${input.successPath}${input.successPath.includes("?") ? "&" : "?"}session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}${input.cancelPath}`,
+    allow_promotion_codes: true,
+    // 100% staff coupons can complete without a card; paid checkouts still require one.
+    payment_method_collection: "if_required",
     customer_email: input.customerEmail || undefined,
     client_reference_id: input.userId || undefined,
     metadata: {
@@ -210,7 +213,10 @@ export async function readPaidShopSession(sessionId: string) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId);
   const kind = session.metadata?.kind ?? "";
-  const paid = session.payment_status === "paid" || session.status === "complete";
+  const paid =
+    session.payment_status === "paid" ||
+    session.payment_status === "no_payment_required" ||
+    session.status === "complete";
   if (!paid || (kind !== "shop_monthly" && kind !== "shop_annual")) {
     return { ok: false as const };
   }
@@ -297,7 +303,10 @@ export async function readPaidManageSession(sessionId: string) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId);
   const kind = session.metadata?.kind ?? "";
-  const paid = session.payment_status === "paid" || session.status === "complete";
+  const paid =
+    session.payment_status === "paid" ||
+    session.payment_status === "no_payment_required" ||
+    session.status === "complete";
   const base = kind === "manage_monthly" || kind === "manage_annual";
   const extra = kind === "manage_extra_monthly" || kind === "manage_extra_annual";
   if (!paid || (!base && !extra)) {
