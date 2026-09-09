@@ -37,7 +37,7 @@ function ManageFrame() {
                 className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
                 activeOptions={{ exact: true }}
               >
-                Houses
+                Work
               </Link>
               <Link
                 to="/manage/add"

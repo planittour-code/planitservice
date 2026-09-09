@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cadenceLabel } from "@/lib/housefile/maintain";
+import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
+import { MaintenanceBadge } from "@/components/status-badge";
 import {
   completeMaintenance,
   getHomeRecord,
@@ -86,17 +87,20 @@ function HomeRecord() {
           </p>
         </div>
         <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
-          {open.map((t) => {
-            const late = new Date(t.due_on) < new Date();
-            return (
-              <li key={t.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-medium">{t.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t.system_name} · {cadenceLabel(t.cadence)} · due {shortDate(t.due_on)}
-                    {late ? " · overdue" : ""}
-                  </p>
-                </div>
+          {open.map((t) => (
+            <li key={t.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">{t.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t.system_name} · {cadenceLabel(t.cadence)} · due {shortDate(t.due_on)}
+                  {t.scheduled_on ? ` · scheduled ${shortDate(t.scheduled_on)}` : ""}
+                </p>
+                {t.scheduled_note ? (
+                  <p className="text-sm text-muted-foreground">{t.scheduled_note}</p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <MaintenanceBadge status={taskStatus(t, todayIso())} />
                 <Button
                   type="button"
                   size="sm"
@@ -106,9 +110,9 @@ function HomeRecord() {
                 >
                   Mark done
                 </Button>
-              </li>
-            );
-          })}
+              </div>
+            </li>
+          ))}
         </ul>
       </section>
 

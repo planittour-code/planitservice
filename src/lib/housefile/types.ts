@@ -382,6 +382,54 @@ export type MaintenanceTask = {
   due_on: string;
   completed_at: string | null;
   notes: string | null;
+  scheduled_on: string | null;
+  scheduled_note: string | null;
+};
+
+export type MaintenanceStatus = "scheduled" | "overdue" | "dueSoon" | "current";
+
+export type PortfolioNextTask = {
+  id: string;
+  title: string;
+  due_on: string;
+  scheduled_on: string | null;
+  status: MaintenanceStatus;
+};
+
+export type PortfolioHouse = HomeownerHouse & {
+  status: MaintenanceStatus;
+  overdueCount: number;
+  dueSoonCount: number;
+  scheduledCount: number;
+  nextTask: PortfolioNextTask | null;
+};
+
+export type PortfolioOwner = {
+  key: string;
+  name: string;
+  email: string;
+  houseCount: number;
+  jobCount: number;
+  overdueCount: number;
+  dueSoonCount: number;
+  scheduledCount: number;
+  houses: PortfolioHouse[];
+};
+
+export type PortfolioUpcoming = {
+  id: string;
+  property_id: string;
+  title: string;
+  system_name: string;
+  due_on: string;
+  scheduled_on: string | null;
+  scheduled_note: string | null;
+  status: MaintenanceStatus;
+  address_line: string;
+  city: string;
+  state: string;
+  zip: string;
+  homeowner_name: string;
 };
 
 export type PropertyTransfer = {

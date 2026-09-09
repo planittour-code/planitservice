@@ -62,6 +62,14 @@ export function statusLabel(status: string) {
       return "Accepted";
     case "completed":
       return "Completed";
+    case "scheduled":
+      return "Scheduled";
+    case "overdue":
+      return "Overdue";
+    case "dueSoon":
+      return "Due soon";
+    case "current":
+      return "Current";
     default:
       return status;
   }

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -13,26 +13,47 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cadenceLabel } from "@/lib/housefile/maintain";
+import { MaintenanceBadge } from "@/components/status-badge";
+import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
-import { completePortfolioMaintenance, getPortfolioRecord, invitePortfolioOwner } from "@/lib/housefile/server";
+import {
+  completePortfolioMaintenance,
+  getPortfolioRecord,
+  invitePortfolioOwner,
+  schedulePortfolioMaintenance,
+} from "@/lib/housefile/server";
+import type { MaintenanceTask } from "@/lib/housefile/types";
 
 export const Route = createFileRoute("/manage/$id")({ component: ManageRecord });
 
 function ManageRecord() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
   const q = useQuery({
     queryKey: ["portfolio-record", id],
     queryFn: () => getPortfolioRecord({ data: id }),
   });
+  const refresh = () => {
+    void q.refetch();
+    void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+  };
   const done = useMutation({
     mutationFn: (taskId: string) => completePortfolioMaintenance({ data: { taskId } }),
     onSuccess: () => {
       toast.success("Logged. Next due date is on the Property Record.");
-      void q.refetch();
+      refresh();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not log"),
+  });
+  const schedule = useMutation({
+    mutationFn: (input: { taskId: string; scheduledOn: string | null; scheduledNote?: string }) =>
+      schedulePortfolioMaintenance({ data: input }),
+    onSuccess: () => {
+      toast.success("Schedule updated");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not schedule"),
   });
 
   if (q.isLoading) return <Skeleton className="h-64 w-full" />;
@@ -131,39 +152,109 @@ function ManageRecord() {
         <div>
           <h2 className="font-display text-xl font-medium">Maintenance</h2>
           <p className="text-sm text-muted-foreground">
-            {due.length} due in the next two weeks. Log the work so the next season is not a guess.
+            {due.length} due in the next two weeks. Set a date when the work is agreed, then log it
+            when it is done.
           </p>
         </div>
         <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
-          {open.map((t) => {
-            const late = new Date(t.due_on) < new Date();
-            return (
-              <li
-                key={t.id}
-                className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
+          {open.map((t) => (
+            <li key={t.id} className="space-y-3 px-4 py-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="font-medium">{t.title}</p>
                   <p className="text-sm text-muted-foreground">
                     {t.system_name} · {cadenceLabel(t.cadence)} · due {shortDate(t.due_on)}
-                    {late ? " · overdue" : ""}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={done.isPending}
-                  onClick={() => done.mutate(t.id)}
-                >
-                  Mark done
-                </Button>
-              </li>
-            );
-          })}
+                <div className="flex flex-wrap items-center gap-2">
+                  <MaintenanceBadge status={taskStatus(t, todayIso())} />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={done.isPending}
+                    onClick={() => done.mutate(t.id)}
+                  >
+                    Mark done
+                  </Button>
+                </div>
+              </div>
+              <ScheduleTask
+                task={t}
+                pending={schedule.isPending}
+                onSave={(scheduledOn, scheduledNote) =>
+                  schedule.mutate({ taskId: t.id, scheduledOn, scheduledNote })
+                }
+              />
+            </li>
+          ))}
         </ul>
       </section>
     </div>
+  );
+}
+
+function ScheduleTask({
+  task,
+  pending,
+  onSave,
+}: {
+  task: MaintenanceTask;
+  pending: boolean;
+  onSave: (scheduledOn: string | null, scheduledNote?: string) => void;
+}) {
+  const [date, setDate] = useState(task.scheduled_on ?? "");
+  const [note, setNote] = useState(task.scheduled_note ?? "");
+
+  useEffect(() => {
+    setDate(task.scheduled_on ?? "");
+    setNote(task.scheduled_note ?? "");
+  }, [task.scheduled_on, task.scheduled_note]);
+
+  return (
+    <form
+      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(date || null, note);
+      }}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor={`sched-${task.id}`}>Scheduled date</Label>
+        <Input
+          id={`sched-${task.id}`}
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full sm:w-44"
+        />
+      </div>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <Label htmlFor={`note-${task.id}`}>Note (optional)</Label>
+        <Input
+          id={`note-${task.id}`}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Vendor, window, or who agreed"
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" disabled={pending || !date}>
+          {task.scheduled_on ? "Update" : "Schedule"}
+        </Button>
+        {task.scheduled_on ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={pending}
+            onClick={() => onSave(null)}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </div>
+    </form>
   );
 }
 
