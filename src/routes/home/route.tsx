@@ -46,6 +46,12 @@ function HomeLayout() {
             >
               Add a property
             </Link>
+            <Link
+              to="/home/settings"
+              className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
+            >
+              Settings
+            </Link>
             <Button asChild size="sm">
               <Link to="/home/add">New record</Link>
             </Button>

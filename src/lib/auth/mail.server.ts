@@ -153,6 +153,42 @@ export async function sendEstimateEmail(data: {
   });
 }
 
+export async function sendManagerInviteEmail(data: {
+  to: string;
+  name: string;
+  office: string;
+  address: string;
+  inviteUrl: string;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = `${data.office} invited you to the Property Record for ${data.address}`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    `${data.office} keeps the Property Record for ${data.address}. Photos, jobs, warranties, and issued estimates stay on that file.`,
+    "",
+    `Sign in to claim your copy: ${data.inviteUrl}`,
+    "",
+    `${data.office} still manages the house. You get the same record.`,
+    "",
+    data.office,
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>${escapeHtml(data.office)} keeps the Property Record for ${escapeHtml(data.address)}. Photos, jobs, warranties, and issued estimates stay on that file.</p>
+<p><a href="${escapeHtml(data.inviteUrl)}">Claim your copy</a></p>
+<p>${escapeHtml(data.office)} still manages the house. You get the same record.</p>
+<p>${escapeHtml(data.office)}</p>`;
+
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: `${data.office} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: LEGAL_EMAIL,
+  });
+}
+
 function bytesToBase64(bytes: Uint8Array) {
   return Buffer.from(bytes).toString("base64");
 }

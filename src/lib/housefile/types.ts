@@ -299,6 +299,22 @@ export type HomeownerProfile = {
   user_id: string;
   plan: HomeownerPlan;
   status: string;
+  display_name: string | null;
+  phone: string | null;
+  email: string | null;
+  created_at: string;
+};
+
+export type Portfolio = {
+  id: string;
+  user_id: string;
+  name: string;
+  paid_at: string | null;
+  extra_slots: number;
+  included_count: number;
+  phone: string | null;
+  email: string | null;
+  logo_src: string | null;
   created_at: string;
 };
 

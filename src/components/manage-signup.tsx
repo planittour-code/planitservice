@@ -65,17 +65,15 @@ export function ManageSignupForm() {
 
   return (
     <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
-      {!user && (
-        <div className="space-y-1.5">
-          <Label htmlFor="office-name">Office name (optional)</Label>
-          <Input
-            id="office-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="organization"
-          />
-        </div>
-      )}
+      <div className="space-y-1.5">
+        <Label htmlFor="office-name">Office name (optional)</Label>
+        <Input
+          id="office-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoComplete="organization"
+        />
+      </div>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Billing</legend>
         <div className="grid gap-2 sm:grid-cols-2">

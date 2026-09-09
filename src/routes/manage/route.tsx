@@ -48,6 +48,12 @@ function ManageFrame() {
               >
                 Add a house
               </Link>
+              <Link
+                to="/manage/settings"
+                className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
+              >
+                Office
+              </Link>
               <Button asChild size="sm">
                 <Link to="/manage/add">New record</Link>
               </Button>

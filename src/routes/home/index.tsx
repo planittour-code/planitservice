@@ -29,7 +29,11 @@ function HomeDashboard() {
         <div>
           <p className="text-sm tracking-wide text-muted-foreground uppercase">Your Property Records</p>
           <h1 className="font-display text-3xl font-medium tracking-tight">
-            {houses.length === 1 ? "This is the house on your account." : "Houses on this account."}
+            {q.data?.profile?.display_name?.trim()
+              ? q.data.profile.display_name
+              : houses.length === 1
+                ? "This is the house on your account."
+                : "Houses on this account."}
           </h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
             Open a card to add photos, products, warranties, and maintenance. Add another address only
@@ -83,9 +87,12 @@ function HomeDashboard() {
           Standard is ${dollars(PROPERTY_MONTHLY)}/month or ${dollars(PROPERTY_ANNUAL)}/year per
           property. Change the card or cancel here. Access lasts through the period you already paid.
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <a href={BILLING_PORTAL}>Manage subscription</a>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/home/settings">Household settings</Link>
           </Button>
         </div>
       </section>

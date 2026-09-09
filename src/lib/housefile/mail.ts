@@ -26,6 +26,17 @@ export async function deliverEstimateEmail(input: {
   });
 }
 
+export async function deliverManagerInviteEmail(input: {
+  to: string;
+  name: string;
+  office: string;
+  address: string;
+  inviteUrl: string;
+}) {
+  const { sendManagerInviteEmail } = await import("@/lib/auth/mail.server");
+  await sendManagerInviteEmail(input);
+}
+
 export async function deliverAcceptedEstimateEmail(input: {
   property: Property;
   proposal: Proposal;

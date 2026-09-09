@@ -36,12 +36,14 @@ import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as HomeIdRouteImport } from './routes/home/$id'
 import { Route as HomeAddRouteImport } from './routes/home/add'
+import { Route as HomeSettingsRouteImport } from './routes/home/settings'
 import { Route as HouseTokenRouteImport } from './routes/house.$token'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ManageIndexRouteImport } from './routes/manage/index'
 import { Route as ManageIdRouteImport } from './routes/manage/$id'
 import { Route as ManageAddRouteImport } from './routes/manage/add'
 import { Route as ManageOpenRouteImport } from './routes/manage/open'
+import { Route as ManageSettingsRouteImport } from './routes/manage/settings'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as RfpTokenRouteImport } from './routes/rfp.$token'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
@@ -187,6 +189,11 @@ const HomeAddRoute = HomeAddRouteImport.update({
   path: '/add',
   getParentRoute: () => HomeRouteRoute,
 } as any)
+const HomeSettingsRoute = HomeSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => HomeRouteRoute,
+} as any)
 const HouseTokenRoute = HouseTokenRouteImport.update({
   id: '/house/$token',
   path: '/house/$token',
@@ -215,6 +222,11 @@ const ManageAddRoute = ManageAddRouteImport.update({
 const ManageOpenRoute = ManageOpenRouteImport.update({
   id: '/open',
   path: '/open',
+  getParentRoute: () => ManageRouteRoute,
+} as any)
+const ManageSettingsRoute = ManageSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => ManageRouteRoute,
 } as any)
 const PTokenRoute = PTokenRouteImport.update({
@@ -289,11 +301,13 @@ export interface FileRoutesByFullPath {
   '/claim/$token': typeof ClaimTokenRoute
   '/home/$id': typeof HomeIdRoute
   '/home/add': typeof HomeAddRoute
+  '/home/settings': typeof HomeSettingsRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
   '/manage/$id': typeof ManageIdRoute
   '/manage/add': typeof ManageAddRoute
   '/manage/open': typeof ManageOpenRoute
+  '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
@@ -330,11 +344,13 @@ export interface FileRoutesByTo {
   '/claim/$token': typeof ClaimTokenRoute
   '/home/$id': typeof HomeIdRoute
   '/home/add': typeof HomeAddRoute
+  '/home/settings': typeof HomeSettingsRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
   '/manage/$id': typeof ManageIdRoute
   '/manage/add': typeof ManageAddRoute
   '/manage/open': typeof ManageOpenRoute
+  '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
@@ -375,11 +391,13 @@ export interface FileRoutesById {
   '/claim/$token': typeof ClaimTokenRoute
   '/home/$id': typeof HomeIdRoute
   '/home/add': typeof HomeAddRoute
+  '/home/settings': typeof HomeSettingsRoute
   '/house/$token': typeof HouseTokenRoute
   '/invite/$token': typeof InviteTokenRoute
   '/manage/$id': typeof ManageIdRoute
   '/manage/add': typeof ManageAddRoute
   '/manage/open': typeof ManageOpenRoute
+  '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
@@ -421,11 +439,13 @@ export interface FileRouteTypes {
     | '/claim/$token'
     | '/home/$id'
     | '/home/add'
+    | '/home/settings'
     | '/house/$token'
     | '/invite/$token'
     | '/manage/$id'
     | '/manage/add'
     | '/manage/open'
+    | '/manage/settings'
     | '/p/$token'
     | '/rfp/$token'
     | '/s/$slug'
@@ -462,11 +482,13 @@ export interface FileRouteTypes {
     | '/claim/$token'
     | '/home/$id'
     | '/home/add'
+    | '/home/settings'
     | '/house/$token'
     | '/invite/$token'
     | '/manage/$id'
     | '/manage/add'
     | '/manage/open'
+    | '/manage/settings'
     | '/p/$token'
     | '/rfp/$token'
     | '/s/$slug'
@@ -506,11 +528,13 @@ export interface FileRouteTypes {
     | '/claim/$token'
     | '/home/$id'
     | '/home/add'
+    | '/home/settings'
     | '/house/$token'
     | '/invite/$token'
     | '/manage/$id'
     | '/manage/add'
     | '/manage/open'
+    | '/manage/settings'
     | '/p/$token'
     | '/rfp/$token'
     | '/s/$slug'
@@ -741,6 +765,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeAddRouteImport
       parentRoute: typeof HomeRouteRoute
     }
+    '/home/settings': {
+      id: '/home/settings'
+      path: '/settings'
+      fullPath: '/home/settings'
+      preLoaderRoute: typeof HomeSettingsRouteImport
+      parentRoute: typeof HomeRouteRoute
+    }
     '/house/$token': {
       id: '/house/$token'
       path: '/house/$token'
@@ -781,6 +812,13 @@ declare module '@tanstack/react-router' {
       path: '/open'
       fullPath: '/manage/open'
       preLoaderRoute: typeof ManageOpenRouteImport
+      parentRoute: typeof ManageRouteRoute
+    }
+    '/manage/settings': {
+      id: '/manage/settings'
+      path: '/settings'
+      fullPath: '/manage/settings'
+      preLoaderRoute: typeof ManageSettingsRouteImport
       parentRoute: typeof ManageRouteRoute
     }
     '/p/$token': {
@@ -894,12 +932,14 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 interface HomeRouteRouteChildren {
   HomeIdRoute: typeof HomeIdRoute
   HomeAddRoute: typeof HomeAddRoute
+  HomeSettingsRoute: typeof HomeSettingsRoute
   HomeIndexRoute: typeof HomeIndexRoute
 }
 
 const HomeRouteRouteChildren: HomeRouteRouteChildren = {
   HomeIdRoute: HomeIdRoute,
   HomeAddRoute: HomeAddRoute,
+  HomeSettingsRoute: HomeSettingsRoute,
   HomeIndexRoute: HomeIndexRoute,
 }
 
@@ -911,6 +951,7 @@ interface ManageRouteRouteChildren {
   ManageIdRoute: typeof ManageIdRoute
   ManageAddRoute: typeof ManageAddRoute
   ManageOpenRoute: typeof ManageOpenRoute
+  ManageSettingsRoute: typeof ManageSettingsRoute
   ManageIndexRoute: typeof ManageIndexRoute
 }
 
@@ -918,6 +959,7 @@ const ManageRouteRouteChildren: ManageRouteRouteChildren = {
   ManageIdRoute: ManageIdRoute,
   ManageAddRoute: ManageAddRoute,
   ManageOpenRoute: ManageOpenRoute,
+  ManageSettingsRoute: ManageSettingsRoute,
   ManageIndexRoute: ManageIndexRoute,
 }
 

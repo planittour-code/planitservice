@@ -111,9 +111,12 @@ function ManageDashboard() {
           {MANAGE_INCLUDED} houses. Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)}/month each. Change
           the card or cancel here. Access lasts through the period you already paid.
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <a href={BILLING_PORTAL}>Manage subscription</a>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/manage/settings">Office settings</Link>
           </Button>
         </div>
       </section>

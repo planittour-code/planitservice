@@ -61,6 +61,7 @@ import type {
   HomeownerPlan,
   HomeownerProfile,
   MaintenanceTask,
+  Portfolio,
   PropertyPlan,
   PropertyTransfer,
   Rfp,
@@ -2443,6 +2444,9 @@ export const claimInvite = createServerFn({ method: "POST" })
       select * from properties where invite_token = ${token} or share_token = ${token} limit 1
     `;
     if (!rows[0]) throw new Error("Invitation not found");
+    if (rows[0].homeowner_user_id && rows[0].homeowner_user_id !== context.userId) {
+      throw new Error("This Property Record already belongs to another household.");
+    }
     if (session?.email) {
       await bindHomeownerByEmail(sql, context.userId, session.email);
     }
@@ -2450,7 +2454,9 @@ export const claimInvite = createServerFn({ method: "POST" })
       update properties
       set homeowner_user_id = ${context.userId}, invite_status = ${"claimed"}
       where id = ${rows[0].id}
+        and (homeowner_user_id is null or homeowner_user_id = ${context.userId})
     `;
+    await ensureHomeownerProfile(sql, context.userId);
     const updated = (await sql<Property>`select * from properties where id = ${rows[0].id}`)[0]!;
     return loadHouse(sql, updated);
   });
@@ -2735,9 +2741,10 @@ export const getHousehold = createServerFn({ method: "GET" })
             and pp.tier = ${"pro"}
         )
     `;
-    const profile = (
+    const profileRow = (
       await sql<HomeownerProfile>`select * from homeowner_profiles where user_id = ${context.userId} limit 1`
     )[0] ?? null;
+    const profile = profileRow ? asHomeownerProfile(profileRow) : null;
     const houses = await sql<HomeownerHouse>`
       select p.*,
         c.name as company_name,
@@ -2952,19 +2959,19 @@ export const getAccount = createServerFn({ method: "GET" })
     const session = await getSessionUser();
     const email = session?.email ?? null;
 
-    const owned = await sql`
-      select * from companies
+    const owned = await sql<{ id: string; name: string }>`
+      select id, name from companies
       where user_id = ${context.userId} and id <> ${HOUSEHOLD_COMPANY}
       limit 1
     `;
-    let shop = null;
+    let shop: { id: string; name: string; role: "owner" | "sales"; seats: number } | null = null;
     if (owned[0]) {
-      const seats = await sql`
+      const seats = await sql<{ c: number }>`
         select count(*)::int as c from company_members where company_id = ${owned[0].id}
       `;
       shop = { id: owned[0].id, name: owned[0].name, role: "owner", seats: num(seats[0]?.c) };
     } else {
-      const byUser = await sql`
+      const byUser = await sql<{ id: string; name: string; member_role: string }>`
         select c.id, c.name, m.role as member_role
         from company_members m
         join companies c on c.id = m.company_id
@@ -2972,7 +2979,7 @@ export const getAccount = createServerFn({ method: "GET" })
         limit 1
       `;
       if (byUser[0]) {
-        const seats = await sql`
+        const seats = await sql<{ c: number }>`
           select count(*)::int as c from company_members where company_id = ${byUser[0].id}
         `;
         shop = {
@@ -2985,7 +2992,15 @@ export const getAccount = createServerFn({ method: "GET" })
     }
 
     if (email) await bindHomeownerByEmail(sql, context.userId, email);
-    const houses = await sql`
+    const houses = await sql<{
+      id: string;
+      address_line: string;
+      city: string;
+      cadence: string | null;
+      tier: string | null;
+      status: string | null;
+      renews_on: string | null;
+    }>`
       select p.id, p.address_line, p.city, pp.cadence, pp.tier, pp.status, pp.renews_on
       from properties p
       left join property_plans pp on pp.property_id = p.id
@@ -2993,7 +3008,7 @@ export const getAccount = createServerFn({ method: "GET" })
       order by p.created_at desc
     `;
     const quotes = shop
-      ? await sql`
+      ? await sql<{ c: number }>`
           select count(*)::int as c from proposals where company_id = ${shop.id}
         `
       : [{ c: 0 }];
@@ -3014,9 +3029,15 @@ export const getAccount = createServerFn({ method: "GET" })
         `
       : [{ c: 0 }];
 
+    const household = (
+      await sql<HomeownerProfile>`
+        select * from homeowner_profiles where user_id = ${context.userId} limit 1
+      `
+    )[0];
+
     return {
       email,
-      name: email?.split("@")[0] ?? "Account",
+      name: household?.display_name?.trim() || email?.split("@")[0] || "Account",
       shop,
       quoteCount: num(quotes[0]?.c),
       houses: houses.map((h) => ({
@@ -3109,19 +3130,44 @@ export const getAudience = createServerFn({ method: "GET" })
   });
 
 async function requirePaidPortfolio(sql: Sql, userId: string) {
-  const rows = await sql<{
-    id: string;
-    user_id: string;
-    name: string;
-    paid_at: string | null;
-    extra_slots: number;
-    included_count: number;
-  }>`
+  const rows = await sql<Portfolio>`
     select * from portfolios where user_id = ${userId} limit 1
   `;
   const portfolio = rows[0];
   if (!portfolio?.paid_at) throw new Error("Open a portfolio to continue.");
-  return portfolio;
+  return asPortfolio(portfolio);
+}
+
+function asPortfolio(row: Portfolio): Portfolio {
+  return {
+    ...row,
+    extra_slots: num(row.extra_slots),
+    included_count: num(row.included_count) || MANAGE_INCLUDED,
+    phone: row.phone ?? null,
+    email: row.email ?? null,
+    logo_src: row.logo_src ?? null,
+  };
+}
+
+function asHomeownerProfile(row: HomeownerProfile): HomeownerProfile {
+  return {
+    ...row,
+    display_name: row.display_name ?? null,
+    phone: row.phone ?? null,
+    email: row.email ?? null,
+  };
+}
+
+async function ensureHomeownerProfile(sql: Sql, userId: string) {
+  await sql`
+    insert into homeowner_profiles (user_id, plan, status)
+    values (${userId}, ${"basic"}, ${"active"})
+    on conflict (user_id) do nothing
+  `;
+  const rows = await sql<HomeownerProfile>`
+    select * from homeowner_profiles where user_id = ${userId} limit 1
+  `;
+  return asHomeownerProfile(rows[0]!);
 }
 
 export const getPortfolio = createServerFn({ method: "GET" })
@@ -3150,6 +3196,9 @@ export const getPortfolio = createServerFn({ method: "GET" })
     return {
       id: portfolio.id,
       name: portfolio.name,
+      phone: portfolio.phone,
+      email: portfolio.email,
+      logo_src: portfolio.logo_src,
       included: cap,
       extra,
       cap: cap + extra,
@@ -3238,7 +3287,12 @@ export const getPortfolioRecord = createServerFn({ method: "GET" })
       select * from maintenance_tasks where property_id = ${id}
       order by completed_at nulls first, due_on
     `;
-    return { house, tasks, portfolioName: portfolio.name };
+    return {
+      house,
+      tasks,
+      portfolioName: portfolio.name,
+      claimed: Boolean(rows[0].homeowner_user_id),
+    };
   });
 
 export const completePortfolioMaintenance = createServerFn({ method: "POST" })
@@ -3270,6 +3324,108 @@ export const completePortfolioMaintenance = createServerFn({ method: "POST" })
       )
     `;
     return { ok: true as const };
+  });
+
+export const updatePortfolio = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: {
+      name: string;
+      phone: string;
+      email: string;
+      logo_src?: string | null;
+    }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const name = data.name.trim() || portfolio.name;
+    await sql`
+      update portfolios
+      set name = ${name},
+          phone = ${data.phone.trim() || null},
+          email = ${data.email.trim() || portfolio.email},
+          logo_src = ${data.logo_src === undefined ? portfolio.logo_src : data.logo_src}
+      where id = ${portfolio.id}
+    `;
+    const rows = await sql<Portfolio>`select * from portfolios where id = ${portfolio.id}`;
+    return asPortfolio(rows[0]!);
+  });
+
+export const updateHomeownerProfile = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { displayName: string; phone: string; email: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const profile = await ensureHomeownerProfile(sql, context.userId);
+    const display = data.displayName.trim() || profile.display_name;
+    await sql`
+      update homeowner_profiles
+      set display_name = ${display},
+          phone = ${data.phone.trim() || null},
+          email = ${data.email.trim() || profile.email}
+      where user_id = ${context.userId}
+    `;
+    const rows = await sql<HomeownerProfile>`
+      select * from homeowner_profiles where user_id = ${context.userId} limit 1
+    `;
+    return asHomeownerProfile(rows[0]!);
+  });
+
+export const invitePortfolioOwner = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string; email: string; name?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const portfolio = await requirePaidPortfolio(sql, context.userId);
+    const property = (
+      await sql<Property>`
+        select p.*
+        from properties p
+        join portfolio_properties pp on pp.property_id = p.id
+        where p.id = ${data.propertyId} and pp.portfolio_id = ${portfolio.id}
+        limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    const email = data.email.trim().toLowerCase();
+    if (!email.includes("@")) throw new Error("Need the owner's email.");
+    if (property.homeowner_user_id) {
+      const same = property.homeowner_email.trim().toLowerCase() === email;
+      if (!same) {
+        throw new Error("This house already has an owner. They transfer the record from their login.");
+      }
+    }
+    const name = data.name?.trim() || property.homeowner_name || "Owner";
+    await sql`
+      update properties
+      set homeowner_email = ${email},
+          homeowner_name = ${name},
+          invite_status = ${property.homeowner_user_id ? "claimed" : "sent"}
+      where id = ${property.id}
+    `;
+    const origin = (process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "");
+    const inviteUrl = `${origin}/invite/${property.invite_token}`;
+    const address = `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`;
+    let emailed = false;
+    try {
+      const { deliverManagerInviteEmail } = await import("./mail");
+      await deliverManagerInviteEmail({
+        to: email,
+        name,
+        office: portfolio.name,
+        address,
+        inviteUrl,
+      });
+      emailed = true;
+    } catch (err) {
+      console.error("[mail] manager invite failed", err);
+    }
+    return {
+      inviteToken: property.invite_token,
+      emailed,
+      claimed: Boolean(property.homeowner_user_id),
+    };
   });
 
 

@@ -212,8 +212,18 @@ function AccountPage() {
                     </Button>
                   )}
                   {isManage && (
+                    <>
+                      <Button asChild variant="outline">
+                        <Link to="/manage">Open portfolio</Link>
+                      </Button>
+                      <Button asChild variant="outline">
+                        <Link to="/manage/settings">Office settings</Link>
+                      </Button>
+                    </>
+                  )}
+                  {isHome && (
                     <Button asChild variant="outline">
-                      <Link to="/manage">Open portfolio</Link>
+                      <Link to="/home/settings">Household settings</Link>
                     </Button>
                   )}
                   {!isHome && !isManage && (

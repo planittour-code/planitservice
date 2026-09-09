@@ -97,7 +97,7 @@ function InvitePage() {
         )}
         <header className="space-y-3">
           <p className="text-sm tracking-wide text-muted-foreground uppercase">
-            {file.company.name} sent this
+            {file.company.id === "co_household" ? "Your property manager sent this" : `${file.company.name} sent this`}
           </p>
           <h1 className="font-display text-4xl font-medium tracking-tight">
             {open ? open.title : p.address_line}

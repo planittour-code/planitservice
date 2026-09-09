@@ -24,6 +24,27 @@ export function invitationSubject(company: string, address: string) {
   return `${company} sent an estimate for ${address}`;
 }
 
+export function managerInviteLetter(input: {
+  name: string;
+  address: string;
+  office: string;
+  inviteUrl: string;
+}) {
+  const greeting = input.name.trim() || "there";
+  return `Hi ${greeting},
+
+${input.office} keeps the Property Record for ${input.address}. Photos, jobs, warranties, and issued estimates stay on that file.
+
+Sign in to claim your copy:
+${input.inviteUrl}
+
+${input.office} still manages the house. You get the same record.`;
+}
+
+export function managerInviteSubject(office: string, address: string) {
+  return `${office} invited you to the Property Record for ${address}`;
+}
+
 export function safeNextPath(path: string | undefined, fallback = "/app") {
   if (!path) return fallback;
   if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {

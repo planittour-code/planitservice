@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   FactsPanel,
@@ -9,10 +10,13 @@ import {
   WarrantyList,
 } from "@/components/house-panels";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cadenceLabel } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
-import { completePortfolioMaintenance, getPortfolioRecord } from "@/lib/housefile/server";
+import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
+import { completePortfolioMaintenance, getPortfolioRecord, invitePortfolioOwner } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/manage/$id")({ component: ManageRecord });
 
@@ -34,7 +38,7 @@ function ManageRecord() {
   if (q.isLoading) return <Skeleton className="h-64 w-full" />;
   if (!q.data) return <p className="text-destructive">Property not found.</p>;
 
-  const { house, tasks } = q.data;
+  const { house, tasks, claimed } = q.data;
   const p = house.property;
   const open = tasks.filter((t) => !t.completed_at);
   const due = open.filter((t) => new Date(t.due_on) <= new Date(Date.now() + 14 * 86400000));
@@ -58,6 +62,11 @@ function ManageRecord() {
         <p className="text-muted-foreground">
           {p.city}, {p.state} {p.zip}
           {p.homeowner_name ? ` · ${p.homeowner_name}` : ""}
+          {claimed
+            ? " · Owner claimed"
+            : p.homeowner_email
+              ? " · Invite sent"
+              : " · Not claimed yet"}
         </p>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Add photos first. Then fill house data and the jobs at this address. Shops quote in their
@@ -65,6 +74,17 @@ function ManageRecord() {
         </p>
       </header>
 
+      <InviteOwner
+        propertyId={p.id}
+        claimed={claimed}
+        currentEmail={p.homeowner_email}
+        currentName={p.homeowner_name}
+        inviteToken={p.invite_token}
+        address={`${p.address_line}, ${p.city}, ${p.state} ${p.zip}`}
+        office={q.data.portfolioName}
+        onDone={() => q.refetch()}
+      />
+      <SectionRule />
       <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       <SectionRule />
       <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
@@ -144,5 +164,124 @@ function ManageRecord() {
         </ul>
       </section>
     </div>
+  );
+}
+
+function InviteOwner({
+  propertyId,
+  claimed,
+  currentEmail,
+  currentName,
+  inviteToken,
+  address,
+  office,
+  onDone,
+}: {
+  propertyId: string;
+  claimed: boolean;
+  currentEmail: string;
+  currentName: string;
+  inviteToken: string;
+  address: string;
+  office: string;
+  onDone: () => void;
+}) {
+  const [email, setEmail] = useState(currentEmail);
+  const [name, setName] = useState(currentName === "Owner" ? "" : currentName);
+
+  useEffect(() => {
+    setEmail(currentEmail);
+    setName(currentName === "Owner" ? "" : currentName);
+  }, [currentEmail, currentName]);
+  const invite = useMutation({
+    mutationFn: () =>
+      invitePortfolioOwner({
+        data: { propertyId, email, name: name.trim() || undefined },
+      }),
+    onSuccess: (res) => {
+      toast.success(res.emailed ? "Invitation sent" : "Invite link ready");
+      onDone();
+      const path = `/invite/${res.inviteToken}`;
+      void navigator.clipboard?.writeText(`${window.location.origin}${path}`);
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not invite"),
+  });
+
+  const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${inviteToken}`;
+  const letter = managerInviteLetter({
+    name: name.trim() || currentName || "there",
+    address,
+    office,
+    inviteUrl: inviteUrl || `/invite/${inviteToken}`,
+  });
+  const subject = managerInviteSubject(office, address);
+
+  return (
+    <section className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+      <div>
+        <h2 className="font-display text-xl font-medium">Invite the owner</h2>
+        <p className="text-sm text-muted-foreground">
+          {claimed
+            ? "The owner has a login on this record. You still keep the file in the portfolio."
+            : "They claim the same Property Record. You keep managing the house."}
+        </p>
+      </div>
+      {claimed ? (
+        <p className="text-sm text-muted-foreground">
+          Claimed
+          {currentEmail ? ` · ${currentEmail}` : ""}
+          {currentName && currentName !== "Owner" ? ` · ${currentName}` : ""}.
+        </p>
+      ) : (
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            invite.mutate();
+          }}
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="owner-email">Owner email</Label>
+            <Input
+              id="owner-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="owner-name">Owner name (optional)</Label>
+            <Input id="owner-name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={invite.isPending}>
+              {invite.isPending ? "Sending…" : "Send invitation"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(letter)}`;
+              }}
+            >
+              Open in email
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteToken}`).then(
+                  () => toast.success("Invite link copied"),
+                  () => toast.error("Could not copy the link"),
+                );
+              }}
+            >
+              Copy invite link
+            </Button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
