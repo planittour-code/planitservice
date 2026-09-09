@@ -8,6 +8,7 @@ import { authClient } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   MANAGE_ANNUAL,
+  MANAGE_EXTRA_ANNUAL,
   MANAGE_EXTRA_MONTHLY,
   MANAGE_INCLUDED,
   MANAGE_MONTHLY,
@@ -101,7 +102,7 @@ export function ManageSignupForm() {
           >
             <p className="font-medium">${dollars(MANAGE_ANNUAL)} / year</p>
             <p className={cn("mt-1 text-sm", cadence === "annual" ? "opacity-80" : "text-muted-foreground")}>
-              Two months included
+              {MANAGE_INCLUDED} houses. Extra ${dollars(MANAGE_EXTRA_ANNUAL)}/year each
             </p>
           </button>
         </div>
