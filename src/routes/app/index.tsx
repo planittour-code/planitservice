@@ -1,23 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { workTypesFor } from "@/lib/housefile/quote";
-import { getDashboard, listWorkKits } from "@/lib/housefile/server";
+import { getDashboard } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/")({ component: ShopHome });
 
 function ShopHome() {
-  const navigate = useNavigate();
   const q = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
-  const kitsQ = useQuery({ queryKey: ["work-kits"], queryFn: () => listWorkKits({ data: {} }) });
-  const [workId, setWorkId] = useState("");
-  const [kitId, setKitId] = useState("");
-  const kitsForWork = (kitsQ.data?.kits ?? []).filter((kit) => kit.work_id === workId);
   if (q.isLoading) {
     return (
       <div className="space-y-4">
@@ -31,17 +23,8 @@ function ShopHome() {
   }
   const { company, properties, proposals, pending, role } = q.data;
   const clients = q.data.clients ?? [];
-  const trades = workTypesFor(company.trades);
   const propertyCount = properties.length;
   const jobCount = properties.reduce((n, p) => n + p.job_count + p.open_proposal_count, 0);
-
-  function startQuote() {
-    if (!workId) return;
-    void navigate({
-      to: "/app/new",
-      search: { work: workId, kit: kitId || undefined },
-    });
-  }
 
   return (
     <div className="space-y-10">
@@ -67,57 +50,11 @@ function ShopHome() {
         <div>
           <h2 className="font-display text-xl font-medium">Start a Quote</h2>
           <p className="text-sm text-muted-foreground">
-            Pick a work category, then a sub-category. Address and details come next.
+            Address and the ask first. Photos, measurements, then line items from Materials.
           </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="quote-work">Work category</Label>
-            <select
-              id="quote-work"
-              value={workId}
-              onChange={(e) => {
-                setWorkId(e.target.value);
-                setKitId("");
-              }}
-              className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            >
-              <option value="">Select work</option>
-              {trades.map((work) => (
-                <option key={work.id} value={work.id}>
-                  {work.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="quote-kit">Sub-category</Label>
-            <select
-              id="quote-kit"
-              value={kitId}
-              disabled={!workId || kitsQ.isLoading}
-              onChange={(e) => setKitId(e.target.value)}
-              className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">
-                {!workId
-                  ? "Pick a work category first"
-                  : kitsQ.isLoading
-                    ? "Loading…"
-                    : kitsForWork.length
-                      ? "Select sub-category"
-                      : "No sub-categories — start blank"}
-              </option>
-              {kitsForWork.map((kit) => (
-                <option key={kit.id} value={kit.id}>
-                  {kit.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <Button type="button" disabled={!workId || (kitsForWork.length > 0 && !kitId)} onClick={startQuote}>
-          Start a Quote
+        <Button asChild>
+          <Link to="/app/new">Start a Quote</Link>
         </Button>
       </section>
 

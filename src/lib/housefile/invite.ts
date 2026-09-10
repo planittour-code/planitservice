@@ -45,6 +45,35 @@ export function managerInviteSubject(office: string, address: string) {
   return `${office} invited you to the Property Record for ${address}`;
 }
 
+export function namedShopInviteLetter(input: {
+  shopName?: string;
+  fromName: string;
+  address: string;
+  title: string;
+  body: string;
+  quoteUrl: string;
+  houseUrl: string;
+}) {
+  const greeting = input.shopName?.trim() || "there";
+  return `Hi ${greeting},
+
+${input.fromName} asked you to quote ${input.title} at ${input.address}.
+
+${input.body}
+
+Open the job and quote from your shop:
+${input.quoteUrl}
+
+Property Record (photos and facts at this address):
+${input.houseUrl}
+
+PlanitService`;
+}
+
+export function namedShopInviteSubject(address: string) {
+  return `Quote requested for ${address}`;
+}
+
 export function safeNextPath(path: string | undefined, fallback = "/app") {
   if (!path) return fallback;
   if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {

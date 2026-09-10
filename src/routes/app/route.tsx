@@ -13,7 +13,8 @@ export const Route = createFileRoute("/app")({ component: AppLayout });
 function AppLayout() {
   const { user, isPending } = useCurrentUserState();
   const { audience, isPending: audiencePending } = useAudience();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useRouterState({ select: (s) => s.location });
+  const pathname = location.pathname;
   const onboardPath = pathname === "/app/onboard";
   const dash = useQuery({
     queryKey: ["dashboard"],
@@ -31,6 +32,15 @@ function AppLayout() {
     );
   }
   if (!user) {
+    const invite = inviteTokenFromLocation(location);
+    if (invite) {
+      return (
+        <Navigate
+          to="/login"
+          search={{ next: `/app/new?invite=${encodeURIComponent(invite)}`, role: "contractor" }}
+        />
+      );
+    }
     return <Navigate to="/shop/open" />;
   }
 
@@ -52,9 +62,7 @@ function AppLayout() {
           {!onboardPath && (
             <nav className="ml-auto hidden items-center gap-1 sm:flex">
               <NavLink to="/app">Shop</NavLink>
-              <NavLink to="/app/market">Market</NavLink>
               <NavLink to="/app/properties">Jobs</NavLink>
-              <NavLink to="/app/leads">Leads</NavLink>
               <NavLink to="/app/book">Materials</NavLink>
               <NavLink to="/app/settings">Shop settings</NavLink>
             </nav>
@@ -71,9 +79,7 @@ function AppLayout() {
         {!onboardPath && (
         <nav className="flex gap-1 overflow-x-auto border-t border-border px-2 py-1 sm:hidden">
           <NavLink to="/app">Shop</NavLink>
-          <NavLink to="/app/market">Market</NavLink>
           <NavLink to="/app/properties">Jobs</NavLink>
-          <NavLink to="/app/leads">Leads</NavLink>
           <NavLink to="/app/book">Materials</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>
         </nav>
@@ -84,6 +90,15 @@ function AppLayout() {
       </div>
     </div>
   );
+}
+
+function inviteTokenFromLocation(location: { href?: string; search?: unknown }) {
+  const search = location.search as Record<string, unknown> | undefined;
+  if (typeof search?.invite === "string" && search.invite.trim()) return search.invite.trim();
+  const href = typeof location.href === "string" ? location.href : "";
+  const query = href.includes("?") ? href.slice(href.indexOf("?") + 1).split("#")[0] : "";
+  if (!query) return "";
+  return new URLSearchParams(query).get("invite")?.trim() || "";
 }
 
 function NavLink({ to, children }: { to: string; children: ReactNode }) {

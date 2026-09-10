@@ -189,6 +189,46 @@ export async function sendManagerInviteEmail(data: {
   });
 }
 
+export async function sendNamedShopInviteEmail(data: {
+  to: string;
+  shopName?: string;
+  fromName: string;
+  address: string;
+  title: string;
+  body: string;
+  quoteUrl: string;
+  houseUrl: string;
+}) {
+  const first = data.shopName?.trim() || "there";
+  const subject = `Quote requested for ${data.address}`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    `${data.fromName} asked you to quote ${data.title} at ${data.address}.`,
+    "",
+    data.body,
+    "",
+    `Open the job and quote from your shop: ${data.quoteUrl}`,
+    `Property Record: ${data.houseUrl}`,
+    "",
+    LEGAL_NAME,
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>${escapeHtml(data.fromName)} asked you to quote ${escapeHtml(data.title)} at ${escapeHtml(data.address)}.</p>
+<p>${escapeHtml(data.body).replace(/\n/g, "<br>")}</p>
+<p><a href="${escapeHtml(data.quoteUrl)}">Open the job and quote</a></p>
+<p>Property Record: <a href="${escapeHtml(data.houseUrl)}">${escapeHtml(data.houseUrl)}</a></p>
+<p>${escapeHtml(LEGAL_NAME)}</p>`;
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: `${data.fromName} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: LEGAL_EMAIL,
+  });
+}
+
 function bytesToBase64(bytes: Uint8Array) {
   return Buffer.from(bytes).toString("base64");
 }

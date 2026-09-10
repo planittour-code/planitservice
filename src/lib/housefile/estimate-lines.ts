@@ -294,14 +294,14 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
   return [];
 }
 
-export function optionLabel(id: string): string {
+export function optionLabel(id: string, fallback?: string): string {
   for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "porch"]) {
     for (const scope of ["interior", "exterior"]) {
       const hit = optionsFor(workId, scope).find((o) => o.id === id);
       if (hit) return hit.label;
     }
   }
-  return "Optional work";
+  return fallback?.trim() || "Optional work";
 }
 
 export function linesForOption(
@@ -444,6 +444,7 @@ export type CatalogLine = {
   qty?: string;
   unit?: string;
   slot?: string | null;
+  bookId?: string;
 };
 
 type CatalogKit = {
@@ -494,14 +495,37 @@ export function catalogLinesForWork(
   return unique;
 }
 
+export function catalogLinesFromBook(book: PriceBookItem[]): CatalogLine[] {
+  const unique: CatalogLine[] = [];
+  const seen = new Set<string>();
+  for (const item of book.filter((b) => b.active !== false)) {
+    const name = bookLabel(item).trim() || item.product_name.trim();
+    if (!name) continue;
+    const key = item.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push({
+      name,
+      description: [item.trade, item.warranty_terms].filter(Boolean).join(" · "),
+      qty: "",
+      unit: item.unit,
+      slot: item.slot,
+      bookId: item.id,
+    });
+  }
+  return unique;
+}
+
 export function applyCatalogToLine(
   line: EstimateLine,
   pick: CatalogLine,
   book: PriceBookItem[],
 ): EstimateLine {
-  const product = pick.slot
-    ? book.find((b) => b.active !== false && b.slot === pick.slot)
-    : undefined;
+  const product = pick.bookId
+    ? book.find((b) => b.id === pick.bookId)
+    : pick.slot
+      ? book.find((b) => b.active !== false && b.slot === pick.slot)
+      : undefined;
   const extra = product
     ? [
         product.color ? `Color: ${product.color}` : "",

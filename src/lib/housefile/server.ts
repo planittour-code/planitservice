@@ -70,6 +70,7 @@ import type {
   PortfolioUpcoming,
   PropertyPlan,
   PropertyTransfer,
+  FileWorkInvite,
   Rfp,
   RfpQuote,
   ShopRole,
@@ -1002,11 +1003,12 @@ export type WizardInput = {
   city: string;
   state: string;
   zip: string;
-  templateId: string;
+  templateId?: string;
   title?: string;
   takeoff?: Record<string, string>;
   coverPhoto?: string;
   rfpToken?: string;
+  workInviteToken?: string;
 };
 
 export const getQuoteHouse = createServerFn({ method: "GET" })
@@ -1075,14 +1077,18 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
 
-    const templates = await sql<Template>`select * from templates where id = ${data.templateId} limit 1`;
-    const template = templates[0];
-    if (!template) throw new Error("Template not found");
-    const tItems = await sql<TemplateItem>`
-      select * from template_items where template_id = ${template.id} order by sort_order
-    `;
+    const templates = data.templateId
+      ? await sql<Template>`select * from templates where id = ${data.templateId} limit 1`
+      : [];
+    const template = templates[0] ?? null;
+    if (data.templateId && !template) throw new Error("Template not found");
+    const tItems = template
+      ? await sql<TemplateItem>`
+          select * from template_items where template_id = ${template.id} order by sort_order
+        `
+      : [];
     const takeoff = data.takeoff ?? {};
-    const work = workFromId(takeoff.__work) ?? workForTemplate(template.id);
+    const work = workFromId(takeoff.__work) ?? (template ? workForTemplate(template.id) : undefined);
     const bookRows = await sql<PriceBookItem>`
       select * from price_book where company_id = ${company.id} and active = true
     `;
@@ -1104,6 +1110,9 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     ) {
       throw new Error("Enter a cost for each product that does not have one.");
     }
+    if (!estimateReady(estimate) && priced.length === 0 && tItems.length === 0) {
+      throw new Error("Add a line item from materials before sending.");
+    }
 
     let property: Property;
     if (data.propertyId) {
@@ -1113,29 +1122,43 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       const name = data.homeownerName.trim();
       const email = data.homeownerEmail.trim().toLowerCase();
       if (!address || !name || !email) throw new Error("Name, email, and address are required");
-      const id = crypto.randomUUID();
-      await sql`
-        insert into properties (
-          id, company_id, share_token, invite_token, invite_status,
-          address_line, city, state, zip, homeowner_name, homeowner_email, homeowner_phone
-        ) values (
-          ${id}, ${company.id}, ${slugToken()}, ${slugToken()}, ${"sent"},
-          ${address}, ${data.city.trim() || "—"}, ${data.state.trim() || "—"}, ${data.zip.trim() || "—"},
-          ${name}, ${email}, ${data.homeownerPhone?.trim() || null}
-        )
-      `;
-      property = (await sql<Property>`select * from properties where id = ${id}`)[0]!;
+      const zip = data.zip.trim() || "—";
+      const existingAtAddress = (
+        await sql<Property>`
+          select * from properties
+          where company_id = ${company.id}
+            and lower(trim(address_line)) = ${address.toLowerCase()}
+            and lower(trim(zip)) = ${zip.toLowerCase()}
+          limit 1
+        `
+      )[0];
+      if (existingAtAddress) {
+        property = existingAtAddress;
+      } else {
+        const id = crypto.randomUUID();
+        await sql`
+          insert into properties (
+            id, company_id, share_token, invite_token, invite_status,
+            address_line, city, state, zip, homeowner_name, homeowner_email, homeowner_phone
+          ) values (
+            ${id}, ${company.id}, ${slugToken()}, ${slugToken()}, ${"sent"},
+            ${address}, ${data.city.trim() || "—"}, ${data.state.trim() || "—"}, ${zip},
+            ${name}, ${email}, ${data.homeownerPhone?.trim() || null}
+          )
+        `;
+        property = (await sql<Property>`select * from properties where id = ${id}`)[0]!;
+      }
     }
 
     const proposalId = crypto.randomUUID();
-    const title = data.title?.trim() || template.name;
+    const title = data.title?.trim() || template?.name || work?.name || "Estimate";
     const pending = role === "sales" && catalogMissing.length > 0;
     await sql`
       insert into proposals (
         id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, created_by
       ) values (
-        ${proposalId}, ${company.id}, ${property.id}, ${template.id}, ${slugToken()},
-        ${title}, ${pending ? "pending" : "sent"}, ${coverLetter(property.homeowner_name, work?.name ?? template.trade)},
+        ${proposalId}, ${company.id}, ${property.id}, ${template?.id ?? null}, ${slugToken()},
+        ${title}, ${pending ? "pending" : "sent"}, ${coverLetter(property.homeowner_name, work?.name ?? template?.trade ?? "work")},
         ${pending ? null : new Date().toISOString()}, ${context.userId}
       )
     `;
@@ -1234,6 +1257,9 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     await attachHomeownerIfKnown(sql, property.id, property.homeowner_email);
     if (data.rfpToken) {
       await attachRfpQuote(sql, data.rfpToken, company.id, proposalId, property);
+    }
+    if (data.workInviteToken) {
+      await attachNamedWorkInvite(sql, data.workInviteToken, company, property, proposalId);
     }
     const proposal = (await sql<Proposal>`select * from proposals where id = ${proposalId}`)[0]!;
     let emailed = false;
@@ -2620,6 +2646,86 @@ async function attachRfpQuote(
   }
 }
 
+async function attachNamedWorkInvite(
+  sql: Sql,
+  token: string,
+  company: Company,
+  property: Property,
+  proposalId: string,
+) {
+  const invite = (
+    await sql<FileWorkInvite>`
+      select * from file_work_invites where share_token = ${token} limit 1
+    `
+  )[0];
+  if (!invite || invite.status === "closed") return;
+  const source = (
+    await sql<Property>`select * from properties where id = ${invite.property_id} limit 1`
+  )[0];
+  if (source) {
+    const same =
+      addressKey(source.address_line, source.zip) === addressKey(property.address_line, property.zip);
+    if (!same) return;
+  }
+  await sql`
+    update file_work_invites
+    set status = ${"quoted"},
+        shop_name = coalesce(shop_name, ${company.name})
+    where id = ${invite.id}
+  `;
+}
+
+async function canWriteFile(sql: Sql, userId: string, propertyId: string): Promise<Property | null> {
+  const owned = await sql<Property>`
+    select * from properties where id = ${propertyId} and homeowner_user_id = ${userId} limit 1
+  `;
+  if (owned[0]) return owned[0];
+  const portfolio = await sql<Property>`
+    select p.*
+    from properties p
+    join portfolio_properties pp on pp.property_id = p.id
+    join portfolios pf on pf.id = pp.portfolio_id
+    where p.id = ${propertyId} and pf.user_id = ${userId} and pf.paid_at is not null
+    limit 1
+  `;
+  if (portfolio[0]) return portfolio[0];
+  const staff = await sql<Property>`
+    select p.*
+    from properties p
+    join portfolio_properties pp on pp.property_id = p.id
+    join portfolio_members m on m.portfolio_id = pp.portfolio_id
+    join portfolios pf on pf.id = pp.portfolio_id
+    where p.id = ${propertyId}
+      and m.user_id = ${userId}
+      and pf.paid_at is not null
+    limit 1
+  `;
+  return staff[0] ?? null;
+}
+
+async function shopEstimatesAtAddress(sql: Sql, property: Property): Promise<ProposalListRow[]> {
+  return sql<ProposalListRow>`
+    select pr.*, shop_p.address_line, shop_p.homeowner_name,
+      t.name as template_name, t.trade as template_trade
+    from properties shop_p
+    join proposals pr on pr.property_id = shop_p.id
+    left join templates t on t.id = pr.template_id
+    where lower(trim(shop_p.address_line)) = ${property.address_line.trim().toLowerCase()}
+      and lower(trim(shop_p.zip)) = ${property.zip.trim().toLowerCase()}
+      and shop_p.company_id <> ${HOUSEHOLD_COMPANY}
+      and pr.status not in (${"draft"}, ${"pending"})
+    order by pr.created_at desc
+  `;
+}
+
+async function workInvitesForProperty(sql: Sql, propertyId: string) {
+  return sql<FileWorkInvite>`
+    select * from file_work_invites
+    where property_id = ${propertyId}
+    order by created_at desc
+  `;
+}
+
 export const startHomeownerPlan = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((plan: HomeownerPlan) => plan)
@@ -2979,7 +3085,9 @@ export const getHomeRecord = createServerFn({ method: "GET" })
         order by created_at desc limit 1
       `
     )[0] ?? null;
-    return { house, plan, tasks, transfer };
+    const workInvites = await workInvitesForProperty(sql, id);
+    const shopEstimates = await shopEstimatesAtAddress(sql, rows[0]);
+    return { house, plan, tasks, transfer, workInvites, shopEstimates };
   });
 
 export const completeMaintenance = createServerFn({ method: "POST" })
@@ -3781,10 +3889,14 @@ export const getPortfolioRecord = createServerFn({ method: "GET" })
       order by completed_at nulls first, due_on
     `).map(asMaintenanceTask);
     const acceptedEstimates = await acceptedEstimatesForPortfolio(sql, portfolio.id, id);
+    const workInvites = await workInvitesForProperty(sql, id);
+    const shopEstimates = await shopEstimatesAtAddress(sql, rows[0]);
     return {
       house,
       tasks,
       acceptedEstimates,
+      workInvites,
+      shopEstimates,
       portfolioName: portfolio.name,
       claimed: Boolean(rows[0].homeowner_user_id),
     };
@@ -3956,6 +4068,108 @@ export const invitePortfolioOwner = createServerFn({ method: "POST" })
       inviteToken: property.invite_token,
       emailed,
       claimed: Boolean(property.homeowner_user_id),
+    };
+  });
+
+export const inviteNamedShop = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: {
+      propertyId: string;
+      shopEmail: string;
+      shopName?: string;
+      title: string;
+      body: string;
+    }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const property = await canWriteFile(sql, context.userId, data.propertyId);
+    if (!property) throw new Error("Property not found");
+    const email = data.shopEmail.trim().toLowerCase();
+    if (!email.includes("@")) throw new Error("Need the shop email.");
+    const title = data.title.trim();
+    const body = data.body.trim();
+    if (title.length < 4) throw new Error("Name the job in a sentence.");
+    if (body.length < 8) throw new Error("Tell the shop what you need.");
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const fromName =
+      session?.email?.split("@")[0] || property.homeowner_name || "The Property Record";
+    const id = crypto.randomUUID();
+    const token = slugToken();
+    const shopName = data.shopName?.trim() || null;
+    await sql`
+      insert into file_work_invites (
+        id, property_id, invited_by_user_id, shop_email, shop_name, title, body, share_token, status
+      ) values (
+        ${id}, ${property.id}, ${context.userId}, ${email}, ${shopName}, ${title}, ${body}, ${token}, ${"open"}
+      )
+    `;
+    const origin = (process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(
+      /\/+$/,
+      "",
+    );
+    const quoteUrl = `${origin}/app/new?invite=${token}`;
+    const houseUrl = `${origin}/house/${property.share_token}`;
+    const address = `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`;
+    let emailed = false;
+    try {
+      const { deliverNamedShopInviteEmail } = await import("./mail");
+      await deliverNamedShopInviteEmail({
+        to: email,
+        shopName: shopName || undefined,
+        fromName,
+        address,
+        title,
+        body,
+        quoteUrl,
+        houseUrl,
+      });
+      emailed = true;
+    } catch (err) {
+      console.error("[mail] named shop invite failed", err);
+    }
+    return { id, token, emailed, quoteUrl };
+  });
+
+export const getNamedWorkInvite = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((token: string) => token)
+  .handler(async ({ context, data: token }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const invite = (
+      await sql<FileWorkInvite>`
+        select * from file_work_invites where share_token = ${token} limit 1
+      `
+    )[0];
+    if (!invite) throw new Error("Invite not found");
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
+    const mail = session?.email?.trim().toLowerCase() ?? "";
+    const shopMail = (company.email || "").trim().toLowerCase();
+    const members = await sql<{ email: string }>`
+      select email from company_members where company_id = ${company.id}
+    `;
+    const allowed = new Set(
+      [mail, shopMail, ...members.map((m) => m.email.trim().toLowerCase())].filter(Boolean),
+    );
+    if (!allowed.has(invite.shop_email)) {
+      throw new Error("This invite was sent to a different shop email.");
+    }
+    const property = (
+      await sql<Property>`select * from properties where id = ${invite.property_id} limit 1`
+    )[0];
+    if (!property) throw new Error("Property not found");
+    const photos = await sql<PropertyPhoto>`
+      select * from property_photos where property_id = ${property.id} order by created_at desc
+    `;
+    return {
+      invite,
+      property,
+      photos,
+      address: `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`,
     };
   });
 

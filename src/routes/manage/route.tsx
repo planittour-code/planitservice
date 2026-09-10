@@ -25,6 +25,10 @@ function ManageFrame() {
 
   if (pathname === "/manage/open") return <Outlet />;
 
+  if (authReady && audience.hats.contractor && !audience.hats.manager) {
+    return <Navigate to="/app" />;
+  }
+
   if (authReady && audience.hats.manager) {
     return (
       <div className="min-h-screen bg-background">
@@ -210,7 +214,10 @@ function ManageMarketing() {
 
 function SignedInOpenPortfolio() {
   const { user } = useCurrentUserState();
+  const { audience } = useAudience();
   if (!user) return null;
+  if (audience.hats.manager) return null;
+  if (audience.hats.contractor || audience.hats.homeowner) return null;
   return (
     <div className="space-y-3">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>

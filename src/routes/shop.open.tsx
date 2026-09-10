@@ -68,6 +68,10 @@ function OpenShop() {
   if (!isPending && audience.kind === "contractor" && audience.paying && !search.session_id) {
     return <Navigate to="/app" />;
   }
+  if (!isPending && audience.signedIn && !audience.hats.contractor && !search.session_id) {
+    if (audience.hats.manager) return <Navigate to="/manage" />;
+    if (audience.hats.homeowner) return <Navigate to="/home" />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">

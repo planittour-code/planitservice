@@ -64,6 +64,7 @@ export function PublicHeader({
   home?: "/" | "/shop";
   path?: "choose" | "homeowner" | "contractor" | "manager" | "public";
 }) {
+  const { user } = useCurrentUserState();
   const lane = path ?? (home === "/shop" ? "contractor" : "choose");
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
@@ -103,9 +104,11 @@ export function PublicHeader({
           {lane === "contractor" && (
             <>
               <HeaderLink to="/shop">Look up a house</HeaderLink>
-              <HeaderLink to="/shop/open" search={{ intent: "up" }}>
-                Open a shop
-              </HeaderLink>
+              {user ? null : (
+                <HeaderLink to="/shop/open" search={{ intent: "up" }}>
+                  Open a shop
+                </HeaderLink>
+              )}
               <HeaderLink to="/shop" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>
@@ -120,9 +123,11 @@ export function PublicHeader({
               <HeaderLink to="/manage" hideOnMobile>
                 The portfolio
               </HeaderLink>
-              <HeaderLink to="/manage/open" search={{ intent: "up" }}>
-                Open a portfolio
-              </HeaderLink>
+              {user ? null : (
+                <HeaderLink to="/manage/open" search={{ intent: "up" }}>
+                  Open a portfolio
+                </HeaderLink>
+              )}
               <HeaderLink to="/manage" hash="pricing" hideOnMobile>
                 Pricing
               </HeaderLink>
@@ -259,7 +264,7 @@ export function WizardSteps({
         );
         const body = (
           <>
-            <span className="tabular-nums">{item.n}</span>
+            <span className="tabular-nums">{items.indexOf(item) + 1}</span>
             <span className="hidden sm:inline">{item.label}</span>
           </>
         );

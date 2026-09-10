@@ -87,6 +87,7 @@ function Login() {
             state: params.get("state") ?? undefined,
             zip: params.get("zip") ?? undefined,
             rfp: params.get("rfp") ?? undefined,
+            invite: params.get("invite") ?? undefined,
           }}
         />
       );

@@ -330,6 +330,19 @@ export type PortfolioMember = {
   created_at: string;
 };
 
+export type FileWorkInvite = {
+  id: string;
+  property_id: string;
+  invited_by_user_id: string;
+  shop_email: string;
+  shop_name: string | null;
+  title: string;
+  body: string;
+  share_token: string;
+  status: "open" | "quoted" | "closed";
+  created_at: string;
+};
+
 export type RfpStatus = "open" | "awarded" | "closed";
 
 export type Rfp = {

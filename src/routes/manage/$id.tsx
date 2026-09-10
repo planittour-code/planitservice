@@ -17,6 +17,7 @@ import { MaintenanceBadge } from "@/components/status-badge";
 import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
+import { NamedShopInvite } from "@/components/named-shop-invite";
 import {
   completePortfolioMaintenance,
   getPortfolioRecord,
@@ -64,7 +65,7 @@ function ManageRecord() {
   const open = tasks.filter((t) => !t.completed_at);
   const due = open.filter((t) => new Date(t.due_on) <= new Date(Date.now() + 14 * 86400000));
   const hero = house.photos.find((ph) => ph.category === "exterior") ?? house.photos[0];
-  const issued = house.proposals.filter(
+  const issued = q.data.shopEstimates ?? house.proposals.filter(
     (pr) => pr.status !== "pending" && pr.status !== "draft",
   );
   const agreed = acceptedEstimates ?? [];
@@ -116,6 +117,14 @@ function ManageRecord() {
       <WarrantyList file={house} />
       <SectionRule />
 
+      <NamedShopInvite
+        propertyId={p.id}
+        invites={q.data.workInvites ?? []}
+        estimates={issued}
+        onDone={() => q.refetch()}
+      />
+      <SectionRule />
+
       {agreed.length > 0 ? (
         <section className="space-y-4">
           <div>
@@ -149,39 +158,6 @@ function ManageRecord() {
           </ul>
         </section>
       ) : null}
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="font-display text-xl font-medium">Issued estimates</h2>
-          <p className="text-sm text-muted-foreground">
-            Quotes shops have already sent for this address. You cannot start a quote from here.
-          </p>
-        </div>
-        {issued.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No issued estimates on this record yet.</p>
-        ) : (
-          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
-            {issued.map((pr) => (
-              <li key={pr.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                <div>
-                  <p className="font-medium">{pr.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {pr.status}
-                    {pr.sent_at ? ` · sent ${shortDate(pr.sent_at)}` : ""}
-                  </p>
-                </div>
-                {pr.share_token ? (
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/p/$token" params={{ token: pr.share_token }}>
-                      View estimate
-                    </Link>
-                  </Button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
       <section className="space-y-4">
         <div>

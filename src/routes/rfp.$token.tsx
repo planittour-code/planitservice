@@ -69,7 +69,7 @@ function RfpPage() {
           <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
             <Wordmark to="/home" />
             <Button asChild variant="ghost" size="sm">
-              <Link to="/app/market">Marketplace</Link>
+              <Link to="/app">Shop</Link>
             </Button>
           </div>
         </header>

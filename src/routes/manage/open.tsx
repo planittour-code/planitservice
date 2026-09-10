@@ -73,6 +73,10 @@ function OpenPortfolio() {
   if (!isPending && audience.hats.manager && !search.session_id) {
     return <Navigate to="/manage" />;
   }
+  if (!isPending && audience.signedIn && !audience.hats.manager && !search.session_id) {
+    if (audience.hats.contractor) return <Navigate to="/app" />;
+    if (audience.hats.homeowner) return <Navigate to="/home" />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">

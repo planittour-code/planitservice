@@ -7,6 +7,7 @@ import { AddressLookup, TeaseCard } from "@/components/address-lookup";
 import { TradeCarousel } from "@/components/trade-carousel";
 import { Button } from "@/components/ui/button";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { useAudience } from "@/lib/housefile/use-audience";
 import {
   PROPERTY_MONTHLY,
   SEAT_MONTHLY,
@@ -180,7 +181,10 @@ function HomePage() {
 
 function SignedInOpenShop() {
   const { user } = useCurrentUserState();
+  const { audience } = useAudience();
   if (!user) return null;
+  if (audience.hats.contractor) return null;
+  if (audience.hats.manager || audience.hats.homeowner) return null;
   return (
     <div className="space-y-3">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>

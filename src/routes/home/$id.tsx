@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { MaintenanceBadge } from "@/components/status-badge";
+import { NamedShopInvite } from "@/components/named-shop-invite";
 import {
   completeMaintenance,
   getHomeRecord,
@@ -78,6 +79,13 @@ function HomeRecord() {
       <JobTimeline file={house} />
       <SectionRule />
       <WarrantyList file={house} />
+      <SectionRule />
+      <NamedShopInvite
+        propertyId={p.id}
+        invites={q.data.workInvites ?? []}
+        estimates={q.data.shopEstimates ?? []}
+        onDone={() => q.refetch()}
+      />
 
       <section className="space-y-4">
         <div>
@@ -121,15 +129,15 @@ function HomeRecord() {
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
       </section>
 
-      {plan?.tier !== "pro" ? (
+      {plan?.tier === "pro" ? (
         <p className="text-sm text-muted-foreground">
-          Pro puts an RFP on the market and lets a property manager see the Property Record and the bids.{" "}
-          <Link to="/home/add" search={{ tier: "pro" }} className="underline">
-            Open the next property as Pro
-          </Link>
-          .
+          Invited pool (several shops on one job) stays on Pro. Named contractor above is Standard.
         </p>
-      ) : null}
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Invited pool — several shops on one job — is Pro. Named contractor on this File is Standard.
+        </p>
+      )}
     </div>
   );
 }

@@ -106,9 +106,10 @@ function HousePage() {
         <SectionRule />
         <section id="rfps" className="space-y-6">
           <div>
-            <h2 className="font-display text-xl font-medium">Ask the market</h2>
+            <h2 className="font-display text-xl font-medium">Invited pool</h2>
             <p className="text-sm text-muted-foreground">
-              Pro puts this job in front of shops. They quote. Bids land here as estimates.
+              Several shops on one job is Pro. Named contractor work is posted from the Property
+              Record on Standard.
             </p>
           </div>
           <RfpList houseToken={p.share_token} />
@@ -117,8 +118,8 @@ function HousePage() {
               Requests are off on the sample.{" "}
               <Link to="/homeowner" className="underline underline-offset-2">
                 Start a Property Record
-              </Link>{" "}
-              to put a job on the market.
+              </Link>
+              .
             </p>
           ) : (
             <RfpForm

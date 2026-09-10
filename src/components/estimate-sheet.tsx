@@ -78,7 +78,7 @@ export function EstimateSheet({
       <div>
         <h2 className="font-display text-2xl font-medium tracking-tight">Line items</h2>
         <p className="text-sm text-muted-foreground">
-          Search this work category's line items. A name that is not in the list stays on the quote.
+          Search this shop’s Materials book. A name that is not in the list stays on the quote.
           Amount is quantity × price.
         </p>
       </div>
@@ -302,7 +302,7 @@ function ItemSearch({
         id={id}
         value={value}
         autoComplete="off"
-        placeholder="Search line items"
+        placeholder="Search materials"
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           onChange(e.target.value);

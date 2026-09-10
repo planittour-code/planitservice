@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StreetView } from "@/components/street-view";
 import { Mark } from "@/components/logo";
+import { optionLabel } from "@/lib/housefile/estimate-lines";
 import { money, shortDate } from "@/lib/housefile/format";
 import { normalizePaymentLink, paymentSchedule, paymentTermLabel } from "@/lib/housefile/payment";
 import {
@@ -500,7 +501,7 @@ function OptionGroup({
             onChange={(e) => void toggle(e.target.checked)}
           />
           <span>
-            <span className="block font-medium">{optionLabel(optionId)}</span>
+            <span className="block font-medium">{optionLabel(optionId, items[0]?.name)}</span>
             <span className="block text-sm text-muted-foreground">
               {items.length} line{items.length === 1 ? "" : "s"}
             </span>

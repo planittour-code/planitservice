@@ -13,13 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EstimateSheet } from "@/components/estimate-sheet";
-import { applyPriceBook, linesNeedingBookCost, pickKey, proposedCostKey, slotsForWork, STARTER_BOOK } from "@/lib/housefile/book";
+import { applyPriceBook, linesNeedingBookCost, proposedCostKey, STARTER_BOOK } from "@/lib/housefile/book";
 import { GUTTER_KIT_SEED, type WorkKit } from "@/lib/housefile/kits";
 import { cn } from "@/lib/utils";
 import {
   ESTIMATE_KEY,
   blankEstimateLine,
   catalogLinesForWork,
+  catalogLinesFromBook,
   estimateReady,
   estimateTotal,
   linesFromKitItems,
@@ -45,6 +46,7 @@ import {
   addCustomWork,
   createProposalFromWizard,
   getDashboard,
+  getNamedWorkInvite,
   getQuoteHouse,
   getRfpByToken,
   listPriceBook,
@@ -67,12 +69,12 @@ const searchSchema = z.object({
   state: queryString,
   zip: queryString,
   rfp: queryString,
+  invite: queryString,
 });
 
 const STEPS = [
   { n: 1, label: "Address" },
-  { n: 2, label: "Work" },
-  { n: 3, label: "Details" },
+  { n: 3, label: "Job" },
   { n: 4, label: "Quote" },
 ];
 
@@ -115,6 +117,11 @@ function NewQuote() {
     queryKey: ["rfp", search.rfp],
     queryFn: () => getRfpByToken({ data: search.rfp! }),
     enabled: Boolean(search.rfp),
+  });
+  const inviteQ = useQuery({
+    queryKey: ["work-invite", search.invite],
+    queryFn: () => getNamedWorkInvite({ data: search.invite! }),
+    enabled: Boolean(user && search.invite),
   });
   const [takeoff, setTakeoff] = useState<Record<string, string>>({});
   const [coverPhoto, setCoverPhoto] = useState<string | null>(null);
@@ -176,16 +183,39 @@ function NewQuote() {
   }, [rfpQ.data?.rfp.id]);
 
   useEffect(() => {
-    if (propertyId || !search.address || !dash.data) return;
-    const needle = normalizeStreet(search.address);
-    const hit = dash.data.properties.find(
-      (p) =>
+    const packed = inviteQ.data;
+    if (!packed) return;
+    const p = packed.property;
+    setAddressLine(p.address_line);
+    setCity(p.city);
+    setState(p.state);
+    setZip(p.zip);
+    setHomeownerName(p.homeowner_name);
+    setHomeownerEmail(p.homeowner_email);
+    setHomeownerPhone(p.homeowner_phone ?? "");
+    const hero = packed.photos.find((ph) => ph.category === "exterior") ?? packed.photos[0];
+    if (hero?.src) setCoverPhoto(hero.src);
+    setStep(3);
+  }, [inviteQ.data?.invite.id]);
+
+  useEffect(() => {
+    if (propertyId || !dash.data) return;
+    const fromInvite = inviteQ.data?.property.address_line;
+    const street = search.address || fromInvite;
+    if (!street) return;
+    const needle = normalizeStreet(street);
+    const zip = (inviteQ.data?.property.zip || search.zip || "").trim().toLowerCase();
+    const hit = dash.data.properties.find((p) => {
+      const sameStreet =
         normalizeStreet(p.address_line) === needle ||
         normalizeStreet(p.address_line).startsWith(needle) ||
-        needle.startsWith(normalizeStreet(p.address_line)),
-    );
+        needle.startsWith(normalizeStreet(p.address_line));
+      if (!sameStreet) return false;
+      if (!zip) return true;
+      return p.zip.trim().toLowerCase() === zip;
+    });
     if (hit) setPropertyId(hit.id);
-  }, [dash.data, search.address, propertyId]);
+  }, [dash.data, search.address, search.zip, inviteQ.data, propertyId]);
 
   const workKits = useMemo(() => {
     if (user) return (kitsQ.data?.kits ?? []).filter((kit) => kit.work_id === workId);
@@ -244,6 +274,13 @@ function NewQuote() {
   }, [work?.id, user, kitsQ.isFetched, workKits.length, bookQ.data?.items.length, search.template, search.kit]);
 
   const book = user ? (bookQ.data?.items ?? []) : guestBook();
+  const quoteCatalog = useMemo(() => {
+    const fromBook = catalogLinesFromBook(book);
+    if (!work) return fromBook;
+    const fromWork = catalogLinesForWork(work.id, workKits, takeoff.paint_scope);
+    const seen = new Set(fromBook.map((row) => row.name.toLowerCase()));
+    return [...fromBook, ...fromWork.filter((row) => !seen.has(row.name.toLowerCase()))];
+  }, [book, work?.id, workKits, takeoff.paint_scope]);
   const role = user ? (bookQ.data?.role ?? dash.data?.role ?? "owner") : "owner";
   const estimate = parseEstimateLines(takeoff[ESTIMATE_KEY]);
   const lines = useMemo(
@@ -271,11 +308,15 @@ function NewQuote() {
           city: existing?.city || city,
           state: existing?.state || state,
           zip: existing?.zip || zip,
-          templateId,
-          title: work?.name && takeoff.__kit_name ? `${work.name} — ${takeoff.__kit_name}` : work?.name,
+          templateId: templateId || undefined,
+          title:
+            work?.name && takeoff.__kit_name
+              ? `${work.name} — ${takeoff.__kit_name}`
+              : work?.name || inviteQ.data?.invite.title,
           takeoff,
           coverPhoto: coverPhoto || undefined,
           rfpToken: search.rfp,
+          workInviteToken: search.invite,
         },
       }),
     onSuccess: (result) => {
@@ -323,10 +364,6 @@ function NewQuote() {
       setStep(1);
       return;
     }
-    if (n >= 3 && !workId) {
-      setStep(2);
-      return;
-    }
     setStep(n);
   }
 
@@ -360,9 +397,7 @@ function NewQuote() {
     }));
   }
 
-  const waitingOnKit = workKits.length > 0 && !takeoff.__kit && !takeoff[ESTIMATE_KEY];
-
-  const shownStep = !addressReady ? 1 : step > 2 && !workId ? 2 : step;
+  const shownStep = !addressReady ? 1 : step;
 
   if (sent) {
     if (sent.pending) {
@@ -404,8 +439,18 @@ function NewQuote() {
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="space-y-4">
         <h1 className="font-display text-3xl font-medium tracking-tight">
-          {work ? `${work.name} quote` : "Start a Quote"}
+          {inviteQ.data?.invite.title
+            ? inviteQ.data.invite.title
+            : work
+              ? `${work.name} quote`
+              : "Start a Quote"}
         </h1>
+        {inviteQ.data ? (
+          <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
+            Named job at this address. Photos on the File. Quote from your materials.
+            {inviteQ.data.invite.body ? ` ${inviteQ.data.invite.body}` : ""}
+          </p>
+        ) : null}
         <QuoteHouseBanner
           guest={!user}
           address={usingDemo ? MAPLE_DEMO.address : jobAddress}
@@ -466,85 +511,98 @@ function NewQuote() {
               {existing.address_line}, {existing.city} · {existing.fact_count} facts already on file.
             </p>
           )}
-          <Button type="button" disabled={user ? !addressReady : false} onClick={() => needShop(() => goToStep(workId ? 3 : 2))}>
-            Next — {workId ? "details" : "type of work"}
+          <Button type="button" disabled={user ? !addressReady : false} onClick={() => needShop(() => goToStep(3))}>
+            Next — photos and measurements
           </Button>
         </div>
       )}
 
-      {shownStep === 2 && (
-        <div className="space-y-4">
-          <p className="text-muted-foreground">What are you quoting at this address?</p>
-          <TradeGrid
-            types={offered}
-            onPick={afterWorkPicked}
-            onAddCustom={() => setAddingWork(true)}
-          />
-          <CustomWorkDialog
-            open={addingWork}
-            onClose={() => setAddingWork(false)}
-            onSave={async (name) => {
-              if (user) {
-                await addWork.mutateAsync(name);
-                afterWorkPicked(customWorkId(name));
-                return;
-              }
-              const id = customWorkId(name);
-              setLocalCustom((cur) => (cur.includes(id) ? cur : [...cur, id]));
-              setAddingWork(false);
-              afterWorkPicked(id);
-            }}
-            busy={addWork.isPending}
-          />
-          <Button type="button" variant="ghost" onClick={() => goToStep(1)}>
-            Back
-          </Button>
-        </div>
-      )}
-
-      {shownStep === 3 && work && (
+      {shownStep === 3 && (
         <div className="space-y-5">
-          {user && !kitsQ.isFetched ? (
-            <p className="text-muted-foreground">Loading sub-categories…</p>
+          <p className="text-muted-foreground">
+            Photos, then measurements, then line items from this shop’s materials. Work category is
+            optional.
+          </p>
+          {workKits.length > 0 && work ? (
+            <KitPicker
+              kits={workKits}
+              selectedId={takeoff.__kit}
+              onPick={applyKit}
+              onSkip={() => applyKit(null)}
+              skipped={Boolean(!takeoff.__kit && takeoff[ESTIMATE_KEY])}
+            />
+          ) : null}
+          {inviteQ.data?.photos.length ? (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {inviteQ.data.photos.slice(0, 8).map((ph) => (
+                <img
+                  key={ph.id}
+                  src={ph.src}
+                  alt={ph.caption ?? ""}
+                  className="aspect-square w-full rounded-lg object-cover"
+                />
+              ))}
+            </div>
+          ) : null}
+          {work ? (
+            <TakeoffForm
+              work={work}
+              paintScope={takeoff.paint_scope}
+              inputs={takeoff}
+              onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
+              book={book}
+              kits={workKits}
+            />
           ) : (
-            <>
-              {workKits.length > 0 && (
-                <KitPicker
-                  kits={workKits}
-                  selectedId={takeoff.__kit}
-                  onPick={applyKit}
-                  onSkip={() => applyKit(null)}
-                  skipped={Boolean(!takeoff.__kit && takeoff[ESTIMATE_KEY])}
-                />
-              )}
-              {waitingOnKit ? null : (
-                <TakeoffForm
-                  work={work}
-                  paintScope={takeoff.paint_scope}
-                  inputs={takeoff}
-                  onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
-                  book={book}
-                  kits={workKits}
-                />
-              )}
-            </>
+            <p className="text-sm text-muted-foreground">
+              Skip the category if you already know the lines. Add them on the next screen from
+              materials.
+            </p>
           )}
+          <details className="rounded-xl bg-card p-4 text-sm shadow-[var(--shadow-border)]">
+            <summary className="cursor-pointer font-medium">Work category (optional)</summary>
+            <div className="mt-3 space-y-3">
+              <TradeGrid
+                types={offered}
+                onPick={afterWorkPicked}
+                onAddCustom={() => setAddingWork(true)}
+              />
+              <CustomWorkDialog
+                open={addingWork}
+                onClose={() => setAddingWork(false)}
+                onSave={async (name) => {
+                  if (user) {
+                    await addWork.mutateAsync(name);
+                    afterWorkPicked(customWorkId(name));
+                    return;
+                  }
+                  const id = customWorkId(name);
+                  setLocalCustom((cur) => (cur.includes(id) ? cur : [...cur, id]));
+                  setAddingWork(false);
+                  afterWorkPicked(id);
+                }}
+                busy={addWork.isPending}
+              />
+            </div>
+          </details>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => goToStep(2)}>
+            <Button type="button" variant="ghost" onClick={() => goToStep(1)}>
               Back
             </Button>
-            <Button type="button" disabled={waitingOnKit} onClick={() => goToStep(4)}>
-              Review quote
+            <Button type="button" onClick={() => goToStep(4)}>
+              Line items from materials
             </Button>
           </div>
         </div>
       )}
 
-      {shownStep === 4 && work && (
+      {shownStep === 4 && (
         <div className="space-y-5">
           <div>
             <p className="font-display text-2xl font-medium">
-              {takeoff.__kit_name ? `${work.name} — ${takeoff.__kit_name}` : work.name}
+              {takeoff.__kit_name && work
+                ? `${work.name} — ${takeoff.__kit_name}`
+                : work?.name || inviteQ.data?.invite.title || "Estimate"}
             </p>
             <p className="text-sm text-muted-foreground">
               {propertyId
@@ -554,12 +612,12 @@ function NewQuote() {
           </div>
           <EstimateSheet
             book={book}
-            catalog={catalogLinesForWork(work.id, workKits, takeoff.paint_scope)}
+            catalog={quoteCatalog}
             lines={estimate.length ? estimate : [blankEstimateLine()]}
             onChange={(next) =>
               setTakeoff((s) => ({ ...s, [ESTIMATE_KEY]: serializeEstimateLines(next) }))
             }
-            workId={work.id}
+            workId={work?.id}
             paintScope={takeoff.paint_scope}
           />
           {lines.length > 0 && !estimateReady(estimate) && (
