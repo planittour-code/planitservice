@@ -101,15 +101,16 @@ function OpenPortfolio() {
                 One record for every house you manage.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                Photos, jobs, warranties, and issued estimates at the address. The homeowner can claim
-                the file later. Shops still quote in their own shop.
+                Start a {MANAGE_TRIAL_DAYS}-day trial, map your addresses, then shops quote from the
+                file. Photos, jobs, warranties, and estimates stay at the address.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
+                <li>{MANAGE_TRIAL_DAYS}-day trial — map houses before you pay.</li>
                 <li>{MANAGE_INCLUDED} Property Records on the base plan.</li>
                 <li>
-                  Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)}/mo or ${dollars(MANAGE_EXTRA_ANNUAL)}/yr each.
+                  Then ${dollars(MANAGE_MONTHLY)}/mo or ${dollars(MANAGE_ANNUAL)}/yr. Extra houses $
+                  {dollars(MANAGE_EXTRA_MONTHLY)}/mo or ${dollars(MANAGE_EXTRA_ANNUAL)}/yr each.
                 </li>
-                <li>No catalog. No quoting. The file is the product.</li>
               </ul>
             </div>
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
@@ -124,18 +125,19 @@ function OpenPortfolio() {
                   kicker="Already have a portfolio"
                   title="Sign in to the office"
                   submitLabel="Sign in to the portfolio"
-                  newAccountLabel="Open a portfolio"
+                  newAccountLabel="Start a trial portfolio"
                   onNewAccount={() => setIntent("up")}
                 />
               ) : (
                 <>
-                  <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a portfolio</p>
+                  <p className="text-sm tracking-wide text-muted-foreground uppercase">
+                    Start Portfolio trial
+                  </p>
                   <p className="mt-2 font-display text-3xl font-medium tracking-tight">
-                    ${dollars(MANAGE_MONTHLY)}
-                    <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
+                    {MANAGE_TRIAL_DAYS}-day trial
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {MANAGE_TRIAL_DAYS}-day trial, then ${dollars(MANAGE_MONTHLY)}/mo — or $
+                    Map your houses on trial. Then ${dollars(MANAGE_MONTHLY)}/mo or $
                     {dollars(MANAGE_ANNUAL)}/yr. Auto-renews until canceled. Cancel during trial: no
                     charge; after convert, access through period end.
                   </p>
