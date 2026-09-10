@@ -8,6 +8,7 @@ import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   MANAGE_ANNUAL,
+  MANAGE_EXTRA_ANNUAL,
   MANAGE_EXTRA_MONTHLY,
   MANAGE_INCLUDED,
   MANAGE_MONTHLY,
@@ -105,7 +106,9 @@ function OpenPortfolio() {
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
                 <li>{MANAGE_INCLUDED} Property Records on the base plan.</li>
-                <li>Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)} / month each.</li>
+                <li>
+                  Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)}/mo or ${dollars(MANAGE_EXTRA_ANNUAL)}/yr each.
+                </li>
                 <li>No catalog. No quoting. The file is the product.</li>
               </ul>
             </div>
@@ -132,8 +135,9 @@ function OpenPortfolio() {
                     <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {MANAGE_TRIAL_DAYS}-day trial, then ${dollars(MANAGE_MONTHLY)}/mo for{" "}
-                    {MANAGE_INCLUDED} houses. Or ${dollars(MANAGE_ANNUAL)} a year.
+                    {MANAGE_TRIAL_DAYS}-day trial, then ${dollars(MANAGE_MONTHLY)}/mo — or $
+                    {dollars(MANAGE_ANNUAL)}/yr. Auto-renews until canceled. Cancel during trial: no
+                    charge; after convert, access through period end.
                   </p>
                   <div className="mt-5">
                     {confirmError ? <p className="mb-3 text-sm text-destructive">{confirmError}</p> : null}
