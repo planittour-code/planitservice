@@ -12,6 +12,7 @@ import {
   MANAGE_EXTRA_MONTHLY,
   MANAGE_INCLUDED,
   MANAGE_MONTHLY,
+  MANAGE_TRIAL_DAYS,
   dollars,
 } from "@/lib/housefile/pricing";
 import { manageKind } from "@/lib/housefile/stripe";
@@ -111,9 +112,9 @@ export function ManageSignupForm() {
         {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        {user
-          ? "Card details stay on Stripe. This login becomes the office."
-          : "Card details stay on Stripe. No PlanitService account until payment finishes."}
+        {MANAGE_TRIAL_DAYS}-day trial, then ${dollars(MANAGE_MONTHLY)}/mo for {MANAGE_INCLUDED}{" "}
+        houses. Card details stay on Stripe
+        {user ? ". This login becomes the office." : ". No PlanitService account until checkout finishes."}
       </p>
     </form>
   );
