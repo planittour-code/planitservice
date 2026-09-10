@@ -18,7 +18,11 @@ function ProposalPage() {
   const approve = useMutation({
     mutationFn: () => approveProposal({ data: id }),
     onSuccess: (result) => {
-      toast.success(result.emailed ? "Estimate emailed to the homeowner" : "Approved. Email did not go out.");
+      toast.success(
+        result.emailed
+          ? "Estimate emailed to the homeowner and the office on this File"
+          : "Approved. Email did not go out.",
+      );
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not approve"),
@@ -80,7 +84,7 @@ function SendEstimateButton({
   const send = useMutation({
     mutationFn: () => sendEstimateToHomeowner({ data: proposalId }),
     onSuccess: (result) => {
-      toast.success(`Estimate emailed to ${result.emailed}`);
+      toast.success(`Estimate emailed to ${result.emailed} and the office on this File`);
       onSent();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send"),

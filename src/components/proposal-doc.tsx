@@ -23,6 +23,7 @@ import {
   addHomeownerMessage,
   completeProposal,
   draftCoverNote,
+  pingEstimateReview,
   reviseProposalPublic,
   updateProposalMeta,
   upsertProposalItem,
@@ -116,6 +117,10 @@ export function ProposalDoc({
               <span className="text-sm text-muted-foreground">Sent {shortDate(proposal.sent_at)}</span>
             ) : null}
           </div>
+        )}
+
+        {!locked && proposal.status !== "pending" && proposal.status !== "accepted" && (
+          <NotifyReviewBar token={proposal.share_token} mode={editMode} />
         )}
       </header>
 
@@ -540,6 +545,51 @@ function OptionGroup({
 
 function lineSettled(item: ProposalItem) {
   return item.review_status === "accepted" || item.review_status === "change_accepted";
+}
+
+function NotifyReviewBar({
+  token,
+  mode,
+}: {
+  token: string;
+  mode: "homeowner" | "contractor";
+}) {
+  const ping = useMutation({
+    mutationFn: () =>
+      pingEstimateReview({
+        data: { token, audience: mode === "contractor" ? "file" : "shop" },
+      }),
+    onSuccess: (result) => {
+      toast.success(
+        result.emailed === 1
+          ? "Review notice sent"
+          : `Review notice sent to ${result.emailed} people`,
+      );
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not notify"),
+  });
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">
+        {mode === "contractor"
+          ? "Email the owner and office when this estimate needs their review."
+          : "Email the shop when this estimate needs their review."}
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-11 w-full sm:w-auto"
+        disabled={ping.isPending}
+        onClick={() => ping.mutate()}
+      >
+        {ping.isPending
+          ? "Sending…"
+          : mode === "contractor"
+            ? "Notify owner and office"
+            : "Notify shop"}
+      </Button>
+    </div>
+  );
 }
 
 function AcceptAllBar({

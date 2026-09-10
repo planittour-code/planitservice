@@ -632,7 +632,7 @@ function NewQuote() {
           )}
           <p className="text-sm text-muted-foreground">
             Send Estimate emails this to {homeownerName || existing?.homeowner_name || "the homeowner"}
-            and writes the measurements onto the Property Record. They can reply to that email.
+            and the office on this File, then writes the measurements onto the Property Record.
           </p>
           {!propertyId && (
             <div className="grid gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:grid-cols-2">

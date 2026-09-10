@@ -421,6 +421,121 @@ function sameAddress(a: { address_line: string; zip: string }, b: { address_line
   return addressKey(a.address_line, a.zip) === addressKey(b.address_line, b.zip);
 }
 
+function isMail(value: string | null | undefined): value is string {
+  const email = value?.trim().toLowerCase() ?? "";
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+type ReviewParty = { to: string; name: string };
+
+function addReviewParty(list: ReviewParty[], seen: Set<string>, to: string | null | undefined, name: string) {
+  if (!isMail(to)) return;
+  const key = to.trim().toLowerCase();
+  if (seen.has(key)) return;
+  seen.add(key);
+  list.push({ to: key, name: name.trim() || "there" });
+}
+
+async function reviewPartiesForProposal(sql: Sql, proposal: Proposal, property: Property) {
+  const company = (
+    await sql<Company>`select * from companies where id = ${proposal.company_id} limit 1`
+  )[0];
+  const files = await filesAtAddress(sql, property);
+  const address = `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`;
+  const file: ReviewParty[] = [];
+  const shop: ReviewParty[] = [];
+  const fileSeen = new Set<string>();
+  const shopSeen = new Set<string>();
+  for (const row of files) {
+    addReviewParty(file, fileSeen, row.homeowner_email, row.homeowner_name || "there");
+  }
+  for (const row of files) {
+    const offices = await sql<{ id: string; name: string; email: string | null }>`
+      select pf.id, pf.name, pf.email
+      from portfolios pf
+      join portfolio_properties pp on pp.portfolio_id = pf.id
+      where pp.property_id = ${row.id} and pf.paid_at is not null
+    `;
+    for (const office of offices) {
+      addReviewParty(file, fileSeen, office.email, office.name || "the office");
+      const members = await sql<{ email: string }>`
+        select email from portfolio_members where portfolio_id = ${office.id}
+      `;
+      for (const member of members) {
+        addReviewParty(file, fileSeen, member.email, office.name || "the office");
+      }
+    }
+  }
+  if (company) {
+    if (!fileSeen.has((company.email || "").trim().toLowerCase())) {
+      addReviewParty(shop, shopSeen, company.email, company.name);
+    }
+    const mailbox = await shopMailbox(sql, company, null);
+    for (const email of mailbox) {
+      if (fileSeen.has(email)) continue;
+      addReviewParty(shop, shopSeen, email, company.name);
+    }
+  }
+  return {
+    company: company ?? null,
+    address,
+    file,
+    shop,
+  };
+}
+
+async function notifyEstimateReview(
+  sql: Sql,
+  proposal: Proposal,
+  reason: string,
+  audience: "file" | "shop" | "all",
+  skip: string[] = [],
+) {
+  const property = (
+    await sql<Property>`select * from properties where id = ${proposal.property_id} limit 1`
+  )[0];
+  if (!property) return { emailed: 0 };
+  const parties = await reviewPartiesForProposal(sql, proposal, property);
+  const origin = (process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(
+    /\/+$/,
+    "",
+  );
+  const skipSet = new Set(skip.map((email) => email.trim().toLowerCase()).filter(Boolean));
+  const who = parties.company?.name || "PlanitService";
+  const targets: { to: string; name: string; url: string }[] = [];
+  if (audience === "file" || audience === "all") {
+    for (const party of parties.file) {
+      if (skipSet.has(party.to)) continue;
+      targets.push({ ...party, url: `${origin}/p/${proposal.share_token}` });
+    }
+  }
+  if (audience === "shop" || audience === "all") {
+    for (const party of parties.shop) {
+      if (skipSet.has(party.to)) continue;
+      targets.push({ ...party, url: `${origin}/app/proposals/${proposal.id}` });
+    }
+  }
+  let emailed = 0;
+  const { deliverEstimateReviewEmail } = await import("./mail");
+  for (const target of targets) {
+    try {
+      await deliverEstimateReviewEmail({
+        to: target.to,
+        name: target.name,
+        who,
+        address: parties.address,
+        title: proposal.title,
+        reason,
+        proposalUrl: target.url,
+      });
+      emailed += 1;
+    } catch (err) {
+      console.error("[mail] estimate review notify failed", err);
+    }
+  }
+  return { emailed };
+}
+
 async function filesAtAddress(sql: Sql, property: Property): Promise<Property[]> {
   const zip5 = property.zip.trim().slice(0, 5);
   const rows = await sql<Property>`
@@ -1370,6 +1485,13 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       } catch (err) {
         console.error("[mail] estimate send failed", err);
       }
+      await notifyEstimateReview(
+        sql,
+        proposal,
+        `${company.name} sent ${proposal.title} for review.`,
+        "file",
+        [property.homeowner_email],
+      );
     }
     return {
       propertyId: property.id,
@@ -2031,7 +2153,36 @@ export const reviseProposalPublic = createServerFn({ method: "POST" })
     if (rows[0].status === "sent") {
       await sql`update proposals set status = ${"revised"} where id = ${rows[0].id}`;
     }
+    if (review === "change_review" && items[0].review_status !== "change_review") {
+      await notifyEstimateReview(
+        sql,
+        rows[0],
+        `A change was requested on ${items[0].name} for ${rows[0].title}.`,
+        "shop",
+      );
+    }
     return { ok: true as const };
+  });
+
+export const pingEstimateReview = createServerFn({ method: "POST" })
+  .validator((input: { token: string; audience: "file" | "shop" }) => input)
+  .handler(async ({ data }) => {
+    const sql = await getSql();
+    const rows = await sql<Proposal>`select * from proposals where share_token = ${data.token} limit 1`;
+    if (!rows[0]) throw new Error("Proposal not found");
+    if (rows[0].status === "pending") throw new Error("This quote is waiting on the shop.");
+    if (rows[0].status === "accepted" || rows[0].status === "completed") {
+      throw new Error("This estimate is already accepted.");
+    }
+    const reason =
+      data.audience === "shop"
+        ? `${rows[0].title} needs the shop to review it.`
+        : `${rows[0].title} is ready for review.`;
+    const result = await notifyEstimateReview(sql, rows[0], reason, data.audience);
+    if (result.emailed === 0) {
+      throw new Error("No one to email for this estimate.");
+    }
+    return { ok: true as const, emailed: result.emailed };
   });
 
 export const addHomeownerMessage = createServerFn({ method: "POST" })
@@ -2609,6 +2760,13 @@ export const approveProposal = createServerFn({ method: "POST" })
     } catch (err) {
       console.error("[mail] estimate send after approval failed", err);
     }
+    await notifyEstimateReview(
+      sql,
+      proposal,
+      `${company.name} sent ${proposal.title} for review.`,
+      "file",
+      [property.homeowner_email],
+    );
     return { ok: true as const, emailed };
   });
 
@@ -2637,6 +2795,13 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
       console.error("[mail] estimate send failed", err);
       throw new Error(`Could not email the estimate. Write ${LEGAL_EMAIL}.`);
     }
+    await notifyEstimateReview(
+      sql,
+      proposal,
+      `${company.name} sent ${proposal.title} for review.`,
+      "file",
+      [property.homeowner_email],
+    );
     await sql`
       update proposals set status = ${"sent"}, sent_at = coalesce(sent_at, now()) where id = ${proposal.id}
     `;

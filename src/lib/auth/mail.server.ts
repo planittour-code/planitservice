@@ -229,6 +229,40 @@ export async function sendNamedShopInviteEmail(data: {
   });
 }
 
+export async function sendEstimateReviewEmail(data: {
+  to: string;
+  name: string;
+  who: string;
+  address: string;
+  title: string;
+  reason: string;
+  proposalUrl: string;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = `${data.title} at ${data.address} needs review`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    data.reason,
+    "",
+    `Open the estimate: ${data.proposalUrl}`,
+    "",
+    data.who,
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>${escapeHtml(data.reason)}</p>
+<p><a href="${escapeHtml(data.proposalUrl)}">Open the estimate</a></p>
+<p>${escapeHtml(data.who)}</p>`;
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: `${data.who} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: LEGAL_EMAIL,
+  });
+}
+
 function bytesToBase64(bytes: Uint8Array) {
   return Buffer.from(bytes).toString("base64");
 }
