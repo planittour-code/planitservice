@@ -11,6 +11,7 @@ import {
   MANAGE_EXTRA_MONTHLY,
   MANAGE_INCLUDED,
   MANAGE_MONTHLY,
+  MANAGE_TRIAL_DAYS,
   dollars,
 } from "@/lib/housefile/pricing";
 import { confirmManageCheckout } from "@/lib/housefile/stripe-billing";
@@ -131,7 +132,8 @@ function OpenPortfolio() {
                     <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    or ${dollars(MANAGE_ANNUAL)} a year. {MANAGE_INCLUDED} houses included.
+                    {MANAGE_TRIAL_DAYS}-day trial, then ${dollars(MANAGE_MONTHLY)}/mo for{" "}
+                    {MANAGE_INCLUDED} houses. Or ${dollars(MANAGE_ANNUAL)} a year.
                   </p>
                   <div className="mt-5">
                     {confirmError ? <p className="mb-3 text-sm text-destructive">{confirmError}</p> : null}
