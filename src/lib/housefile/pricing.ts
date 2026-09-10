@@ -11,6 +11,7 @@ export const PRO_MONTHLY = 9.99;
 export const PRO_ANNUAL = 99;
 
 /** Property manager portfolio. Base includes 10 houses. Extra houses are billed. */
+export const MANAGE_TRIAL_DAYS = 14;
 export const MANAGE_INCLUDED = 10;
 export const MANAGE_MONTHLY = 39.99;
 export const MANAGE_ANNUAL = 399;
