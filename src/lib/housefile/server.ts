@@ -394,6 +394,139 @@ function listRowFromCounts(p: PropertyListRow): PropertyListRow {
   };
 }
 
+function addressKey(line: string, zip: string) {
+  return `${line.trim().toLowerCase()}|${zip.trim().toLowerCase()}`;
+}
+
+async function filesAtAddress(sql: Sql, property: Property): Promise<Property[]> {
+  const line = property.address_line.trim().toLowerCase();
+  const zip = property.zip.trim().toLowerCase();
+  const rows = await sql<Property>`
+    select * from properties p
+    where lower(trim(p.address_line)) = ${line}
+      and lower(trim(p.zip)) = ${zip}
+      and (
+        p.id = ${property.id}
+        or p.company_id = ${HOUSEHOLD_COMPANY}
+        or exists (select 1 from portfolio_properties pp where pp.property_id = p.id)
+      )
+  `;
+  if (!rows.some((row) => row.id === property.id)) rows.push(property);
+  return rows;
+}
+
+function paintFactKey(name: string) {
+  if (/door/i.test(name)) return "front_door_paint";
+  if (/trim/i.test(name)) {
+    return /interior/i.test(name) ? "interior_trim_paint" : "exterior_trim_paint";
+  }
+  if (/body|clapboard|siding|wall/i.test(name)) {
+    return /interior|room|hall|living|dining/i.test(name) ? "interior_paint_main" : "exterior_paint";
+  }
+  return null;
+}
+
+async function writeJobOnFile(
+  sql: Sql,
+  input: {
+    companyId: string;
+    propertyId: string;
+    proposal: Proposal;
+    items: ProposalItem[];
+    completedAt: string;
+  },
+) {
+  const existing = await sql<{ id: string }>`
+    select id from jobs
+    where property_id = ${input.propertyId} and proposal_id = ${input.proposal.id}
+    limit 1
+  `;
+  if (existing[0]) return existing[0].id;
+
+  const summary = input.items
+    .slice(0, 4)
+    .map((i) => i.name)
+    .join(". ");
+  const jobId = crypto.randomUUID();
+  await sql`
+    insert into jobs (id, company_id, property_id, proposal_id, title, summary, completed_at)
+    values (
+      ${jobId}, ${input.companyId}, ${input.propertyId}, ${input.proposal.id},
+      ${input.proposal.title}, ${summary}, ${input.completedAt}::date
+    )
+    on conflict do nothing
+  `;
+  const written = await sql<{ id: string }>`
+    select id from jobs
+    where property_id = ${input.propertyId} and proposal_id = ${input.proposal.id}
+    limit 1
+  `;
+  const resolvedId = written[0]?.id ?? jobId;
+  if (resolvedId !== jobId) return resolvedId;
+  for (const item of input.items) {
+    const kind = item.color ? "paint_color" : item.manufacturer ? "product" : "note";
+    const years = item.warranty_years == null ? null : num(item.warranty_years);
+    let expires: string | null = null;
+    if (years && years > 0) {
+      const d = new Date(`${input.completedAt}T12:00:00`);
+      if (Number.isNaN(d.getTime())) d.setTime(Date.now());
+      d.setFullYear(d.getFullYear() + years);
+      expires = d.toISOString().slice(0, 10);
+    }
+    await sql`
+      insert into job_specs (
+        id, job_id, kind, label, value, location_note, manufacturer, product_name,
+        warranty_years, warranty_terms, warranty_expires
+      ) values (
+        ${crypto.randomUUID()}, ${jobId}, ${kind}, ${item.name},
+        ${item.color || item.product_name || item.name},
+        ${item.location_note}, ${item.manufacturer}, ${item.product_name},
+        ${years}, ${item.warranty_terms}, ${expires}
+      )
+    `;
+    if (item.color && kind === "paint_color") {
+      const key = paintFactKey(item.name);
+      if (key) {
+        const value = [item.sku, item.color, item.manufacturer, item.product_name]
+          .filter(Boolean)
+          .join(" · ");
+        await sql`
+          insert into property_facts (id, property_id, field_key, value, source)
+          values (${crypto.randomUUID()}, ${input.propertyId}, ${key}, ${value}, ${"contractor"})
+          on conflict (property_id, field_key)
+          do update set value = excluded.value, source = excluded.source, updated_at = now()
+        `;
+      }
+    }
+  }
+  return jobId;
+}
+
+/** Accepted quote writes the job line onto every File at that address. */
+async function writeAcceptedWorkToFiles(sql: Sql, proposal: Proposal) {
+  const propertyRows = await sql<Property>`
+    select * from properties where id = ${proposal.property_id} limit 1
+  `;
+  const property = propertyRows[0];
+  if (!property) return;
+  const items = await sql<ProposalItem>`
+    select * from proposal_items
+    where proposal_id = ${proposal.id} and included = true
+    order by sort_order
+  `;
+  const completedAt = (proposal.accepted_at || new Date().toISOString()).slice(0, 10);
+  const files = await filesAtAddress(sql, property);
+  for (const file of files) {
+    await writeJobOnFile(sql, {
+      companyId: proposal.company_id,
+      propertyId: file.id,
+      proposal,
+      items,
+      completedAt,
+    });
+  }
+}
+
 function collapseSameAddress<T extends {
   address_line: string;
   zip: string;
@@ -404,7 +537,7 @@ function collapseSameAddress<T extends {
 }>(houses: T[]): T[] {
   const by = new Map<string, T>();
   for (const house of houses) {
-    const key = `${house.address_line.trim().toLowerCase()}|${house.zip.trim()}`;
+    const key = addressKey(house.address_line, house.zip);
     const prev = by.get(key);
     if (!prev) {
       by.set(key, house);
@@ -507,7 +640,7 @@ export const getDashboard = createServerFn({ method: "GET" })
         (select count(*)::int from property_facts f where f.property_id = p.id) as fact_count,
         (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
-        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','pending','sent','revised','accepted')) as open_proposal_count,
+        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','pending','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src
       from properties p
       where p.company_id = ${company.id}
@@ -559,7 +692,7 @@ export const listShopIndex = createServerFn({ method: "GET" })
         (select count(*)::int from property_facts f where f.property_id = p.id) as fact_count,
         (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
-        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','pending','sent','revised','accepted')) as open_proposal_count,
+        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','pending','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src
       from properties p
       where p.company_id = ${company.id}
@@ -591,7 +724,8 @@ export const listShopIndex = createServerFn({ method: "GET" })
         p.address_line, p.city, p.state, p.zip, p.homeowner_name, p.homeowner_email, p.homeowner_phone
       from proposals pr
       join properties p on p.id = pr.property_id
-      where pr.company_id = ${company.id} and pr.status <> ${"completed"}
+      where pr.company_id = ${company.id}
+        and pr.status not in (${"completed"}, ${"accepted"})
       order by pr.created_at desc
     `;
     const jobRows = await sql<{
@@ -614,7 +748,7 @@ export const listShopIndex = createServerFn({ method: "GET" })
         p.address_line, p.city, p.state, p.zip, p.homeowner_name, p.homeowner_email, p.homeowner_phone
       from jobs j
       join properties p on p.id = j.property_id
-      where j.company_id = ${company.id}
+      where j.company_id = ${company.id} and p.company_id = ${company.id}
       order by j.completed_at desc
     `;
     const openWork: ShopWorkRow[] = proposalRows.map((row) => ({
@@ -1284,61 +1418,14 @@ export const completeProposal = createServerFn({ method: "POST" })
     `;
     const proposal = rows[0];
     if (!proposal) throw new Error("Proposal not found");
-    const items = await sql<ProposalItem>`
-      select * from proposal_items where proposal_id = ${proposal.id} and included = true order by sort_order
-    `;
-    const jobId = crypto.randomUUID();
-    const summary = items
-      .slice(0, 4)
-      .map((i) => i.name)
-      .join(". ");
-    await sql`
-      insert into jobs (id, company_id, property_id, proposal_id, title, summary, completed_at)
-      values (${jobId}, ${company.id}, ${proposal.property_id}, ${proposal.id}, ${proposal.title}, ${summary}, (now())::date)
-    `;
-    for (const item of items) {
-      const kind =
-        item.color ? "paint_color" : item.manufacturer ? "product" : "note";
-      const years = item.warranty_years == null ? null : num(item.warranty_years);
-      let expires: string | null = null;
-      if (years && years > 0) {
-        const d = new Date();
-        d.setFullYear(d.getFullYear() + years);
-        expires = d.toISOString().slice(0, 10);
-      }
-      await sql`
-        insert into job_specs (
-          id, job_id, kind, label, value, location_note, manufacturer, product_name,
-          warranty_years, warranty_terms, warranty_expires
-        ) values (
-          ${crypto.randomUUID()}, ${jobId}, ${kind}, ${item.name},
-          ${item.color || item.product_name || item.name},
-          ${item.location_note}, ${item.manufacturer}, ${item.product_name},
-          ${years}, ${item.warranty_terms}, ${expires}
-        )
-      `;
-      if (item.color && kind === "paint_color") {
-        const key =
-          /door/i.test(item.name) ? "front_door_paint"
-          : /trim/i.test(item.name) ? ( /interior/i.test(item.name) ? "interior_trim_paint" : "exterior_trim_paint")
-          : /body|clapboard|siding|wall/i.test(item.name)
-            ? (/interior|room|hall|living|dining/i.test(item.name) ? "interior_paint_main" : "exterior_paint")
-            : null;
-        if (key) {
-          const value = [item.sku, item.color, item.manufacturer, item.product_name]
-            .filter(Boolean)
-            .join(" · ");
-          await sql`
-            insert into property_facts (id, property_id, field_key, value, source)
-            values (${crypto.randomUUID()}, ${proposal.property_id}, ${key}, ${value}, ${"contractor"})
-            on conflict (property_id, field_key)
-            do update set value = excluded.value, source = excluded.source, updated_at = now()
-          `;
-        }
-      }
-    }
+    await writeAcceptedWorkToFiles(sql, proposal);
     await sql`update proposals set status = ${"completed"} where id = ${proposal.id}`;
-    return { jobId };
+    const written = await sql<{ id: string }>`
+      select id from jobs
+      where proposal_id = ${proposal.id} and property_id = ${proposal.property_id}
+      limit 1
+    `;
+    return { jobId: written[0]?.id ?? proposal.id };
   });
 
 export const upsertFactContractor = createServerFn({ method: "POST" })
@@ -1855,6 +1942,7 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
       `;
     }
     const proposal = (await sql<Proposal>`select * from proposals where id = ${rows[0].id}`)[0]!;
+    await writeAcceptedWorkToFiles(sql, proposal);
     const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0]!;
     const company = asCompany(
       (await sql<Company>`select * from companies where id = ${proposal.company_id}`)[0]!,
@@ -2493,10 +2581,10 @@ export const getMyHouses = createServerFn({ method: "GET" })
         (select count(*)::int from property_facts f where f.property_id = p.id) as fact_count,
         (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
-        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted')) as open_proposal_count,
+        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
-        (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_title,
-        (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_token
+        (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_title,
+        (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_token
       from properties p
       join companies c on c.id = p.company_id
       where p.homeowner_user_id = ${context.userId}
@@ -2768,10 +2856,10 @@ export const getHousehold = createServerFn({ method: "GET" })
         (select count(*)::int from property_facts f where f.property_id = p.id) as fact_count,
         (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
-        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted')) as open_proposal_count,
+        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
-        (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_title,
-        (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_token
+        (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_title,
+        (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_token
       from properties p
       join companies c on c.id = p.company_id
       where p.homeowner_user_id = ${context.userId}
@@ -3453,10 +3541,10 @@ export const getPortfolio = createServerFn({ method: "GET" })
         (select count(*)::int from property_facts f where f.property_id = p.id) as fact_count,
         (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
-        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted')) as open_proposal_count,
+        (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
-        (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_title,
-        (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised','accepted') order by pr.created_at desc limit 1) as open_token
+        (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_title,
+        (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_token
       from portfolio_properties pp
       join properties p on p.id = pp.property_id
       join companies c on c.id = p.company_id
