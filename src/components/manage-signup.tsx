@@ -35,7 +35,6 @@ export function ManageSignupForm() {
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const price = cadence === "annual" ? MANAGE_ANNUAL : MANAGE_MONTHLY;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -83,7 +82,7 @@ export function ManageSignupForm() {
         />
       </div>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Billing</legend>
+        <legend className="text-sm font-medium">Billing after trial</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           <button
             type="button"
@@ -115,8 +114,11 @@ export function ManageSignupForm() {
       </fieldset>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <TermsAgree id="manage-agree-terms" />
+      <p className="rounded-lg bg-muted/60 px-3 py-2 text-center text-sm font-medium text-foreground">
+        {MANAGE_TRIAL_DAYS}-day trial — map your houses before you pay
+      </p>
       <Button type="submit" className="min-h-12 w-full" disabled={busy}>
-        {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
+        {busy ? "Starting your trial…" : `Start ${MANAGE_TRIAL_DAYS}-day trial`}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         {manageTrialTerms(cadence)} Card details stay on Stripe
