@@ -395,25 +395,46 @@ function listRowFromCounts(p: PropertyListRow): PropertyListRow {
   };
 }
 
+function normalizeStreetKey(line: string) {
+  return line
+    .toLowerCase()
+    .replace(/[.,#]/g, " ")
+    .replace(/\b(northwest|northeast|southwest|southeast)\b/g, (m) =>
+      m === "northwest" ? "nw" : m === "northeast" ? "ne" : m === "southwest" ? "sw" : "se",
+    )
+    .replace(/\b(street|st)\b/g, "st")
+    .replace(/\b(road|rd)\b/g, "rd")
+    .replace(/\b(drive|dr)\b/g, "dr")
+    .replace(/\b(court|ct)\b/g, "ct")
+    .replace(/\b(avenue|ave)\b/g, "ave")
+    .replace(/\b(lane|ln)\b/g, "ln")
+    .replace(/\b(boulevard|blvd)\b/g, "blvd")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function addressKey(line: string, zip: string) {
-  return `${line.trim().toLowerCase()}|${zip.trim().toLowerCase()}`;
+  return `${normalizeStreetKey(line)}|${zip.trim().toLowerCase().slice(0, 5)}`;
+}
+
+function sameAddress(a: { address_line: string; zip: string }, b: { address_line: string; zip: string }) {
+  return addressKey(a.address_line, a.zip) === addressKey(b.address_line, b.zip);
 }
 
 async function filesAtAddress(sql: Sql, property: Property): Promise<Property[]> {
-  const line = property.address_line.trim().toLowerCase();
-  const zip = property.zip.trim().toLowerCase();
+  const zip5 = property.zip.trim().slice(0, 5);
   const rows = await sql<Property>`
     select * from properties p
-    where lower(trim(p.address_line)) = ${line}
-      and lower(trim(p.zip)) = ${zip}
+    where left(trim(p.zip), 5) = ${zip5}
       and (
         p.id = ${property.id}
         or p.company_id = ${HOUSEHOLD_COMPANY}
         or exists (select 1 from portfolio_properties pp where pp.property_id = p.id)
       )
   `;
-  if (!rows.some((row) => row.id === property.id)) rows.push(property);
-  return rows;
+  const matched = rows.filter((row) => sameAddress(row, property));
+  if (!matched.some((row) => row.id === property.id)) matched.push(property);
+  return matched;
 }
 
 function paintFactKey(name: string) {
@@ -515,6 +536,7 @@ async function writeAcceptedWorkToFiles(sql: Sql, proposal: Proposal) {
     where proposal_id = ${proposal.id} and included = true
     order by sort_order
   `;
+  if (items.length === 0) return;
   const completedAt = (proposal.accepted_at || new Date().toISOString()).slice(0, 10);
   const files = await filesAtAddress(sql, property);
   for (const file of files) {
@@ -1203,15 +1225,12 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       const email = data.homeownerEmail.trim().toLowerCase();
       if (!address || !name || !email) throw new Error("Name, email, and address are required");
       const zip = data.zip.trim() || "—";
-      const existingAtAddress = (
-        await sql<Property>`
-          select * from properties
-          where company_id = ${company.id}
-            and lower(trim(address_line)) = ${address.toLowerCase()}
-            and lower(trim(zip)) = ${zip.toLowerCase()}
-          limit 1
-        `
-      )[0];
+      const shopRows = await sql<Property>`
+        select * from properties where company_id = ${company.id}
+      `;
+      const existingAtAddress = shopRows.find((row) =>
+        sameAddress(row, { address_line: address, zip }),
+      );
       if (existingAtAddress) {
         property = existingAtAddress;
       } else {
@@ -2742,11 +2761,7 @@ async function attachNamedWorkInvite(
   const source = (
     await sql<Property>`select * from properties where id = ${invite.property_id} limit 1`
   )[0];
-  if (source) {
-    const same =
-      addressKey(source.address_line, source.zip) === addressKey(property.address_line, property.zip);
-    if (!same) return;
-  }
+  if (source && !sameAddress(source, property)) return;
   await sql`
     update file_work_invites
     set status = ${"quoted"},
@@ -2784,18 +2799,21 @@ async function canWriteFile(sql: Sql, userId: string, propertyId: string): Promi
 }
 
 async function shopEstimatesAtAddress(sql: Sql, property: Property): Promise<ProposalListRow[]> {
-  return sql<ProposalListRow>`
-    select pr.*, shop_p.address_line, shop_p.homeowner_name,
+  const zip5 = property.zip.trim().slice(0, 5);
+  const rows = await sql<ProposalListRow & { shop_zip: string }>`
+    select pr.*, shop_p.address_line, shop_p.homeowner_name, shop_p.zip as shop_zip,
       t.name as template_name, t.trade as template_trade
     from properties shop_p
     join proposals pr on pr.property_id = shop_p.id
     left join templates t on t.id = pr.template_id
-    where lower(trim(shop_p.address_line)) = ${property.address_line.trim().toLowerCase()}
-      and lower(trim(shop_p.zip)) = ${property.zip.trim().toLowerCase()}
+    where left(trim(shop_p.zip), 5) = ${zip5}
       and shop_p.company_id <> ${HOUSEHOLD_COMPANY}
       and pr.status not in (${"draft"}, ${"pending"})
     order by pr.created_at desc
   `;
+  return rows.filter((row) =>
+    sameAddress({ address_line: row.address_line, zip: row.shop_zip }, property),
+  );
 }
 
 async function workInvitesForProperty(sql: Sql, propertyId: string) {
@@ -3613,15 +3631,14 @@ function estimateDateIso(value: string | null | undefined) {
 }
 
 async function acceptedEstimatesForPortfolio(sql: Sql, portfolioId: string, propertyId?: string) {
-  const rows = await sql<AcceptedEstimateRow>`
+  const rows = await sql<AcceptedEstimateRow & { shop_address: string; shop_zip: string }>`
     select pr.id, pr.title, pr.share_token, pr.accepted_at, office_p.id as property_id,
       office_p.address_line, office_p.city, office_p.state, office_p.zip, office_p.homeowner_name,
+      shop_p.address_line as shop_address, shop_p.zip as shop_zip,
       c.name as company_name
     from portfolio_properties pp
     join properties office_p on office_p.id = pp.property_id
-    join properties shop_p
-      on lower(trim(shop_p.address_line)) = lower(trim(office_p.address_line))
-     and lower(trim(shop_p.zip)) = lower(trim(office_p.zip))
+    join properties shop_p on left(trim(shop_p.zip), 5) = left(trim(office_p.zip), 5)
     join proposals pr on pr.property_id = shop_p.id
     join companies c on c.id = pr.company_id
     where pp.portfolio_id = ${portfolioId}
@@ -3633,6 +3650,14 @@ async function acceptedEstimatesForPortfolio(sql: Sql, portfolioId: string, prop
   const seen = new Set<string>();
   const out: PortfolioAcceptedEstimate[] = [];
   for (const row of rows) {
+    if (
+      !sameAddress(
+        { address_line: row.address_line, zip: row.zip },
+        { address_line: row.shop_address, zip: row.shop_zip },
+      )
+    ) {
+      continue;
+    }
     if (propertyId && row.property_id !== propertyId) continue;
     if (seen.has(row.id)) continue;
     seen.add(row.id);

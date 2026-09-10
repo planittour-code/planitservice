@@ -68,6 +68,7 @@ export function ProposalDoc({
   const navigate = useNavigate();
   const { proposal, items, property, company, house } = bundle;
   const locked = proposal.status === "completed" || mode === "accepted";
+  const editMode: "homeowner" | "contractor" = mode === "contractor" ? "contractor" : "homeowner";
   const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   const openLines = items.filter((i) => i.included && !lineSettled(i));
   const readyToStart = openLines.length === 0 && items.some((i) => i.included);
@@ -135,7 +136,7 @@ export function ProposalDoc({
           <ProposalLine
             key={item.id}
             item={item}
-            mode={mode}
+            mode={editMode}
             token={proposal.share_token}
             proposalId={proposal.id}
             locked={locked}
@@ -151,7 +152,7 @@ export function ProposalDoc({
               <ProposalLine
                 key={item.id}
                 item={item}
-                mode={mode}
+                mode={editMode}
                 token={proposal.share_token}
                 proposalId={proposal.id}
                 locked={locked}
@@ -163,7 +164,7 @@ export function ProposalDoc({
       ) : null}
       <OptionGroups
         items={items}
-        mode={mode}
+        mode={editMode}
         token={proposal.share_token}
         locked={locked}
         onChanged={onChanged}
@@ -407,8 +408,8 @@ function ContractorMeta({
                   homeownerName: bundle.property.homeowner_name,
                 },
               });
-              if (!res.ok) {
-                toast.error(res.error);
+              if (!("text" in res) || !res.text) {
+                toast.error("Could not draft a cover note");
                 return;
               }
               setCover(res.text);
