@@ -20,6 +20,13 @@ import { claimManageCheckout, startCheckout, startManageCheckout } from "@/lib/h
 import { useAudience } from "@/lib/housefile/use-audience";
 import { cn } from "@/lib/utils";
 
+function manageTrialTerms(cadence: "monthly" | "annual") {
+  if (cadence === "annual") {
+    return `${MANAGE_TRIAL_DAYS}-day trial, then $${dollars(MANAGE_ANNUAL)}/yr for ${MANAGE_INCLUDED} houses. Auto-renews annually until canceled. Cancel during trial: no charge. Cancel after convert: access through the end of the paid period (manage in Stripe Customer Portal).`;
+  }
+  return `${MANAGE_TRIAL_DAYS}-day trial, then $${dollars(MANAGE_MONTHLY)}/mo for ${MANAGE_INCLUDED} houses. Auto-renews monthly until canceled. Cancel during trial: no charge. Cancel after convert: access through the end of the paid period (manage in Stripe Customer Portal).`;
+}
+
 export function ManageSignupForm() {
   const navigate = useNavigate();
   const { user } = useCurrentUserState();
@@ -112,8 +119,7 @@ export function ManageSignupForm() {
         {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        {MANAGE_TRIAL_DAYS}-day trial, then ${dollars(MANAGE_MONTHLY)}/mo for {MANAGE_INCLUDED}{" "}
-        houses. Card details stay on Stripe
+        {manageTrialTerms(cadence)} Card details stay on Stripe
         {user ? ". This login becomes the office." : ". No PlanitService account until checkout finishes."}
       </p>
     </form>
@@ -150,7 +156,9 @@ export function ManageClaimForm({ sessionId }: { sessionId: string }) {
   return (
     <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
       <p className="text-sm text-muted-foreground">
-        Payment received. Set a password for the email you used on Stripe.
+        Checkout complete (trial or paid). Set a password for the email you used on Stripe. You can
+        cancel in the Stripe Customer Portal — during trial there is no charge; after convert, access
+        continues through the end of the paid period.
       </p>
       <div className="space-y-1.5">
         <Label htmlFor="manage-claim-name">Your name</Label>
