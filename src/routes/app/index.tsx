@@ -23,8 +23,10 @@ function ShopHome() {
   }
   const { company, properties, proposals, pending, role } = q.data;
   const clients = q.data.clients ?? [];
+  const namedInvites = q.data.namedInvites ?? [];
   const propertyCount = properties.length;
-  const jobCount = properties.reduce((n, p) => n + p.job_count + p.open_proposal_count, 0);
+  const jobCount =
+    properties.reduce((n, p) => n + p.job_count + p.open_proposal_count, 0) + namedInvites.length;
 
   return (
     <div className="space-y-10">
@@ -58,6 +60,37 @@ function ShopHome() {
         </Button>
       </section>
 
+      {namedInvites.length > 0 && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-display text-xl font-medium">Named jobs</h2>
+            <p className="text-sm text-muted-foreground">
+              Work sent to this shop from a Property Record. Quote from Materials.
+            </p>
+          </div>
+          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            {namedInvites.map((row) => (
+              <li key={row.id}>
+                <Link
+                  to="/app/new"
+                  search={{ invite: row.invite_token ?? undefined }}
+                  className="flex min-h-14 flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{row.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {row.homeowner_name} · {row.address_line}
+                      {row.city ? `, ${row.city}` : ""}
+                    </p>
+                  </div>
+                  <StatusBadge status={row.status} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {role === "owner" && (pending?.length ?? 0) > 0 && (
         <section className="space-y-3">
           <h2 className="font-display text-xl font-medium">Needs approval</h2>
@@ -83,7 +116,7 @@ function ShopHome() {
         </section>
       )}
 
-      {properties.length === 0 ? (
+      {properties.length === 0 && namedInvites.length === 0 ? (
         <Card>
           <CardContent className="space-y-3 py-10 text-center">
             <h2 className="font-display text-2xl font-medium">No clients yet</h2>

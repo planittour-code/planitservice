@@ -201,12 +201,13 @@ export type ProposalListRow = Proposal & {
 
 export type ShopWorkRow = {
   id: string;
-  kind: "proposal" | "job";
+  kind: "proposal" | "job" | "invite";
   title: string;
   status: string;
   summary: string | null;
   property_id: string;
   proposal_id: string | null;
+  invite_token: string | null;
   address_line: string;
   city: string;
   state: string;

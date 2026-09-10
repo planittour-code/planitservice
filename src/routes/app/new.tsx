@@ -42,6 +42,7 @@ import {
   workTypesFor,
 } from "@/lib/housefile/quote";
 import { formatLine } from "@/lib/housefile/geocode";
+import { namedShopInviteToken } from "@/lib/housefile/invite";
 import {
   addCustomWork,
   createProposalFromWizard,
@@ -59,6 +60,8 @@ const queryString = z.preprocess(
   z.string().optional(),
 );
 
+const inviteToken = z.preprocess((v) => namedShopInviteToken(v), z.string().optional());
+
 const searchSchema = z.object({
   template: queryString,
   work: queryString,
@@ -69,7 +72,7 @@ const searchSchema = z.object({
   state: queryString,
   zip: queryString,
   rfp: queryString,
-  invite: queryString,
+  invite: inviteToken,
 });
 
 const STEPS = [
@@ -449,6 +452,10 @@ function NewQuote() {
           <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
             Named job at this address. Photos on the File. Quote from your materials.
             {inviteQ.data.invite.body ? ` ${inviteQ.data.invite.body}` : ""}
+          </p>
+        ) : search.invite && inviteQ.isError ? (
+          <p className="text-sm text-destructive">
+            {inviteQ.error instanceof Error ? inviteQ.error.message : "Could not open this named job."}
           </p>
         ) : null}
         <QuoteHouseBanner

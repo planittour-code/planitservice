@@ -81,3 +81,10 @@ export function safeNextPath(path: string | undefined, fallback = "/app") {
   }
   return path;
 }
+
+export function namedShopInviteToken(value: unknown): string | undefined {
+  if (value == null || value === true || value === false) return undefined;
+  const token = String(value).trim();
+  if (!token || token === "true" || token === "false") return undefined;
+  return token;
+}

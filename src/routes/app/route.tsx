@@ -37,7 +37,7 @@ function AppLayout() {
       return (
         <Navigate
           to="/login"
-          search={{ next: `/app/new?invite=${encodeURIComponent(invite)}`, role: "contractor" }}
+          search={{ next: "/app/new", role: "contractor", invite }}
         />
       );
     }
@@ -51,7 +51,9 @@ function AppLayout() {
   }
 
   if (dash.data?.role === "owner" && !dash.data.company.onboarded_at && !onboardPath) {
-    return <Navigate to="/app/onboard" />;
+    if (!inviteTokenFromLocation(location)) {
+      return <Navigate to="/app/onboard" />;
+    }
   }
 
   return (
@@ -94,11 +96,17 @@ function AppLayout() {
 
 function inviteTokenFromLocation(location: { href?: string; search?: unknown }) {
   const search = location.search as Record<string, unknown> | undefined;
-  if (typeof search?.invite === "string" && search.invite.trim()) return search.invite.trim();
+  const raw = search?.invite;
+  if (typeof raw === "string") {
+    const token = raw.trim();
+    if (token && token !== "true" && token !== "false") return token;
+  }
   const href = typeof location.href === "string" ? location.href : "";
   const query = href.includes("?") ? href.slice(href.indexOf("?") + 1).split("#")[0] : "";
   if (!query) return "";
-  return new URLSearchParams(query).get("invite")?.trim() || "";
+  const token = new URLSearchParams(query).get("invite")?.trim() || "";
+  if (!token || token === "true" || token === "false") return "";
+  return token;
 }
 
 function NavLink({ to, children }: { to: string; children: ReactNode }) {

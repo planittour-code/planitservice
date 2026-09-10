@@ -9,11 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GROK_PROVIDERS, authClient, authEnabled, grokOauthOnThisHost, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { safeNextPath } from "@/lib/housefile/invite";
+import { namedShopInviteToken, safeNextPath } from "@/lib/housefile/invite";
 import { useAudience } from "@/lib/housefile/use-audience";
 
 const searchSchema = z.object({
-  invite: z.string().optional(),
+  invite: z.preprocess((v) => namedShopInviteToken(v), z.string().optional()),
   email: z.string().optional(),
   next: z.string().optional(),
   role: z.string().optional(),
@@ -28,6 +28,12 @@ function isShopDestination(path: string) {
   return path === "/app" || path.startsWith("/app/");
 }
 
+function inviteFromShopNext(path: string) {
+  if (!path.startsWith("/app/new")) return undefined;
+  const query = path.includes("?") ? path.slice(path.indexOf("?") + 1) : "";
+  return namedShopInviteToken(new URLSearchParams(query).get("invite"));
+}
+
 function isHouseDestination(path: string) {
   return path === "/home" || path.startsWith("/home/");
 }
@@ -40,20 +46,29 @@ function Login() {
   const search = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const { audience, isPending: audiencePending } = useAudience();
-  const homeowner = Boolean(search.invite) || search.role === "homeowner";
   const manager =
     search.role === "manager" ||
     search.next === "/manage" ||
     Boolean(search.next?.startsWith("/manage/"));
+  const contractor =
+    search.role === "contractor" || Boolean(search.next?.startsWith("/app"));
+  const homeowner =
+    search.role === "homeowner" ||
+    (Boolean(search.invite) && !contractor && !manager);
   const next = safeNextPath(search.next, homeowner ? "/home" : manager ? "/manage" : "/app");
+  const shopInvite =
+    inviteFromShopNext(next) || (contractor ? namedShopInviteToken(search.invite) : undefined);
+  const houseInvite = !contractor && !manager ? namedShopInviteToken(search.invite) : undefined;
   // Land back on /login after auth so a paid contractor is not sent to /home
   // just because the public Sign in button asked for the house dashboard.
-  const after = search.invite
-    ? `/invite/${search.invite}`
-    : isShopDestination(next) || isManageDestination(next) || next.startsWith("/home/add")
-      ? next
-      : "/login";
-  const [mode, setMode] = useState<"in" | "up">(search.invite ? "up" : "in");
+  const after = shopInvite
+    ? `/app/new?invite=${encodeURIComponent(shopInvite)}`
+    : houseInvite
+      ? `/invite/${houseInvite}`
+      : isShopDestination(next) || isManageDestination(next) || next.startsWith("/home/add")
+        ? next
+        : "/login";
+  const [mode, setMode] = useState<"in" | "up">(houseInvite ? "up" : "in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -72,8 +87,11 @@ function Login() {
   }
 
   if (user) {
-    if (search.invite) {
-      return <Navigate to="/invite/$token" params={{ token: search.invite }} />;
+    if (shopInvite) {
+      return <Navigate to="/app/new" search={{ invite: shopInvite }} />;
+    }
+    if (houseInvite) {
+      return <Navigate to="/invite/$token" params={{ token: houseInvite }} />;
     }
     if (next.startsWith("/app/new")) {
       const params = new URLSearchParams(next.split("?")[1] ?? "");

@@ -73,7 +73,7 @@ function PropertiesPage() {
     return <p className="text-destructive">{q.error instanceof Error ? q.error.message : "Could not load jobs."}</p>;
   }
 
-  const emptyShop = houses.length === 0 && work.length === 0;
+  const emptyShop = houses.length === 0 && work.length === 0 && filteredWork.length === 0;
 
   return (
     <div className="space-y-6">
@@ -169,7 +169,7 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
       </p>
     );
   }
-  const open = rows.filter((row) => row.kind === "proposal");
+  const open = rows.filter((row) => row.kind === "proposal" || row.kind === "invite");
   const done = rows.filter((row) => row.kind === "job");
   return (
     <div className="space-y-6">
@@ -214,7 +214,11 @@ function WorkRows({ rows }: { rows: ShopWorkRow[] }) {
           "flex min-h-14 flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between";
         return (
           <li key={`${row.kind}-${row.id}`}>
-            {row.kind === "proposal" || row.proposal_id ? (
+            {row.kind === "invite" && row.invite_token ? (
+              <Link to="/app/new" search={{ invite: row.invite_token }} className={className}>
+                {body}
+              </Link>
+            ) : row.kind === "proposal" || row.proposal_id ? (
               <Link to="/app/proposals/$id" params={{ id: row.proposal_id || row.id }} className={className}>
                 {body}
               </Link>
@@ -318,6 +322,7 @@ function matchesHay(hay: string, query: string) {
 function hayForWork(row: ShopWorkRow) {
   return [
     row.title,
+    row.summary,
     row.homeowner_name,
     row.homeowner_email,
     row.homeowner_phone,

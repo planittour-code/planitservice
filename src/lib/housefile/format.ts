@@ -70,6 +70,8 @@ export function statusLabel(status: string) {
       return "Due soon";
     case "current":
       return "Current";
+    case "open":
+      return "Named job";
     default:
       return status;
   }

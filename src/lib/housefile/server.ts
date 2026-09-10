@@ -670,6 +670,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       job_count: num(p.job_count),
       open_proposal_count: num(p.open_proposal_count),
     }));
+    const namedInvites = await namedWorkForShop(sql, company, session?.email);
     return {
       company,
       role,
@@ -677,6 +678,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       properties: houses,
       clients: clientsFromHouses(houses),
       proposals,
+      namedInvites,
       templateCount: num(templates[0]?.c),
     };
   });
@@ -760,6 +762,7 @@ export const listShopIndex = createServerFn({ method: "GET" })
       summary: null,
       property_id: row.property_id,
       proposal_id: row.id,
+      invite_token: null,
       address_line: row.address_line,
       city: row.city,
       state: row.state,
@@ -770,6 +773,7 @@ export const listShopIndex = createServerFn({ method: "GET" })
       created_at: row.created_at,
       completed_at: row.accepted_at,
     }));
+    const namedInvites = await namedWorkForShop(sql, company, session?.email);
     const completedWork: ShopWorkRow[] = jobRows.map((row) => ({
       id: row.id,
       kind: "job",
@@ -778,6 +782,7 @@ export const listShopIndex = createServerFn({ method: "GET" })
       summary: row.summary,
       property_id: row.property_id,
       proposal_id: row.proposal_id,
+      invite_token: null,
       address_line: row.address_line,
       city: row.city,
       state: row.state,
@@ -788,10 +793,85 @@ export const listShopIndex = createServerFn({ method: "GET" })
       created_at: row.created_at,
       completed_at: row.completed_at,
     }));
-    const work = [...openWork, ...completedWork];
+    const work = [...namedInvites, ...openWork, ...completedWork];
     const clients = clientsFromHouses(houses);
     return { role, houses, work, clients };
   });
+
+async function shopMailbox(sql: Sql, company: Company, sessionEmail?: string | null) {
+  const members = await sql<{ email: string }>`
+    select email from company_members where company_id = ${company.id}
+  `;
+  return [
+    ...new Set(
+      [
+        sessionEmail?.trim().toLowerCase() ?? "",
+        (company.email || "").trim().toLowerCase(),
+        ...members.map((m) => m.email.trim().toLowerCase()),
+      ].filter(Boolean),
+    ),
+  ];
+}
+
+function shopCanOpenInvite(inviteEmail: string, mailbox: string[]) {
+  return mailbox.includes(inviteEmail.trim().toLowerCase());
+}
+
+async function namedWorkForShop(
+  sql: Sql,
+  company: Company,
+  sessionEmail?: string | null,
+): Promise<ShopWorkRow[]> {
+  const mailbox = await shopMailbox(sql, company, sessionEmail);
+  if (mailbox.length === 0) return [];
+  const seen = new Set<string>();
+  const rows: ShopWorkRow[] = [];
+  for (const email of mailbox) {
+    const part = await sql<
+      FileWorkInvite & {
+        address_line: string;
+        city: string;
+        state: string;
+        zip: string;
+        homeowner_name: string;
+        homeowner_email: string;
+        homeowner_phone: string | null;
+      }
+    >`
+      select i.*, p.address_line, p.city, p.state, p.zip,
+        p.homeowner_name, p.homeowner_email, p.homeowner_phone
+      from file_work_invites i
+      join properties p on p.id = i.property_id
+      where i.status = ${"open"} and lower(i.shop_email) = ${email}
+      order by i.created_at desc
+    `;
+    for (const row of part) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      rows.push({
+        id: row.id,
+        kind: "invite",
+        title: row.title,
+        status: "open",
+        summary: row.body,
+        property_id: row.property_id,
+        proposal_id: null,
+        invite_token: row.share_token,
+        address_line: row.address_line,
+        city: row.city,
+        state: row.state,
+        zip: row.zip,
+        homeowner_name: row.homeowner_name,
+        homeowner_email: row.homeowner_email,
+        homeowner_phone: row.homeowner_phone,
+        created_at: row.created_at,
+        completed_at: null,
+      });
+    }
+  }
+  rows.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  return rows;
+}
 
 function clientsFromHouses(houses: PropertyListRow[]): ShopClientRow[] {
   const map = new Map<string, ShopClientRow>();
@@ -4147,15 +4227,8 @@ export const getNamedWorkInvite = createServerFn({ method: "GET" })
     )[0];
     if (!invite) throw new Error("Invite not found");
     const { company } = await requirePaidShop(sql, context.userId, session?.email);
-    const mail = session?.email?.trim().toLowerCase() ?? "";
-    const shopMail = (company.email || "").trim().toLowerCase();
-    const members = await sql<{ email: string }>`
-      select email from company_members where company_id = ${company.id}
-    `;
-    const allowed = new Set(
-      [mail, shopMail, ...members.map((m) => m.email.trim().toLowerCase())].filter(Boolean),
-    );
-    if (!allowed.has(invite.shop_email)) {
+    const mailbox = await shopMailbox(sql, company, session?.email);
+    if (!shopCanOpenInvite(invite.shop_email, mailbox)) {
       throw new Error("This invite was sent to a different shop email.");
     }
     const property = (
