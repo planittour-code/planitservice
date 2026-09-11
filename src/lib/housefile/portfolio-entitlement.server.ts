@@ -9,10 +9,11 @@ export async function markPortfolioPaid(
   const sql = await getSql();
   const customerId = stripeIds?.customerId?.trim() || null;
   const subscriptionId = stripeIds?.subscriptionId?.trim() || null;
-  const existing = await sql<{ id: string }>`
-    select id from portfolios where user_id = ${userId} limit 1
+  const existing = await sql<{ id: string; paid_at: Date | string | null }>`
+    select id, paid_at from portfolios where user_id = ${userId} limit 1
   `;
   if (existing[0]) {
+    const wasPaid = Boolean(existing[0].paid_at);
     await sql`
       update portfolios
       set paid_at = coalesce(paid_at, now()),
@@ -20,6 +21,15 @@ export async function markPortfolioPaid(
           stripe_subscription_id = coalesce(${subscriptionId}, stripe_subscription_id)
       where id = ${existing[0].id}
     `;
+    if (!wasPaid) {
+      const { trackEvent } = await import("@/lib/housefile/analytics.server");
+      await trackEvent({
+        name: "portfolio_paid",
+        eventKey: `portfolio_paid:${existing[0].id}:${subscriptionId || "grant"}`,
+        userId,
+        portfolioId: existing[0].id,
+      });
+    }
     return existing[0].id;
   }
   const id = crypto.randomUUID();
@@ -29,6 +39,13 @@ export async function markPortfolioPaid(
     insert into portfolios (id, user_id, name, paid_at, stripe_customer_id, stripe_subscription_id)
     values (${id}, ${userId}, ${name}, now(), ${customerId}, ${subscriptionId})
   `;
+  const { trackEvent } = await import("@/lib/housefile/analytics.server");
+  await trackEvent({
+    name: "portfolio_paid",
+    eventKey: `portfolio_paid:${id}:${subscriptionId || "grant"}`,
+    userId,
+    portfolioId: id,
+  });
   return id;
 }
 
@@ -56,6 +73,10 @@ export async function syncPortfolioSubscription(sub: {
   `;
   if (bySub[0]) {
     if (entitled) {
+      const before = await sql<{ paid_at: Date | string | null; user_id: string }>`
+        select paid_at, user_id from portfolios where id = ${bySub[0].id} limit 1
+      `;
+      const wasPaid = Boolean(before[0]?.paid_at);
       await sql`
         update portfolios
         set paid_at = coalesce(paid_at, now()),
@@ -63,6 +84,15 @@ export async function syncPortfolioSubscription(sub: {
             stripe_subscription_id = ${sub.id}
         where id = ${bySub[0].id}
       `;
+      if (!wasPaid) {
+        const { trackEvent } = await import("@/lib/housefile/analytics.server");
+        await trackEvent({
+          name: "portfolio_paid",
+          eventKey: `portfolio_paid:${bySub[0].id}:${sub.id}`,
+          userId: (before[0]?.user_id ?? userId) || null,
+          portfolioId: bySub[0].id,
+        });
+      }
     } else if (revoke) {
       await sql`
         update portfolios
@@ -79,12 +109,25 @@ export async function syncPortfolioSubscription(sub: {
     `;
     if (byCust[0]) {
       if (entitled) {
+        const before = await sql<{ paid_at: Date | string | null; user_id: string }>`
+          select paid_at, user_id from portfolios where id = ${byCust[0].id} limit 1
+        `;
+        const wasPaid = Boolean(before[0]?.paid_at);
         await sql`
           update portfolios
           set paid_at = coalesce(paid_at, now()),
               stripe_subscription_id = coalesce(stripe_subscription_id, ${sub.id})
           where id = ${byCust[0].id}
         `;
+        if (!wasPaid) {
+          const { trackEvent } = await import("@/lib/housefile/analytics.server");
+          await trackEvent({
+            name: "portfolio_paid",
+            eventKey: `portfolio_paid:${byCust[0].id}:${sub.id}`,
+            userId: (before[0]?.user_id ?? userId) || null,
+            portfolioId: byCust[0].id,
+          });
+        }
       } else if (revoke) {
         await sql`
           update portfolios

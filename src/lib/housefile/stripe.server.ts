@@ -128,6 +128,16 @@ export async function createCheckoutSessionUrl(input: {
     },
   });
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
+  // Funnel signup = base Portfolio only — not extras/seats.
+  if (isManageBaseKind(input.kind)) {
+    const { trackEvent } = await import("@/lib/housefile/analytics.server");
+    await trackEvent({
+      name: "portfolio_signup_started",
+      eventKey: `portfolio_signup_started:${session.id}`,
+      userId: input.userId || null,
+      sessionId: session.id,
+    });
+  }
   return session.url;
 }
 
