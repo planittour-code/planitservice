@@ -19,3 +19,57 @@ create index if not exists analytics_events_name_created_idx
 
 create index if not exists analytics_events_created_idx
   on analytics_events (created_at desc);
+
+-- address_mapped: portfolio_properties insert (addPortfolioProperty / map into slot)
+create or replace function analytics_track_address_mapped() returns trigger
+language plpgsql as $$
+declare
+  uid text;
+  eid text;
+begin
+  select user_id into uid from portfolios where id = NEW.portfolio_id;
+  eid := md5(random()::text || clock_timestamp()::text || NEW.portfolio_id || NEW.property_id);
+  insert into analytics_events (id, name, user_id, portfolio_id, property_id, event_key)
+  values (
+    eid,
+    'address_mapped',
+    uid,
+    NEW.portfolio_id,
+    NEW.property_id,
+    'address_mapped:' || NEW.portfolio_id || ':' || NEW.property_id
+  )
+  on conflict (event_key) do nothing;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists analytics_address_mapped_trg on portfolio_properties;
+create trigger analytics_address_mapped_trg
+  after insert on portfolio_properties
+  for each row execute function analytics_track_address_mapped();
+
+-- quote_created: proposals insert (createProposalFromWizard / contractor quote)
+create or replace function analytics_track_quote_created() returns trigger
+language plpgsql as $$
+declare
+  eid text;
+begin
+  eid := md5(random()::text || clock_timestamp()::text || NEW.id);
+  insert into analytics_events (id, name, user_id, property_id, quote_id, event_key)
+  values (
+    eid,
+    'quote_created',
+    NEW.created_by,
+    NEW.property_id,
+    NEW.id,
+    'quote_created:' || NEW.id
+  )
+  on conflict (event_key) do nothing;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists analytics_quote_created_trg on proposals;
+create trigger analytics_quote_created_trg
+  after insert on proposals
+  for each row execute function analytics_track_quote_created();
