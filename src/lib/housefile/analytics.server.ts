@@ -1,4 +1,11 @@
-/** Minimal Portfolio funnel analytics — ids only, no PII beyond stored ids. */
+/** Minimal Portfolio funnel analytics — ids only, no PII beyond stored ids.
+ *
+ * Call sites:
+ * - portfolio_signup_started → createCheckoutSessionUrl (manage_* kinds)
+ * - portfolio_paid → markPortfolioPaid + syncPortfolioSubscription (null→paid)
+ * - address_mapped → DB trigger on portfolio_properties insert (addPortfolioProperty)
+ * - quote_created → DB trigger on proposals insert (createProposalFromWizard)
+ */
 
 export type AnalyticsEventName =
   | "portfolio_signup_started"
