@@ -30,7 +30,7 @@ DATABASE_URL=... npm run demo:seed-map10
 DATABASE_URL=... node scripts/seed-map10-demo.mjs
 ```
 
-Idempotent: replaces the ten `prop_map10_*` houses and job stubs on the demo office. Clears Stripe customer/subscription ids on that portfolio so the demo never implies a live charge.
+Seed reads `scripts/map10-houses.json` (10 addresses + 1–2 job stubs each). Idempotent: replaces the ten `prop_map10_*` houses and job stubs on the demo office. Clears Stripe customer/subscription ids on that portfolio so the demo never implies a live charge.
 
 ## Happy path (Loom)
 
