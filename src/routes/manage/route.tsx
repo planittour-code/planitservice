@@ -130,7 +130,7 @@ function ManageMarketing() {
                 title="Sign in to the office"
                 submitLabel="Sign in to the portfolio"
                 newAccountTo="/manage/open"
-                newAccountLabel="Open a portfolio"
+                newAccountLabel="Start Portfolio"
               />
               <SignedInOpenPortfolio />
             </div>
@@ -196,11 +196,21 @@ function ManageMarketing() {
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
                   <Link to="/manage/open" search={{ intent: "up" }}>
-                    Open a portfolio
+                    Start Portfolio
                   </Link>
                 </Button>
               </div>
-              <p className="mt-3 text-center text-xs opacity-80">
+              <p className="mt-3 text-center text-sm opacity-90">
+                Want it on your addresses? Reply or{" "}
+                <a
+                  href="mailto:support@planitservice.com?subject=Book%20a%2015-min%20Portfolio%20walkthrough"
+                  className="underline underline-offset-2"
+                >
+                  email to book
+                </a>{" "}
+                a 15-min walkthrough — no dead button until a calendar or Loom link is live.
+              </p>
+              <p className="mt-2 text-center text-xs opacity-80">
                 Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)}/month or billed yearly.
               </p>
             </div>
@@ -227,7 +237,7 @@ function SignedInOpenPortfolio() {
       </p>
       <Button asChild className="min-h-12 w-full">
         <Link to="/manage/open" search={{ intent: "up" }}>
-          Continue to Stripe
+          Start Portfolio
         </Link>
       </Button>
     </div>
