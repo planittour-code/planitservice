@@ -156,6 +156,16 @@ function OpenPortfolio() {
                         </button>
                       </p>
                     ) : null}
+                    <p className="mt-4 text-center text-sm text-muted-foreground">
+                      Want it on your addresses? Reply or{" "}
+                      <a
+                        href="mailto:support@planitservice.com?subject=Book%20a%2015-min%20Portfolio%20walkthrough"
+                        className="underline underline-offset-2 hover:text-foreground"
+                      >
+                        email to book
+                      </a>{" "}
+                      a 15-min walkthrough.
+                    </p>
                   </div>
                 </>
               )}

@@ -10,6 +10,7 @@ import { shortDate } from "@/lib/housefile/format";
 import { getPortfolio } from "@/lib/housefile/server";
 import type { MaintenanceStatus } from "@/lib/housefile/maintain";
 import type { PortfolioHouse, PortfolioOwner } from "@/lib/housefile/types";
+import { InviteShopHeaderButton, InviteShopHintCard } from "@/components/invite-shop-cta";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/manage/")({ component: ManageDashboard });
@@ -75,9 +76,12 @@ function ManageDashboard() {
             soon, overdue, or already scheduled — including estimates the owner has accepted.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/manage/add">Add a house</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {count > 0 ? <InviteShopHeaderButton propertyId={portfolio.data.houses[0]!.id} /> : null}
+          <Button asChild variant="outline">
+            <Link to="/manage/add">Add a house</Link>
+          </Button>
+        </div>
       </div>
 
       {count === 0 ? (
@@ -86,7 +90,8 @@ function ManageDashboard() {
             <p className="font-medium">No houses in this portfolio yet</p>
             <p className="text-sm text-muted-foreground">
               Add an address you manage. Maintenance dates land on the calendar as soon as the
-              record exists.
+              record exists. When a house is on file, invite a go-to shop from the Property Record
+              for an estimate against what is already known.
             </p>
             <Button asChild>
               <Link to="/manage/add">Add a house</Link>
@@ -134,6 +139,8 @@ function ManageDashboard() {
           {houses.length === 0 ? (
             <p className="text-sm text-muted-foreground">No houses match that filter.</p>
           ) : (
+            <>
+            <InviteShopHintCard propertyId={houses[0]!.id} />
             <section className="space-y-3">
               <div>
                 <h2 className="font-display text-xl font-medium">By owner</h2>
@@ -147,6 +154,7 @@ function ManageDashboard() {
                 ))}
               </ul>
             </section>
+            </>
           )}
 
           <section className="space-y-3">

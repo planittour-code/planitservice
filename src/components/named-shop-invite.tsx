@@ -42,11 +42,12 @@ export function NamedShopInvite({
   });
 
   return (
-    <section className="space-y-4">
+    <section id="invite-shop" className="scroll-mt-24 space-y-4">
       <div>
-        <h2 className="font-display text-xl font-medium">Ask a named contractor</h2>
+        <h2 className="font-display text-xl font-medium">Invite a shop</h2>
         <p className="text-sm text-muted-foreground">
-          Standard. Send this address and the ask to one shop. Their accepted quote writes this File.
+          Send this address and the ask to one shop. They quote from the jobs already on this
+          record. Their accepted quote writes this File.
         </p>
       </div>
       <form
@@ -94,7 +95,7 @@ export function NamedShopInvite({
           />
         </div>
         <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? "Sending…" : "Send to this shop"}
+          {save.isPending ? "Sending…" : "Invite a shop"}
         </Button>
       </form>
 
@@ -116,7 +117,22 @@ export function NamedShopInvite({
         <p className="text-sm text-muted-foreground">Quotes shops have already sent for this house.</p>
       </div>
       {estimates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">None yet. Invite a shop above.</p>
+        <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+          <p className="text-sm text-muted-foreground">
+            None yet. Invite a go-to shop above for an estimate on this record.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              document.getElementById("invite-shop")?.scrollIntoView({ behavior: "smooth" });
+              toast.message("Invite a shop to quote from the jobs on this record.");
+            }}
+          >
+            Quote from this history
+          </Button>
+        </div>
       ) : (
         <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
           {estimates.map((pr) => (
@@ -139,6 +155,19 @@ export function NamedShopInvite({
           ))}
         </ul>
       )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            document.getElementById("invite-shop")?.scrollIntoView({ behavior: "smooth" });
+            toast.message("Invite a shop to quote from the jobs on this record.");
+          }}
+        >
+          Quote from this history
+        </Button>
+      </div>
     </section>
   );
 }

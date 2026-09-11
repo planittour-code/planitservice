@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test 'scripts/**/*.test.mjs'",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "demo:seed-map10": "node scripts/seed-map10-demo.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

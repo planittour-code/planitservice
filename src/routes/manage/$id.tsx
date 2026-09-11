@@ -18,6 +18,7 @@ import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
 import { NamedShopInvite } from "@/components/named-shop-invite";
+import { QuoteFromHistoryStub } from "@/components/invite-shop-cta";
 import {
   completePortfolioMaintenance,
   getPortfolioRecord,
@@ -113,6 +114,7 @@ function ManageRecord() {
       <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       <SectionRule />
       <JobTimeline file={house} />
+      <QuoteFromHistoryStub />
       <SectionRule />
       <WarrantyList file={house} />
       <SectionRule />

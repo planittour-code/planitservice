@@ -1,0 +1,192 @@
+[
+  {
+    "id": "prop_map10_01",
+    "address": "104 Birch Lane",
+    "city": "Marietta",
+    "state": "GA",
+    "zip": "30064",
+    "owner": "Elena Vargas",
+    "jobs": [
+      {
+        "id": "job_map10_01a",
+        "title": "Architectural shingle reroof",
+        "when": "2021-06-14",
+        "summary": "Tear-off and GAF Timberline HDZ. Squares and color on the record."
+      },
+      {
+        "id": "job_map10_01b",
+        "title": "Gutter and guard replacement",
+        "when": "2022-04-02",
+        "summary": "6-inch aluminum with micromesh. Downspouts to grade."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_02",
+    "address": "218 Oak Crest Drive",
+    "city": "Marietta",
+    "state": "GA",
+    "zip": "30066",
+    "owner": "James Okonkwo",
+    "jobs": [
+      {
+        "id": "job_map10_02a",
+        "title": "Exterior paint — body and trim",
+        "when": "2023-08-19",
+        "summary": "Duration on clapboard. Colors named for the next coat."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_03",
+    "address": "55 Magnolia Court",
+    "city": "Smyrna",
+    "state": "GA",
+    "zip": "30080",
+    "owner": "Priya Shah",
+    "jobs": [
+      {
+        "id": "job_map10_03a",
+        "title": "Heat pump replacement",
+        "when": "2020-11-03",
+        "summary": "2.5 ton matched system. Model and warranty on the File."
+      },
+      {
+        "id": "job_map10_03b",
+        "title": "Interior paint — main floor",
+        "when": "2024-02-11",
+        "summary": "Cashmere Agreeable Gray. Trim in Emerald Urethane."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_04",
+    "address": "912 Peachtree Walk",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30309",
+    "owner": "Marcus Lee",
+    "jobs": [
+      {
+        "id": "job_map10_04a",
+        "title": "Deck restore and stain",
+        "when": "2022-09-28",
+        "summary": "Wash, brighten, Ready Seal Dark Walnut."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_05",
+    "address": "7 Cedar Ridge Road",
+    "city": "Kennesaw",
+    "state": "GA",
+    "zip": "30144",
+    "owner": "Hannah Brooks",
+    "jobs": [
+      {
+        "id": "job_map10_05a",
+        "title": "Architectural shingle reroof",
+        "when": "2019-05-22",
+        "summary": "Ice and water in valleys. Ridge vent on the long run."
+      },
+      {
+        "id": "job_map10_05b",
+        "title": "Exterior paint — body, trim, door",
+        "when": "2023-10-07",
+        "summary": "Alabaster body, Extra White trim, Rookwood Red door."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_06",
+    "address": "440 Willow Springs Way",
+    "city": "Roswell",
+    "state": "GA",
+    "zip": "30075",
+    "owner": "Daniel Cho",
+    "jobs": [
+      {
+        "id": "job_map10_06a",
+        "title": "Gutter and guard replacement",
+        "when": "2021-03-16",
+        "summary": "Seamless 6-inch, white, micromesh full run."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_07",
+    "address": "301 Dogwood Terrace",
+    "city": "Alpharetta",
+    "state": "GA",
+    "zip": "30004",
+    "owner": "Sofia Marin",
+    "jobs": [
+      {
+        "id": "job_map10_07a",
+        "title": "Heat pump replacement",
+        "when": "2022-07-01",
+        "summary": "Equipment and Manual J notes on the Property Record."
+      },
+      {
+        "id": "job_map10_07b",
+        "title": "Interior paint — upstairs hall",
+        "when": "2025-01-18",
+        "summary": "Same Cashmere system as the main floor sample."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_08",
+    "address": "88 Hickory Hollow",
+    "city": "Woodstock",
+    "state": "GA",
+    "zip": "30188",
+    "owner": "Owen Patel",
+    "jobs": [
+      {
+        "id": "job_map10_08a",
+        "title": "Exterior paint — body and trim",
+        "when": "2020-04-30",
+        "summary": "Duration film warranty dates kept with the address."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_09",
+    "address": "1520 Pinecrest Avenue",
+    "city": "Decatur",
+    "state": "GA",
+    "zip": "30030",
+    "owner": "Amelia Grant",
+    "jobs": [
+      {
+        "id": "job_map10_09a",
+        "title": "Architectural shingle reroof",
+        "when": "2018-09-12",
+        "summary": "24 squares, Charcoal. Next trade quotes from this line."
+      },
+      {
+        "id": "job_map10_09b",
+        "title": "Deck restore and stain",
+        "when": "2024-06-05",
+        "summary": "Board repair allowance used; stain product on file."
+      }
+    ]
+  },
+  {
+    "id": "prop_map10_10",
+    "address": "19 Riverbend Circle",
+    "city": "Vinings",
+    "state": "GA",
+    "zip": "30339",
+    "owner": "Noah Kim",
+    "jobs": [
+      {
+        "id": "job_map10_10a",
+        "title": "Gutter and guard replacement",
+        "when": "2023-05-21",
+        "summary": "Leaf guards sized for this roof. Photos on the record."
+      }
+    ]
+  }
+]
