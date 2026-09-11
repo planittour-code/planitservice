@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
-import { getStripe, grantManageExtraSlots, markPortfolioPaid } from "@/lib/housefile/stripe.server";
+import {
+  clearPortfolioSubscription,
+  getStripe,
+  grantManageExtraSlots,
+  markPortfolioPaid,
+  syncPortfolioSubscription,
+} from "@/lib/housefile/stripe.server";
 
 export const Route = createFileRoute("/api/stripe/webhook")({
   server: {
@@ -26,6 +32,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
         try {
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as {
+              id: string;
               metadata?: {
                 userId?: string;
                 kind?: string;
@@ -50,16 +57,19 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               `;
             }
             if (userId && (kind === "manage_monthly" || kind === "manage_annual")) {
-              await markPortfolioPaid(userId, null, session.metadata?.officeName);
+              await markPortfolioPaid(userId, null, session.metadata?.officeName, {
+                customerId,
+                subscriptionId,
+              });
             }
             if (userId && (kind === "manage_extra_monthly" || kind === "manage_extra_annual")) {
-              const full = await stripe.checkout.sessions.retrieve(event.data.object.id as string, {
+              const full = await stripe.checkout.sessions.retrieve(session.id, {
                 expand: ["line_items"],
               });
               const quantity = full.line_items?.data[0]?.quantity ?? 1;
               await grantManageExtraSlots({
                 userId,
-                sessionId: event.data.object.id as string,
+                sessionId: session.id,
                 quantity,
               });
             }
@@ -80,6 +90,25 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               `;
             }
             console.log("[stripe] checkout.session.completed", session.metadata);
+          }
+
+          if (
+            event.type === "customer.subscription.updated" ||
+            event.type === "customer.subscription.deleted"
+          ) {
+            const sub = event.data.object as {
+              id: string;
+              customer: string | { id?: string } | null;
+              status: string;
+              metadata?: { userId?: string; kind?: string } | null;
+            };
+            if (event.type === "customer.subscription.deleted") {
+              await clearPortfolioSubscription(sub.id);
+              console.log("[stripe] customer.subscription.deleted", sub.id);
+            } else {
+              await syncPortfolioSubscription(sub);
+              console.log("[stripe] customer.subscription.updated", sub.id, sub.status);
+            }
           }
         } catch (err) {
           console.error("[stripe] webhook handler error", err);

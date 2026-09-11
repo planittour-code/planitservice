@@ -1,27 +1,30 @@
-import Stripe from "stripe";
 import type { CheckoutKind } from "@/lib/housefile/stripe";
+import { getStripe, stripeIsTest } from "@/lib/housefile/stripe-client.server";
+import {
+  clearPortfolioSubscription,
+  markPortfolioPaid,
+  syncPortfolioSubscription,
+} from "@/lib/housefile/portfolio-entitlement.server";
+import {
+  claimPaidShopSession,
+  confirmPaidShopSession,
+  markShopPaid,
+  readPaidShopSession,
+} from "@/lib/housefile/stripe-shop.server";
+import { MANAGE_TRIAL_DAYS } from "@/lib/housefile/pricing";
 
-function requireEnv(name: string): string {
-  const v = process.env[name]?.trim();
-  if (!v) throw new Error(`Missing ${name}. Set it in Netlify environment variables.`);
-  return v;
-}
-
-function stripeSecret(): string {
-  return requireEnv("STRIPE_SECRET_KEY");
-}
-
-function stripeIsTest(): boolean {
-  return stripeSecret().startsWith("sk_test_");
-}
-
-export function getStripe(): Stripe {
-  const key = stripeSecret();
-  if (process.env.NETLIFY === "true" && key.startsWith("sk_test_")) {
-    throw new Error("Stripe test keys are not allowed on Netlify. Production uses live keys.");
-  }
-  return new Stripe(key);
-}
+export { getStripe, stripeIsTest } from "@/lib/housefile/stripe-client.server";
+export {
+  clearPortfolioSubscription,
+  markPortfolioPaid,
+  syncPortfolioSubscription,
+} from "@/lib/housefile/portfolio-entitlement.server";
+export {
+  claimPaidShopSession,
+  confirmPaidShopSession,
+  markShopPaid,
+  readPaidShopSession,
+} from "@/lib/housefile/stripe-shop.server";
 
 /** Live catalog. Used only with sk_live. Test mode must set STRIPE_PRICE_* env. */
 const LIVE_PRICES: Record<CheckoutKind, string> = {
@@ -83,6 +86,10 @@ function appOrigin(): string {
   );
 }
 
+function isManageBaseKind(kind: CheckoutKind): boolean {
+  return kind === "manage_monthly" || kind === "manage_annual";
+}
+
 export async function createCheckoutSessionUrl(input: {
   kind: CheckoutKind;
   customerEmail?: string | null;
@@ -97,6 +104,13 @@ export async function createCheckoutSessionUrl(input: {
   const stripe = getStripe();
   const price = priceIdFor(input.kind);
   const origin = appOrigin();
+  const metadata = {
+    userId: input.userId ?? "",
+    kind: input.kind,
+    propertyId: input.propertyId ?? "",
+    shopName: input.shopName ?? "",
+    officeName: input.officeName ?? "",
+  };
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price, quantity: input.quantity && input.quantity > 1 ? input.quantity : 1 }],
@@ -107,21 +121,10 @@ export async function createCheckoutSessionUrl(input: {
     payment_method_collection: "if_required",
     customer_email: input.customerEmail || undefined,
     client_reference_id: input.userId || undefined,
-    metadata: {
-      userId: input.userId ?? "",
-      kind: input.kind,
-      propertyId: input.propertyId ?? "",
-      shopName: input.shopName ?? "",
-      officeName: input.officeName ?? "",
-    },
+    metadata,
     subscription_data: {
-      metadata: {
-        userId: input.userId ?? "",
-        kind: input.kind,
-        propertyId: input.propertyId ?? "",
-        shopName: input.shopName ?? "",
-        officeName: input.officeName ?? "",
-      },
+      metadata,
+      ...(isManageBaseKind(input.kind) ? { trial_period_days: MANAGE_TRIAL_DAYS } : {}),
     },
   });
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
@@ -135,7 +138,7 @@ export async function createPortalSessionUrl(input: {
 }): Promise<string> {
   const stripe = getStripe();
   const origin = appOrigin();
-  let customerId = input.customerId ?? undefined;
+  let customerId = input.customerId?.trim() || undefined;
 
   if (!customerId && input.customerEmail) {
     const found = await stripe.customers.list({ email: input.customerEmail, limit: 1 });
@@ -154,153 +157,11 @@ export async function createPortalSessionUrl(input: {
   return portal.url;
 }
 
-const HOUSEHOLD_COMPANY = "co_household";
-
-export async function markShopPaid(userId: string, email?: string | null, shopName?: string | null) {
-  const { getSql } = await import("@/lib/db");
-  const sql = await getSql();
-  const owned = await sql<{ id: string }>`
-    select id from companies
-    where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
-    limit 1
-  `;
-  if (owned[0]) {
-    await sql`
-      update companies
-      set shop_paid_at = coalesce(shop_paid_at, now())
-      where id = ${owned[0].id}
-    `;
-    return owned[0].id;
-  }
-  const member = await sql<{ id: string }>`
-    select c.id
-    from company_members m
-    join companies c on c.id = m.company_id
-    where m.user_id = ${userId} and c.id <> ${HOUSEHOLD_COMPANY}
-    limit 1
-  `;
-  if (member[0]) {
-    await sql`
-      update companies
-      set shop_paid_at = coalesce(shop_paid_at, now())
-      where id = ${member[0].id}
-    `;
-    return member[0].id;
-  }
-  const id = crypto.randomUUID();
-  const local = shopName?.trim() || email?.split("@")[0]?.replace(/[._]/g, " ") || "My shop";
-  const name = local.replace(/\b\w/g, (c) => c.toUpperCase()) || "My shop";
-  const mail = email?.trim().toLowerCase() || null;
-  await sql`
-    insert into companies (id, user_id, name, trade, email, shop_paid_at)
-    values (${id}, ${userId}, ${name}, ${"general"}, ${mail}, now())
-  `;
-  await sql`
-    insert into company_members (id, company_id, user_id, email, role)
-    values (
-      ${crypto.randomUUID()}, ${id}, ${userId},
-      ${mail || `owner-${id}@local`}, ${"owner"}
-    )
-    on conflict (company_id, email) do nothing
-  `;
-  return id;
-}
-
 function shopEmailFromSession(session: {
   customer_email?: string | null;
   customer_details?: { email?: string | null } | null;
 }) {
   return (session.customer_details?.email ?? session.customer_email ?? "").trim().toLowerCase();
-}
-
-export async function readPaidShopSession(sessionId: string) {
-  const stripe = getStripe();
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
-  const kind = session.metadata?.kind ?? "";
-  const paid =
-    session.payment_status === "paid" ||
-    session.payment_status === "no_payment_required" ||
-    session.status === "complete";
-  if (!paid || (kind !== "shop_monthly" && kind !== "shop_annual")) {
-    return { ok: false as const };
-  }
-  const email = shopEmailFromSession(session);
-  if (!email) return { ok: false as const };
-  return {
-    ok: true as const,
-    email,
-    userId: session.metadata?.userId?.trim() || "",
-    shopName: session.metadata?.shopName?.trim() || "",
-  };
-}
-
-export async function claimPaidShopSession(input: {
-  sessionId: string;
-  password: string;
-  name?: string;
-}) {
-  const paid = await readPaidShopSession(input.sessionId);
-  if (!paid.ok) throw new Error("Checkout did not finish. Open a shop to try again.");
-  if (input.password.trim().length < 8) throw new Error("Password must be at least 8 characters.");
-
-  const { getSql } = await import("@/lib/db");
-  const sql = await getSql();
-  const existing = await sql<{ id: string }>`
-    select id from "user" where lower(email) = ${paid.email} limit 1
-  `;
-  if (existing[0]) {
-    throw new Error("That email already has an account. Sign in, then open a shop from the explainer.");
-  }
-
-  const { auth } = await import("@/lib/auth/server");
-  const name =
-    input.name?.trim() || paid.shopName || paid.email.split("@")[0] || "Shop owner";
-  const signed = await auth.api.signUpEmail({
-    body: { email: paid.email, password: input.password, name },
-  });
-  const userId = signed.user.id;
-  await markShopPaid(userId, paid.email, paid.shopName || name);
-  return { ok: true as const, email: paid.email };
-}
-
-export async function confirmPaidShopSession(input: { sessionId: string; userId: string }) {
-  const paid = await readPaidShopSession(input.sessionId);
-  if (!paid.ok) return { ok: false as const };
-  if (paid.userId && paid.userId !== input.userId) {
-    throw new Error("That checkout belongs to another account.");
-  }
-  const { getSessionUser } = await import("@/lib/auth/verify.server");
-  const session = await getSessionUser();
-  await markShopPaid(input.userId, session?.email ?? paid.email, paid.shopName);
-  return { ok: true as const };
-}
-
-export async function markPortfolioPaid(
-  userId: string,
-  email?: string | null,
-  officeName?: string | null,
-) {
-  const { getSql } = await import("@/lib/db");
-  const sql = await getSql();
-  const existing = await sql<{ id: string }>`
-    select id from portfolios where user_id = ${userId} limit 1
-  `;
-  if (existing[0]) {
-    await sql`
-      update portfolios
-      set paid_at = coalesce(paid_at, now())
-      where id = ${existing[0].id}
-    `;
-    return existing[0].id;
-  }
-  const id = crypto.randomUUID();
-  const local = officeName?.trim() || email?.split("@")[0]?.replace(/[._]/g, " ") || "My portfolio";
-  const name = local.replace(/\b\w/g, (c) => c.toUpperCase()) || "My portfolio";
-  await sql`
-    insert into portfolios (id, user_id, name, paid_at)
-    values (${id}, ${userId}, ${name}, now())
-  `;
-  return id;
 }
 
 export async function readPaidManageSession(sessionId: string) {
@@ -324,6 +185,8 @@ export async function readPaidManageSession(sessionId: string) {
     const full = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["line_items"] });
     quantity = full.line_items?.data[0]?.quantity ?? 1;
   }
+  const customerId = typeof session.customer === "string" ? session.customer : null;
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
   return {
     ok: true as const,
     email,
@@ -332,6 +195,8 @@ export async function readPaidManageSession(sessionId: string) {
     extra,
     seat,
     quantity,
+    customerId,
+    subscriptionId,
   };
 }
 
@@ -362,7 +227,10 @@ export async function claimPaidManageSession(input: {
     body: { email: paid.email, password: input.password, name },
   });
   const userId = signed.user.id;
-  await markPortfolioPaid(userId, paid.email, paid.officeName || name);
+  await markPortfolioPaid(userId, paid.email, paid.officeName || name, {
+    customerId: paid.customerId,
+    subscriptionId: paid.subscriptionId,
+  });
   return { ok: true as const, email: paid.email };
 }
 
@@ -373,11 +241,14 @@ export async function grantManageExtraSlots(input: {
 }) {
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
-  const rows = await sql<{ id: string }>`
-    select id from portfolios where user_id = ${input.userId} limit 1
+  const rows = await sql<{ id: string; paid_at: Date | string | null }>`
+    select id, paid_at from portfolios where user_id = ${input.userId} limit 1
   `;
   const portfolioId = rows[0]?.id;
   if (!portfolioId) throw new Error("Open a portfolio before adding extra houses.");
+  if (!rows[0]?.paid_at) {
+    throw new Error("Portfolio must be active or on trial before adding extra houses.");
+  }
   const recorded = await sql<{ session_id: string }>`
     insert into portfolio_billing_events (session_id, portfolio_id, kind, quantity)
     values (${input.sessionId}, ${portfolioId}, ${"manage_extra"}, ${input.quantity})
@@ -401,11 +272,14 @@ export async function grantManageExtraSeats(input: {
 }) {
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
-  const rows = await sql<{ id: string }>`
-    select id from portfolios where user_id = ${input.userId} limit 1
+  const rows = await sql<{ id: string; paid_at: Date | string | null }>`
+    select id, paid_at from portfolios where user_id = ${input.userId} limit 1
   `;
   const portfolioId = rows[0]?.id;
   if (!portfolioId) throw new Error("Open a portfolio before adding office seats.");
+  if (!rows[0]?.paid_at) {
+    throw new Error("Portfolio must be active or on trial before adding office seats.");
+  }
   const recorded = await sql<{ session_id: string }>`
     insert into portfolio_billing_events (session_id, portfolio_id, kind, quantity)
     values (${input.sessionId}, ${portfolioId}, ${"manage_seat"}, ${input.quantity})
@@ -446,6 +320,9 @@ export async function confirmPaidManageSession(input: { sessionId: string; userI
     });
     return { ok: true as const, extra: true as const };
   }
-  await markPortfolioPaid(input.userId, session?.email ?? paid.email, paid.officeName);
+  await markPortfolioPaid(input.userId, session?.email ?? paid.email, paid.officeName, {
+    customerId: paid.customerId,
+    subscriptionId: paid.subscriptionId,
+  });
   return { ok: true as const, extra: false as const };
 }

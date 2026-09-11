@@ -60,8 +60,13 @@ export const claimShopCheckout = createServerFn({ method: "POST" })
 export const startManageCheckout = createServerFn({ method: "POST" })
   .validator((input: { kind: "manage_monthly" | "manage_annual"; officeName?: string }) => input)
   .handler(async ({ data }) => {
+    // Guest-friendly: if a session exists (soft), attach userId/email so webhook + claim link.
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser().catch(() => null);
     const url = await createCheckoutSessionUrl({
       kind: data.kind,
+      userId: session?.id,
+      customerEmail: session?.email,
       officeName: data.officeName,
       successPath: "/manage/open",
       cancelPath: "/manage/open",
@@ -92,10 +97,16 @@ export const confirmShopCheckout = createServerFn({ method: "POST" })
 export const startBillingPortal = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { returnPath: string }) => input)
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
     const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const { getSql } = await import("@/lib/db");
     const session = await getSessionUser();
+    const sql = await getSql();
+    const rows = await sql<{ stripe_customer_id: string | null }>`
+      select stripe_customer_id from portfolios where user_id = ${context.userId} limit 1
+    `;
     const url = await createPortalSessionUrl({
+      customerId: rows[0]?.stripe_customer_id,
       customerEmail: session?.email,
       returnPath: data.returnPath,
     });

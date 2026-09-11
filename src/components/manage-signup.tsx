@@ -12,12 +12,20 @@ import {
   MANAGE_EXTRA_MONTHLY,
   MANAGE_INCLUDED,
   MANAGE_MONTHLY,
+  MANAGE_TRIAL_DAYS,
   dollars,
 } from "@/lib/housefile/pricing";
 import { manageKind } from "@/lib/housefile/stripe";
 import { claimManageCheckout, startCheckout, startManageCheckout } from "@/lib/housefile/stripe-billing";
 import { useAudience } from "@/lib/housefile/use-audience";
 import { cn } from "@/lib/utils";
+
+function manageTrialTerms(cadence: "monthly" | "annual") {
+  if (cadence === "annual") {
+    return `${MANAGE_TRIAL_DAYS}-day trial, then $${dollars(MANAGE_ANNUAL)}/yr for ${MANAGE_INCLUDED} houses. Auto-renews annually until canceled. Cancel during trial: no charge. Cancel after convert: access through the end of the paid period (manage in Stripe Customer Portal).`;
+  }
+  return `${MANAGE_TRIAL_DAYS}-day trial, then $${dollars(MANAGE_MONTHLY)}/mo for ${MANAGE_INCLUDED} houses. Auto-renews monthly until canceled. Cancel during trial: no charge. Cancel after convert: access through the end of the paid period (manage in Stripe Customer Portal).`;
+}
 
 export function ManageSignupForm() {
   const navigate = useNavigate();
@@ -27,7 +35,6 @@ export function ManageSignupForm() {
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const price = cadence === "annual" ? MANAGE_ANNUAL : MANAGE_MONTHLY;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -75,7 +82,7 @@ export function ManageSignupForm() {
         />
       </div>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Billing</legend>
+        <legend className="text-sm font-medium">Billing after trial</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           <button
             type="button"
@@ -107,13 +114,15 @@ export function ManageSignupForm() {
       </fieldset>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <TermsAgree id="manage-agree-terms" />
+      <p className="rounded-lg bg-muted/60 px-3 py-2 text-center text-sm font-medium text-foreground">
+        {MANAGE_TRIAL_DAYS}-day trial — map your houses before you pay
+      </p>
       <Button type="submit" className="min-h-12 w-full" disabled={busy}>
-        {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
+        {busy ? "Starting your trial…" : `Start ${MANAGE_TRIAL_DAYS}-day trial`}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        {user
-          ? "Card details stay on Stripe. This login becomes the office."
-          : "Card details stay on Stripe. No PlanitService account until payment finishes."}
+        {manageTrialTerms(cadence)} Card details stay on Stripe
+        {user ? ". This login becomes the office." : ". No PlanitService account until checkout finishes."}
       </p>
     </form>
   );
@@ -149,7 +158,9 @@ export function ManageClaimForm({ sessionId }: { sessionId: string }) {
   return (
     <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
       <p className="text-sm text-muted-foreground">
-        Payment received. Set a password for the email you used on Stripe.
+        Checkout complete (trial or paid). Set a password for the email you used on Stripe. You can
+        cancel in the Stripe Customer Portal — during trial there is no charge; after convert, access
+        continues through the end of the paid period.
       </p>
       <div className="space-y-1.5">
         <Label htmlFor="manage-claim-name">Your name</Label>
