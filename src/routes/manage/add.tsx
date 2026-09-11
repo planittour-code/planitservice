@@ -194,7 +194,7 @@ function AddPortfolioHouse() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="mx-auto max-w-lg space-y-4">
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Add a house</h1>
         <p className="mt-2 text-muted-foreground">
@@ -248,31 +248,31 @@ function AddPortfolioHouse() {
         </div>
       ) : (
         <form
-          className="space-y-4"
+          className="space-y-2"
           onSubmit={(e) => {
             e.preventDefault();
             onSubmit();
           }}
         >
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="ad">Street</Label>
             <Input id="ad" value={address} onChange={(e) => setAddress(e.target.value)} required />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5 col-span-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1 col-span-2">
               <Label htmlFor="ct">City</Label>
               <Input id="ct" value={city} onChange={(e) => setCity(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="st">State</Label>
               <Input id="st" value={state} onChange={(e) => setState(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="zp">ZIP</Label>
               <Input id="zp" value={zip} onChange={(e) => setZip(e.target.value)} />
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="ow">Owner name (optional)</Label>
             <Input id="ow" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
           </div>

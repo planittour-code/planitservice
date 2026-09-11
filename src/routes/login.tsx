@@ -230,14 +230,14 @@ function Login() {
                   <div className="h-px flex-1 bg-border" />
                 </div>
               )}
-              <form className="space-y-3" onSubmit={(e) => void onEmail(e)}>
+              <form className="space-y-2" onSubmit={(e) => void onEmail(e)}>
                 {mode === "up" && homeowner && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label htmlFor="name">{search.invite ? "Your name" : "Your name"}</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
                 )}
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -248,7 +248,7 @@ function Login() {
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <div className="flex items-center justify-between gap-3">
                     <Label htmlFor="password">Password</Label>
                     {mode === "in" && (

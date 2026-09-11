@@ -72,7 +72,7 @@ function ManageRecord() {
   const agreed = acceptedEstimates ?? [];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {hero && (
         <img
           src={hero.src}
@@ -82,7 +82,7 @@ function ManageRecord() {
       )}
       <header className="space-y-2">
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Property Record</p>
-        <h1 className="font-display text-4xl font-medium tracking-tight">{p.address_line}</h1>
+        <h1 className="font-display text-3xl font-medium tracking-tight">{p.address_line}</h1>
         <p className="text-muted-foreground">
           {p.city}, {p.state} {p.zip}
           {p.homeowner_name ? ` · ${p.homeowner_name}` : ""}
@@ -232,7 +232,7 @@ function ScheduleTask({
         onSave(date || null, note);
       }}
     >
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor={`sched-${task.id}`}>Scheduled date</Label>
         <Input
           id={`sched-${task.id}`}
@@ -242,7 +242,7 @@ function ScheduleTask({
           className="w-full sm:w-44"
         />
       </div>
-      <div className="min-w-0 flex-1 space-y-1.5">
+      <div className="min-w-0 flex-1 space-y-1">
         <Label htmlFor={`note-${task.id}`}>Note (optional)</Label>
         <Input
           id={`note-${task.id}`}
@@ -338,13 +338,13 @@ function InviteOwner({
         </p>
       ) : (
         <form
-          className="space-y-3"
+          className="space-y-2"
           onSubmit={(e) => {
             e.preventDefault();
             invite.mutate();
           }}
         >
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="owner-email">Owner email</Label>
             <Input
               id="owner-email"
@@ -354,7 +354,7 @@ function InviteOwner({
               required
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="owner-name">Owner name (optional)</Label>
             <Input id="owner-name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>

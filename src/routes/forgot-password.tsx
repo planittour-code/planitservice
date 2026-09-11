@@ -87,8 +87,8 @@ function ForgotPassword() {
               </Button>
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
-              <div className="space-y-1.5">
+            <form className="space-y-2" onSubmit={(e) => void onSubmit(e)}>
+              <div className="space-y-1">
                 <Label htmlFor="reset-email">Email</Label>
                 <Input
                   id="reset-email"

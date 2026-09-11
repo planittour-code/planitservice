@@ -30,8 +30,8 @@ function PropertyPage() {
   const p = file.property;
 
   return (
-    <div className="space-y-10">
-      <header className="space-y-4">
+    <div className="space-y-6">
+      <header className="space-y-2">
         <p className="text-sm text-muted-foreground">
           <Link to="/app/properties" className="underline-offset-4 hover:underline">
             Jobs
@@ -50,7 +50,7 @@ function PropertyPage() {
           {p.homeowner_email ? ` · ${p.homeowner_email}` : ""}
           {p.homeowner_phone ? ` · ${p.homeowner_phone}` : ""}
         </p>
-        <div className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+        <div className="rounded-xl bg-card p-3 shadow-[var(--shadow-border)]">
           <QuoteTypePicker
             onPick={(workId) => {
               void navigate({ to: "/app/new", search: { property: p.id, work: workId } });

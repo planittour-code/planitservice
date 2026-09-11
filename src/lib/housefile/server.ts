@@ -3,12 +3,14 @@ import { authMiddleware, optionalAuthMiddleware } from "@/lib/auth/middleware";
 import { getSql, type Sql } from "@/lib/db";
 import { LEGAL_EMAIL } from "@/lib/legal";
 import { MANAGE_INCLUDED } from "./pricing";
-import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, STARTER_BOOK, type PriceBookItem } from "./book";
+import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, parseBookPhoto, STARTER_BOOK, type PriceBookItem } from "./book";
 import {
   KIT_SEEDS,
   catalogHeaderFromCsv,
   isCatalogCsvHeader,
+  kitPhotosPayload,
   parseCatalogCsv,
+  parseKitPhotos,
   type WorkKit,
   type WorkKitItem,
 } from "./kits";
@@ -1224,6 +1226,7 @@ export type WizardInput = {
   title?: string;
   takeoff?: Record<string, string>;
   coverPhoto?: string;
+  housePhotos?: string[];
   rfpToken?: string;
   workInviteToken?: string;
 };
@@ -1240,9 +1243,16 @@ export const getQuoteHouse = createServerFn({ method: "GET" })
     const facts = await sql<PropertyFact>`
       select * from property_facts where property_id = ${property.id}
     `;
+    const photos = await sql<PropertyPhoto>`
+      select * from property_photos
+      where property_id = ${property.id}
+      order by case when category = ${"exterior"} then 0 else 1 end, created_at desc
+      limit 8
+    `;
     return {
       property,
       facts: Object.fromEntries(facts.map((f) => [f.field_key, f.value])),
+      photos,
     };
   });
 
@@ -1434,15 +1444,33 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     if (work) {
       await writeFacts(sql, property.id, factsFromTakeoff(work, takeoff));
     }
-    const cover = data.coverPhoto?.trim() ?? "";
-    if (cover && (cover.startsWith("data:image/") || cover.startsWith("/"))) {
+    const housePhotos = [
+      ...(Array.isArray(data.housePhotos) ? data.housePhotos : []),
+      data.coverPhoto ?? "",
+    ]
+      .map((src) => src.trim())
+      .filter((src) => src.startsWith("data:image/") || src.startsWith("/"));
+    const uniqueHouse = [...new Set(housePhotos)].slice(0, 8);
+    const existingSrc = new Set(
+      (
+        await sql<{ src: string }>`
+          select src from property_photos where property_id = ${property.id}
+        `
+      ).map((row) => row.src),
+    );
+    let houseOrder = 0;
+    for (const src of uniqueHouse) {
+      if (existingSrc.has(src)) continue;
       await sql`
         insert into property_photos (id, property_id, src, caption, category, uploaded_by)
         values (
-          ${crypto.randomUUID()}, ${property.id}, ${cover},
-          ${"Job photo"}, ${"exterior"}, ${"contractor"}
+          ${crypto.randomUUID()}, ${property.id}, ${src},
+          ${houseOrder === 0 ? "House photo" : "House photo"},
+          ${houseOrder === 0 ? "exterior" : "general"}, ${"contractor"}
         )
       `;
+      existingSrc.add(src);
+      houseOrder += 1;
     }
 
     for (const photo of estimatePhotos(estimate)) {
@@ -2387,6 +2415,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
       sell: string;
       warranty_years: string;
       warranty_terms: string;
+      photo?: string | null;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -2401,6 +2430,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     const sell = data.sell.trim() === "" ? null : num(data.sell);
     const years = data.warranty_years.trim() === "" ? null : num(data.warranty_years);
     assertBookPrices({ slot: data.slot, product_name: product, cost, sell });
+    const photo = parseBookPhoto(data.photo);
     if (data.id) {
       await sql`
         update price_book set
@@ -2415,6 +2445,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
           sell = ${sell},
           warranty_years = ${years},
           warranty_terms = ${data.warranty_terms.trim() || null},
+          photo = ${photo},
           updated_at = now()
         where id = ${data.id} and company_id = ${company.id}
       `;
@@ -2424,11 +2455,11 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     await sql`
       insert into price_book (
         id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-        cost, sell, warranty_years, warranty_terms
+        cost, sell, warranty_years, warranty_terms, photo
       ) values (
         ${id}, ${company.id}, ${data.trade}, ${data.slot}, ${data.manufacturer.trim() || null},
         ${product}, ${data.sku.trim() || null}, ${data.color.trim() || null}, ${data.unit.trim() || "ea"},
-        ${cost}, ${sell}, ${years}, ${data.warranty_terms.trim() || null}
+        ${cost}, ${sell}, ${years}, ${data.warranty_terms.trim() || null}, ${photo}
       )
     `;
     return { id };
@@ -2576,10 +2607,10 @@ async function kitsForCompany(sql: Sql, companyId: string, workId?: string): Pro
   if (kits.length === 0) return [];
   const items: WorkKitItem[] = [];
   for (const kit of kits) {
-    const rows = await sql<WorkKitItem>`
+    const rows = await sql<Omit<WorkKitItem, "photos"> & { photos: unknown }>`
       select * from work_kit_items where kit_id = ${kit.id} order by sort_order
     `;
-    items.push(...rows);
+    items.push(...rows.map((row) => ({ ...row, photos: parseKitPhotos(row.photos) })));
   }
   const byKit = new Map<string, WorkKitItem[]>();
   for (const item of items) {
@@ -2624,7 +2655,14 @@ export const saveWorkKit = createServerFn({ method: "POST" })
       id?: string;
       workId: string;
       name: string;
-      items: { name: string; description?: string; qty?: string; unit?: string; slot?: string }[];
+      items: {
+        name: string;
+        description?: string;
+        qty?: string;
+        unit?: string;
+        slot?: string;
+        photos?: string[];
+      }[];
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -2660,10 +2698,11 @@ export const saveWorkKit = createServerFn({ method: "POST" })
       const itemName = item.name.trim();
       if (!itemName) continue;
       await sql`
-        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot, photos)
         values (
           ${crypto.randomUUID()}, ${kitId}, ${order}, ${itemName}, ${item.description?.trim() || null},
-          ${item.qty?.trim() || null}, ${item.unit?.trim() || "ls"}, ${item.slot?.trim() || null}
+          ${item.qty?.trim() || null}, ${item.unit?.trim() || "ls"}, ${item.slot?.trim() || null},
+          ${kitPhotosPayload(item.photos)}
         )
       `;
       order += 1;

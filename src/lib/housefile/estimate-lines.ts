@@ -1,8 +1,10 @@
 import { bookLabel, type BookSlotId, type PriceBookItem } from "./book";
 import { num } from "./format";
+import { parseKitPhotos } from "./kits";
 import type { QuoteLine } from "./quote";
 
 export const ESTIMATE_KEY = "estimate_lines";
+export const CUSTOM_OPTION_ID = "custom";
 
 export type EstimateLine = {
   id: string;
@@ -295,6 +297,7 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
 }
 
 export function optionLabel(id: string, fallback?: string): string {
+  if (id === CUSTOM_OPTION_ID) return fallback?.trim() || "Optional work";
   for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "porch"]) {
     for (const scope of ["interior", "exterior"]) {
       const hit = optionsFor(workId, scope).find((o) => o.id === id);
@@ -333,7 +336,14 @@ function starterToLine(row: Starter, book: PriceBookItem[]): EstimateLine {
 }
 
 export function linesFromKitItems(
-  items: { name: string; description?: string | null; qty?: string | null; unit?: string | null; slot?: string | null }[],
+  items: {
+    name: string;
+    description?: string | null;
+    qty?: string | null;
+    unit?: string | null;
+    slot?: string | null;
+    photos?: string[] | string | null;
+  }[],
   book: PriceBookItem[],
 ): EstimateLine[] {
   if (!items.length) return [blankEstimateLine()];
@@ -348,7 +358,7 @@ export function linesFromKitItems(
       },
       book,
     );
-    return { ...line, item: row.name };
+    return { ...line, item: row.name, photos: parseKitPhotos(row.photos) };
   });
 }
 
@@ -373,6 +383,10 @@ export function blankEstimateLine(): EstimateLine {
     price: "",
     photos: [],
   };
+}
+
+export function blankOptionalLine(): EstimateLine {
+  return { ...blankEstimateLine(), optionId: CUSTOM_OPTION_ID };
 }
 
 export function parseEstimateLines(raw: string | undefined): EstimateLine[] {

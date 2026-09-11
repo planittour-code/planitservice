@@ -173,10 +173,10 @@ function StartHouseRecord() {
                 )}
               </ul>
 
-              <form className="mt-5 space-y-3" onSubmit={(e) => void onSubmit(e)}>
+              <form className="mt-4 space-y-2" onSubmit={(e) => void onSubmit(e)}>
                 {!user && (
                   <>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       <Label htmlFor="start-name">Name</Label>
                       <Input
                         id="start-name"
@@ -185,7 +185,7 @@ function StartHouseRecord() {
                         autoComplete="name"
                       />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       <Label htmlFor="start-email">Email</Label>
                       <Input
                         id="start-email"
@@ -196,7 +196,7 @@ function StartHouseRecord() {
                         autoComplete="email"
                       />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       <Label htmlFor="start-password">Password</Label>
                       <Input
                         id="start-password"

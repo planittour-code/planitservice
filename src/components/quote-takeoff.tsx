@@ -54,13 +54,13 @@ export function TakeoffForm({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">{work.name}</h1>
         <p className="text-muted-foreground">{work.blurb}</p>
       </div>
       {work.id === "paint" && (
-        <div className="space-y-1.5 max-w-xs">
+        <div className="space-y-1 max-w-xs">
           <Label htmlFor="paint-scope">Where</Label>
           <select
             id="paint-scope"
@@ -70,7 +70,7 @@ export function TakeoffForm({
               onChange("paint_scope", scope);
               onChange(ESTIMATE_KEY, serializeEstimateLines(seedEstimateLines(work.id, book, scope)));
             }}
-            className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none"
+            className="flex h-9 w-full rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
           >
             <option value="interior">Interior</option>
             <option value="exterior">Exterior</option>
@@ -91,7 +91,7 @@ export function TakeoffForm({
             {showMeasures ? "Hide measurements" : "Add measurements"}
           </Button>
           {showMeasures && (
-            <div className="grid gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:grid-cols-2">
+            <div className="grid gap-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)] sm:grid-cols-2">
               <p className="text-sm text-muted-foreground sm:col-span-2">
                 Optional. These write onto the property record. They do not price the lines.
               </p>
@@ -165,7 +165,7 @@ function TakeoffInput({
   if (field.kind === "toggle") {
     const on = value === "yes" || value === "true" || value === "1";
     return (
-      <label className="flex min-h-11 items-center gap-3 rounded-lg bg-background px-3 py-2 shadow-[var(--shadow-border)] sm:col-span-2">
+      <label className="flex min-h-9 items-center gap-3 rounded-lg bg-background px-3 py-2 shadow-[var(--shadow-border)] sm:col-span-2">
         <input
           id={id}
           type="checkbox"
@@ -181,7 +181,7 @@ function TakeoffInput({
     );
   }
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <Label htmlFor={id}>
         {field.label}
         {field.unit ? ` (${field.unit})` : ""}
@@ -191,7 +191,7 @@ function TakeoffInput({
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex h-11 w-full rounded-md bg-background px-3 text-sm shadow-[var(--shadow-border)] outline-none"
+          className="flex h-9 w-full rounded-md bg-background px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
         >
           {(field.options ?? []).map((o) => (
             <option key={o.value} value={o.value}>

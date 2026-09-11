@@ -71,8 +71,8 @@ export function ManageSignupForm() {
   }
 
   return (
-    <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
-      <div className="space-y-1.5">
+    <form className="space-y-2" onSubmit={(e) => void onSubmit(e)}>
+      <div className="space-y-1">
         <Label htmlFor="office-name">Office name (optional)</Label>
         <Input
           id="office-name"
@@ -156,17 +156,17 @@ export function ManageClaimForm({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
+    <form className="space-y-2" onSubmit={(e) => void onSubmit(e)}>
       <p className="text-sm text-muted-foreground">
         Checkout complete (trial or paid). Set a password for the email you used on Stripe. You can
         cancel in the Stripe Customer Portal — during trial there is no charge; after convert, access
         continues through the end of the paid period.
       </p>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="manage-claim-name">Your name</Label>
         <Input id="manage-claim-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="manage-claim-password">Password</Label>
         <Input
           id="manage-claim-password"

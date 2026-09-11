@@ -28,7 +28,7 @@ export function CustomWorkDialog({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 p-4" role="presentation" onClick={onClose}>
       <form
-        className="w-full max-w-md space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border-hover)]"
+        className="w-full max-w-md space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border-hover)]"
         onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => void submit(e)}
       >
@@ -38,7 +38,7 @@ export function CustomWorkDialog({
             Pools, fencing, irrigation — whatever you quote that is not already on the list.
           </p>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="custom-work-name">Category name</Label>
           <Input
             id="custom-work-name"

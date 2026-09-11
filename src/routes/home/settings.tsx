@@ -54,7 +54,7 @@ function HouseholdSettings() {
   if (q.error) return <p className="text-destructive">Could not load household settings.</p>;
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="mx-auto max-w-lg space-y-4">
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Household settings</h1>
         <p className="text-muted-foreground">
@@ -62,21 +62,21 @@ function HouseholdSettings() {
         </p>
       </div>
       <form
-        className="space-y-4"
+        className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
         }}
       >
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="household-name">Your name</Label>
           <Input id="household-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="household-phone">Phone</Label>
           <Input id="household-phone" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="household-email">Contact email</Label>
           <Input
             id="household-email"

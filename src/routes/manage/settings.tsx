@@ -78,14 +78,14 @@ function OfficeSettings() {
         <p className="text-muted-foreground">This name appears on the portfolio and owner invitations.</p>
       </div>
       <form
-        className="space-y-4"
+        className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
           if (q.data.role !== "owner") return;
           save.mutate();
         }}
       >
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="office-name">Office name</Label>
           <Input
             id="office-name"
@@ -95,7 +95,7 @@ function OfficeSettings() {
             disabled={q.data.role !== "owner"}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="office-phone">Phone</Label>
           <Input
             id="office-phone"
@@ -105,7 +105,7 @@ function OfficeSettings() {
             disabled={q.data.role !== "owner"}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="office-email">Email</Label>
           <Input
             id="office-email"

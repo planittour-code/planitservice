@@ -59,8 +59,8 @@ export function PathSignInForm({
         <p className="text-sm tracking-wide text-muted-foreground uppercase">{kicker}</p>
         <p className="mt-1 font-display text-2xl font-medium tracking-tight">{title}</p>
       </div>
-      <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
-        <div className="space-y-1.5">
+      <form className="space-y-2" onSubmit={(e) => void onSubmit(e)}>
+        <div className="space-y-1">
           <Label htmlFor="path-email">Email</Label>
           <Input
             id="path-email"
@@ -71,7 +71,7 @@ export function PathSignInForm({
             required
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <div className="flex items-center justify-between gap-3">
             <Label htmlFor="path-password">Password</Label>
             <Link

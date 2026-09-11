@@ -91,8 +91,8 @@ function ResetPassword() {
               </Button>
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
-              <div className="space-y-1.5">
+            <form className="space-y-2" onSubmit={(e) => void onSubmit(e)}>
+              <div className="space-y-1">
                 <Label htmlFor="new-password">New password</Label>
                 <Input
                   id="new-password"
@@ -104,7 +104,7 @@ function ResetPassword() {
                   minLength={8}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <Label htmlFor="confirm-password">Confirm password</Label>
                 <Input
                   id="confirm-password"

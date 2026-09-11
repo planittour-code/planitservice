@@ -78,7 +78,7 @@ function HousePage() {
           />
         </div>
       )}
-      <main className="hf-rise mx-auto max-w-3xl space-y-10 px-5 py-8">
+      <main className="hf-rise mx-auto max-w-3xl space-y-6 px-4 py-5 sm:px-5">
         {sample && (
           <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
             This is a sample Property Record. Look through it. To keep a record of your own house,{" "}
@@ -88,9 +88,9 @@ function HousePage() {
             .
           </p>
         )}
-        <header id="file" className="space-y-4">
+        <header id="file" className="space-y-2">
           <p className="text-sm tracking-wide text-muted-foreground uppercase">The Property Record</p>
-          <h1 className="font-display text-4xl font-medium tracking-tight">{p.address_line}</h1>
+          <h1 className="font-display text-3xl font-medium tracking-tight">{p.address_line}</h1>
           <p className="text-muted-foreground">
             {p.city}, {p.state} {p.zip}
             <span className="mx-2">·</span>
@@ -104,7 +104,7 @@ function HousePage() {
         <EstimateGroups proposals={file.proposals} />
 
         <SectionRule />
-        <section id="rfps" className="space-y-6">
+        <section id="rfps" className="space-y-3">
           <div>
             <h2 className="font-display text-xl font-medium">Invited pool</h2>
             <p className="text-sm text-muted-foreground">

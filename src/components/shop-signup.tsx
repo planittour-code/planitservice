@@ -56,9 +56,9 @@ export function ShopSignupForm() {
   }
 
   return (
-    <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
+    <form className="space-y-2" onSubmit={(e) => void onSubmit(e)}>
       {!user && (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="shop-name">Shop name (optional)</Label>
           <Input
             id="shop-name"
@@ -139,15 +139,15 @@ export function ShopClaimForm({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
+    <form className="space-y-2" onSubmit={(e) => void onSubmit(e)}>
       <p className="text-sm text-muted-foreground">
         Payment received. Set a password for the email you used on Stripe.
       </p>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="claim-name">Your name</Label>
         <Input id="claim-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="claim-password">Password</Label>
         <Input
           id="claim-password"

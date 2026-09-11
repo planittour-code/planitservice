@@ -87,7 +87,7 @@ function AppLayout() {
         </nav>
         )}
       </header>
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
+      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 sm:py-5">
         <Outlet />
       </div>
     </div>

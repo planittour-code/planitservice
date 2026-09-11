@@ -11,7 +11,29 @@ export type WorkKitItem = {
   qty: string | null;
   unit: string;
   slot: string | null;
+  photos: string[];
 };
+
+export function parseKitPhotos(raw: unknown): string[] {
+  let list: unknown[] = [];
+  if (Array.isArray(raw)) list = raw;
+  else if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {
+      return [];
+    }
+  }
+  return list
+    .filter((p): p is string => typeof p === "string" && p.startsWith("data:image/"))
+    .slice(0, 8);
+}
+
+export function kitPhotosPayload(photos?: string[]) {
+  const clean = parseKitPhotos(photos);
+  return clean.length ? JSON.stringify(clean) : null;
+}
 
 export type WorkKit = {
   id: string;

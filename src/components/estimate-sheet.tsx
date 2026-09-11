@@ -1,13 +1,13 @@
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PriceBookItem } from "@/lib/housefile/book";
 import {
   applyCatalogToLine,
   blankEstimateLine,
+  blankOptionalLine,
+  CUSTOM_OPTION_ID,
   estimateTotal,
   lineAmount,
-  linesForOption,
-  optionsFor,
   type CatalogLine,
   type EstimateLine,
 } from "@/lib/housefile/estimate-lines";
@@ -24,8 +24,6 @@ export function EstimateSheet({
   catalog,
   lines,
   onChange,
-  workId,
-  paintScope,
 }: {
   book: PriceBookItem[];
   catalog: CatalogLine[];
@@ -35,9 +33,14 @@ export function EstimateSheet({
   paintScope?: string;
 }) {
   const items = book.filter((b) => b.active !== false);
-  const extras = workId ? optionsFor(workId, paintScope) : [];
   const core = lines.filter((l) => !l.optionId);
+  const optional = lines.filter((l) => l.optionId);
   const total = estimateTotal(lines);
+  const [optionalOpen, setOptionalOpen] = useState(optional.length > 0);
+
+  useEffect(() => {
+    if (optional.length > 0) setOptionalOpen(true);
+  }, [optional.length]);
 
   function patch(id: string, next: Partial<EstimateLine>) {
     onChange(lines.map((row) => (row.id === id ? { ...row, ...next } : row)));
@@ -62,19 +65,8 @@ export function EstimateSheet({
     }
   }
 
-  function toggleOption(optionId: string, on: boolean) {
-    const option = extras.find((o) => o.id === optionId);
-    if (!option) return;
-    if (!on) {
-      onChange(lines.filter((l) => l.optionId !== optionId));
-      return;
-    }
-    if (lines.some((l) => l.optionId === optionId)) return;
-    onChange([...lines, ...linesForOption(option, items)]);
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h2 className="font-display text-2xl font-medium tracking-tight">Line items</h2>
         <p className="text-sm text-muted-foreground">
@@ -82,7 +74,7 @@ export function EstimateSheet({
           Amount is quantity × price.
         </p>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {core.map((row) => (
           <LineCard
             key={row.id}
@@ -93,59 +85,54 @@ export function EstimateSheet({
             onPick={(pick) => pickCatalog(row.id, pick)}
             onPhotos={(files) => void addPhotos(row.id, files)}
             onRemove={() => onChange(lines.filter((l) => l.id !== row.id))}
+            onType={(optionalNext) =>
+              patch(row.id, { optionId: optionalNext ? CUSTOM_OPTION_ID : undefined })
+            }
           />
         ))}
       </div>
-      {extras.length > 0 && (
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-display text-xl font-medium">Optional work</h3>
-            <p className="text-sm text-muted-foreground">
-              Check an extra to open its lines. Uncheck to drop them from the quote.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {extras.map((option) => {
-              const on = lines.some((l) => l.optionId === option.id);
-              const optionLines = lines.filter((l) => l.optionId === option.id);
-              return (
-                <div key={option.id} className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      className="mt-1 size-4"
-                      checked={on}
-                      onChange={(e) => toggleOption(option.id, e.target.checked)}
-                    />
-                    <span>
-                      <span className="block text-sm font-medium">{option.label}</span>
-                      <span className="block text-xs text-muted-foreground">{option.hint}</span>
-                    </span>
-                  </label>
-                  {on && (
-                    <div className="mt-4 space-y-3 border-l-2 border-border pl-4">
-                      {optionLines.map((row) => (
-                        <LineCard
-                          key={row.id}
-                          row={row}
-                          catalog={catalog}
-                          canRemove={optionLines.length > 1}
-                          onPatch={(next) => patch(row.id, next)}
-                          onPick={(pick) => pickCatalog(row.id, pick)}
-                          onPhotos={(files) => void addPhotos(row.id, files)}
-                          onRemove={() => onChange(lines.filter((l) => l.id !== row.id))}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      <details
+        className="rounded-xl bg-card p-3 text-sm shadow-[var(--shadow-border)]"
+        open={optionalOpen}
+        onToggle={(e) => setOptionalOpen(e.currentTarget.open)}
+      >
+        <summary className="cursor-pointer font-medium">
+          Optional work{optional.length ? ` (${optional.length})` : ""}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Type extras the homeowner can take or leave. Change the type back to a line item, or
+            remove the row with (x).
+          </p>
+          {optional.map((row) => (
+            <LineCard
+              key={row.id}
+              row={row}
+              catalog={catalog}
+              canRemove
+              onPatch={(next) => patch(row.id, next)}
+              onPick={(pick) => pickCatalog(row.id, pick)}
+              onPhotos={(files) => void addPhotos(row.id, files)}
+              onRemove={() => onChange(lines.filter((l) => l.id !== row.id))}
+              onType={(optionalNext) =>
+                patch(row.id, { optionId: optionalNext ? CUSTOM_OPTION_ID : undefined })
+              }
+            />
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setOptionalOpen(true);
+              onChange([...lines, blankOptionalLine()]);
+            }}
+          >
+            Add optional line
+          </Button>
         </div>
-      )}
+      </details>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/95 p-3 shadow-[var(--shadow-border)] sticky bottom-0 z-20 -mx-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:shadow-none">
-        <Button type="button" variant="outline" className="min-h-11" onClick={() => onChange([...lines, blankEstimateLine()])}>
+        <Button type="button" variant="outline" onClick={() => onChange([...lines, blankEstimateLine()])}>
           Add a line
         </Button>
         <p className="font-display text-xl font-medium tabular-nums sm:text-2xl">
@@ -164,6 +151,7 @@ function LineCard({
   onPick,
   onPhotos,
   onRemove,
+  onType,
 }: {
   row: EstimateLine;
   catalog: CatalogLine[];
@@ -172,14 +160,25 @@ function LineCard({
   onPick: (pick: CatalogLine) => void;
   onPhotos: (files: FileList | null) => void;
   onRemove: () => void;
+  onType: (optional: boolean) => void;
 }) {
   const heading = row.item.trim() || "New line";
   const photoInput = useRef<HTMLInputElement>(null);
+  const isOptional = Boolean(row.optionId);
   return (
-    <div className="space-y-3 rounded-xl bg-background p-3 shadow-[var(--shadow-border)] sm:p-4">
+    <div className="space-y-2 rounded-lg bg-background p-2.5 shadow-[var(--shadow-border)] sm:p-3">
       <div className="flex items-center justify-between gap-3">
         <p className="min-w-0 truncate font-medium">{heading}</p>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1">
+          <select
+            value={isOptional ? "optional" : "line"}
+            aria-label="Line type"
+            className="flex h-9 rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
+            onChange={(e) => onType(e.target.value === "optional")}
+          >
+            <option value="line">Line item</option>
+            <option value="optional">Optional work</option>
+          </select>
           <Button type="button" size="sm" variant="outline" onClick={() => photoInput.current?.click()}>
             <Camera className="size-4" />
             Add photo
@@ -196,13 +195,21 @@ function LineCard({
             }}
           />
           {canRemove && (
-            <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={onRemove}>
-              Remove
-            </button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-11"
+              aria-label="Remove line"
+              title="Remove line"
+              onClick={onRemove}
+            >
+              <X className="size-4" />
+            </Button>
           )}
         </div>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor={`item-${row.id}`}>Item</Label>
         <ItemSearch
           id={`item-${row.id}`}
@@ -212,7 +219,7 @@ function LineCard({
           onPick={onPick}
         />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor={`desc-${row.id}`}>Description</Label>
         <Textarea
           id={`desc-${row.id}`}
@@ -222,13 +229,13 @@ function LineCard({
           placeholder="Scope, prep, product, notes the homeowner should see"
         />
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <NumField label="Quantity" value={row.qty} onChange={(v) => onPatch({ qty: v })} />
         <NumField label="Cost" value={row.cost} onChange={(v) => onPatch({ cost: v })} />
         <NumField label="Price" value={row.price} onChange={(v) => onPatch({ price: v })} />
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label>Amount</Label>
-          <p className="flex h-11 items-center tabular-nums">{money(lineAmount(row))}</p>
+          <p className="flex h-9 items-center tabular-nums">{money(lineAmount(row))}</p>
         </div>
       </div>
       {(row.photos ?? []).length > 0 && (
@@ -368,7 +375,7 @@ function NumField({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <Label>{label}</Label>
       <Input
         type="number"

@@ -290,12 +290,12 @@ function ChangePasswordForm() {
   }
 
   return (
-    <form className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]" onSubmit={(e) => void onSubmit(e)}>
+    <form className="space-y-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]" onSubmit={(e) => void onSubmit(e)}>
       <p className="text-sm text-muted-foreground">
         Change the password on this email login. If you signed in with Google or X and never set a
         password, request a reset from the sign-in page instead.
       </p>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="current-password">Current password</Label>
         <Input
           id="current-password"
@@ -306,7 +306,7 @@ function ChangePasswordForm() {
           required
         />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="account-new-password">New password</Label>
         <Input
           id="account-new-password"
@@ -318,7 +318,7 @@ function ChangePasswordForm() {
           minLength={8}
         />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="account-confirm-password">Confirm new password</Label>
         <Input
           id="account-confirm-password"

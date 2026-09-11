@@ -56,7 +56,14 @@ export type PriceBookItem = {
   warranty_years: number | null;
   warranty_terms: string | null;
   active: boolean;
+  photo?: string | null;
 };
+
+export function parseBookPhoto(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const src = raw.trim();
+  return src.startsWith("data:image/") ? src : null;
+}
 
 export function slotsForWork(workId: string, inputs: Record<string, string>): BookSlot[] {
   switch (workId) {
@@ -80,6 +87,22 @@ export function slotsForWork(workId: string, inputs: Record<string, string>): Bo
   }
 }
 
+export function slotsForOfferedWork(workIds: string[]): BookSlot[] {
+  const seen = new Set<BookSlotId>();
+  const out: BookSlot[] = [];
+  for (const workId of workIds) {
+    const scopes = workId === "paint" ? ["interior", "exterior"] : [""];
+    for (const scope of scopes) {
+      for (const slot of slotsForWork(workId, { paint_scope: scope })) {
+        if (seen.has(slot.id)) continue;
+        seen.add(slot.id);
+        out.push(slot);
+      }
+    }
+  }
+  return out;
+}
+
 export function pickKey(slot: string) {
   return `book_${slot}`;
 }
@@ -101,6 +124,7 @@ export function hydrateBook(row: PriceBookItem): PriceBookItem {
     warranty_years: row.warranty_years == null ? null : num(row.warranty_years),
     active: Boolean(row.active),
     slot: row.slot as BookSlotId,
+    photo: parseBookPhoto(row.photo),
   };
 }
 

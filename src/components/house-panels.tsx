@@ -25,9 +25,9 @@ import { cn } from "@/lib/utils";
 export function Completeness({ filled, total }: { filled: number; total: number }) {
   const pct = total ? Math.round((filled / total) * 100) : 0;
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
       <div
-        className="size-16 shrink-0 rounded-full"
+        className="size-12 shrink-0 rounded-full"
         style={{
           background: `conic-gradient(var(--color-primary) ${pct}%, var(--color-muted) 0)`,
         }}
@@ -153,10 +153,10 @@ export function PhotoGrid({
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl font-medium">Photos</h2>
+          <h2 className="font-display text-lg font-medium">Photos</h2>
           <p className="text-sm text-muted-foreground">
             Start here. Add elevations, rooms, and equipment tags. These stay with the address.
           </p>
@@ -166,7 +166,7 @@ export function PhotoGrid({
         {file.photos.map((p) => (
           <figure key={p.id} className="overflow-hidden rounded-lg bg-card shadow-[var(--shadow-border)]">
             <img src={p.src} alt={p.caption || p.category} className="aspect-[4/3] w-full object-cover" />
-            <figcaption className="space-y-2 px-3 py-2">
+            <figcaption className="space-y-1 px-2 py-1.5">
               <div className="flex items-start justify-between gap-2">
                 <span className="text-xs text-foreground">{p.caption || "Untitled"}</span>
                 <Badge variant="muted">{p.category}</Badge>
@@ -215,7 +215,7 @@ export function PhotoGrid({
             </figcaption>
           </figure>
         ))}
-        <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card/60 px-3 py-6 text-center text-sm text-muted-foreground hover:bg-muted">
+        <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-card/60 px-3 py-4 text-center text-sm text-muted-foreground hover:bg-muted">
           <Camera className="size-5 text-primary" />
           <span>{busy ? "Adding…" : "Add a photo"}</span>
           <input
@@ -229,12 +229,12 @@ export function PhotoGrid({
         </label>
       </div>
       {pending && (
-        <div className="grid gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:grid-cols-[8rem_1fr]">
+        <div className="grid gap-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)] sm:grid-cols-[8rem_1fr]">
           <img src={pending.preview} alt="" className="aspect-[4/3] w-full rounded-md object-cover" />
-          <div className="space-y-3">
+          <div className="space-y-2">
             <p className="text-sm font-medium">Caption this photo, then add it to the house.</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-1">
                 <Label htmlFor="cap">Caption</Label>
                 <Input
                   id="cap"
@@ -243,13 +243,13 @@ export function PhotoGrid({
                   placeholder="South elevation, 2026"
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <Label htmlFor="cat">Category</Label>
                 <select
                   id="cat"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="flex h-11 w-full rounded-md bg-background px-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  className="flex h-9 w-full rounded-md bg-background px-2.5 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   {PHOTO_CATEGORIES.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -319,9 +319,9 @@ export function FactsPanel({
   });
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-3">
       <div>
-        <h2 className="font-display text-xl font-medium">House data</h2>
+        <h2 className="font-display text-lg font-medium">House data</h2>
         <p className="text-sm text-muted-foreground">
           Keep this current. The next quote starts here instead of a clipboard.
         </p>
@@ -329,14 +329,14 @@ export function FactsPanel({
 
       {missing.length > 0 && (
         <Card className="bg-muted/40">
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2">
             <div>
               <h3 className="font-medium">Missing for future quotes</h3>
               <p className="text-sm text-muted-foreground">
                 Fill what you know. Leave the rest — a contractor can add it on site.
               </p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-2">
               {missing.map((field) => (
                 <FactInput
                   key={field.key}
@@ -357,11 +357,11 @@ export function FactsPanel({
         const fields = FIELD_CATALOG.filter((f) => f.group === group.id && byKey[f.key]);
         if (!fields.length) return null;
         return (
-          <div key={group.id} className="space-y-3">
-            <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+          <div key={group.id} className="space-y-1.5">
+            <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               {group.label}
             </h3>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-2">
               {fields.map((field) => (
                 <FactInput
                   key={`${field.key}-${byKey[field.key]?.value ?? ""}`}
@@ -415,14 +415,14 @@ export function MissingFactsPreview({
   });
   if (!missing.length) return null;
   return (
-    <section className="space-y-3">
+    <section className="space-y-2">
       <div>
-        <h2 className="font-display text-xl font-medium">Missing house data</h2>
+        <h2 className="font-display text-lg font-medium">Missing house data</h2>
         <p className="text-sm text-muted-foreground">
           These are the blanks that slow the next quote. Fill what you know while you have the draft open.
         </p>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-2 md:grid-cols-2">
         {missing.map((field) => (
           <FactInput
             key={field.key}
@@ -459,7 +459,7 @@ function FactInput({
   const [value, setValue] = useState(defaultValue);
   const dirty = value !== defaultValue;
   return (
-    <div className="space-y-1.5 rounded-lg bg-card p-3 shadow-[var(--shadow-border)]">
+    <div className="space-y-1 rounded-md bg-card px-2.5 py-2 shadow-[var(--shadow-border)]">
       <div className="flex items-center justify-between gap-2">
         <Label>{label}</Label>
         {source && (
@@ -486,29 +486,29 @@ export function JobTimeline({ file }: { file: HouseFile }) {
   if (!file.jobs.length) {
     return (
       <section className="space-y-2">
-        <h2 className="font-display text-xl font-medium">Jobs at this address</h2>
+        <h2 className="font-display text-lg font-medium">Jobs at this address</h2>
         <p className="text-sm text-muted-foreground">No completed jobs yet. Accepted work will land here.</p>
       </section>
     );
   }
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div>
-        <h2 className="font-display text-xl font-medium">Jobs at this address</h2>
+        <h2 className="font-display text-lg font-medium">Jobs at this address</h2>
         <p className="text-sm text-muted-foreground">
           Colors, products, and measurements stay with the house.
         </p>
       </div>
-      <ol className="space-y-4">
+      <ol className="space-y-2">
         {file.jobs.map((job) => (
-          <li key={job.id} className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+          <li key={job.id} className="rounded-lg bg-card p-3 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="font-display text-lg font-medium">{job.title}</h3>
               <time className="text-sm text-muted-foreground">{shortDate(job.completed_at)}</time>
             </div>
             {job.summary && <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>}
             {job.specs.length > 0 && (
-              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+              <dl className="mt-2 grid gap-2 sm:grid-cols-2">
                 {job.specs.map((spec) => (
                   <div key={spec.id} className="rounded-md bg-muted/60 px-3 py-2">
                     <dt className="text-xs tracking-wide text-muted-foreground uppercase">{spec.label}</dt>
@@ -564,7 +564,7 @@ export function WarrantyList({ file }: { file: HouseFile }) {
   if (!items.length) {
     return (
       <section className="space-y-2">
-        <h2 className="font-display text-xl font-medium">Manufacturer warranties</h2>
+        <h2 className="font-display text-lg font-medium">Manufacturer warranties</h2>
         <p className="text-sm text-muted-foreground">
           When a job is marked complete, product warranties are copied here.
         </p>
@@ -572,19 +572,19 @@ export function WarrantyList({ file }: { file: HouseFile }) {
     );
   }
   return (
-    <section className="space-y-4">
-      <div className="flex items-start gap-3">
-        <Shield className="mt-1 size-5 text-primary" />
+    <section className="space-y-3">
+      <div className="flex items-start gap-2">
+        <Shield className="mt-0.5 size-4 text-primary" />
         <div>
-          <h2 className="font-display text-xl font-medium">Manufacturer warranties</h2>
+          <h2 className="font-display text-lg font-medium">Manufacturer warranties</h2>
           <p className="text-sm text-muted-foreground">
             Tied to this address, not a PDF in a drawer.
           </p>
         </div>
       </div>
-      <ul className="space-y-3">
+      <ul className="space-y-2">
         {items.map((w) => (
-          <li key={w.id} className="rounded-lg bg-card px-4 py-3 shadow-[var(--shadow-border)]">
+          <li key={w.id} className="rounded-md bg-card px-3 py-2 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="font-medium">
                 {w.manufacturer ? `${w.manufacturer} ` : ""}

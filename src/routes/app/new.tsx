@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -127,7 +127,8 @@ function NewQuote() {
     enabled: Boolean(user && search.invite),
   });
   const [takeoff, setTakeoff] = useState<Record<string, string>>({});
-  const [coverPhoto, setCoverPhoto] = useState<string | null>(null);
+  const [housePhotos, setHousePhotos] = useState<string[]>([]);
+  const lastPropertyId = useRef(propertyId);
   const [sent, setSent] = useState<Awaited<ReturnType<typeof createProposalFromWizard>> | null>(null);
   const [addingWork, setAddingWork] = useState(false);
   const [localCustom, setLocalCustom] = useState<string[]>([]);
@@ -196,8 +197,13 @@ function NewQuote() {
     setHomeownerName(p.homeowner_name);
     setHomeownerEmail(p.homeowner_email);
     setHomeownerPhone(p.homeowner_phone ?? "");
-    const hero = packed.photos.find((ph) => ph.category === "exterior") ?? packed.photos[0];
-    if (hero?.src) setCoverPhoto(hero.src);
+    const invitePhotos = packed.photos
+      .slice()
+      .sort((a, b) => (a.category === "exterior" ? 0 : 1) - (b.category === "exterior" ? 0 : 1))
+      .map((ph) => ph.src)
+      .filter(Boolean)
+      .slice(0, 8);
+    if (invitePhotos.length) setHousePhotos(invitePhotos);
     setStep(3);
   }, [inviteQ.data?.invite.id]);
 
@@ -220,6 +226,21 @@ function NewQuote() {
     if (hit) setPropertyId(hit.id);
   }, [dash.data, search.address, search.zip, inviteQ.data, propertyId]);
 
+  useEffect(() => {
+    if (lastPropertyId.current === propertyId) return;
+    lastPropertyId.current = propertyId;
+    setHousePhotos([]);
+  }, [propertyId]);
+
+  useEffect(() => {
+    const filePhotos = house.data?.photos ?? [];
+    if (!filePhotos.length) return;
+    setHousePhotos((cur) => {
+      if (cur.length) return cur;
+      return filePhotos.map((ph) => ph.src).filter(Boolean).slice(0, 8);
+    });
+  }, [house.data?.photos]);
+
   const workKits = useMemo(() => {
     if (user) return (kitsQ.data?.kits ?? []).filter((kit) => kit.work_id === workId);
     if (workId !== "gutters") return [];
@@ -239,6 +260,7 @@ function NewQuote() {
         qty: line.qty ?? null,
         unit: line.unit ?? "ls",
         slot: line.slot ?? null,
+        photos: [],
       })),
     })) satisfies WorkKit[];
   }, [kitsQ.data?.kits, workId, user]);
@@ -317,7 +339,8 @@ function NewQuote() {
               ? `${work.name} — ${takeoff.__kit_name}`
               : work?.name || inviteQ.data?.invite.title,
           takeoff,
-          coverPhoto: coverPhoto || undefined,
+          coverPhoto: housePhotos[0],
+          housePhotos,
           rfpToken: search.rfp,
           workInviteToken: search.invite,
         },
@@ -439,7 +462,7 @@ function NewQuote() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-5">
       <div className="space-y-4">
         <h1 className="font-display text-3xl font-medium tracking-tight">
           {inviteQ.data?.invite.title
@@ -466,28 +489,41 @@ function NewQuote() {
           zip={usingDemo ? MAPLE_DEMO.zip : jobZip}
           name={usingDemo ? MAPLE_DEMO.name : existing?.homeowner_name || homeownerName}
           photo={
-            usingDemo ? MAPLE_DEMO.photo : user ? coverPhoto || existing?.cover_src || null : null
+            usingDemo
+              ? MAPLE_DEMO.photo
+              : user
+                ? housePhotos[0] || existing?.cover_src || null
+                : null
           }
+          photos={usingDemo ? [MAPLE_DEMO.photo] : user ? housePhotos : []}
           lat={usingDemo ? null : geo.data?.lat}
           lng={usingDemo ? null : geo.data?.lng}
-          onAddPhoto={user ? setCoverPhoto : undefined}
+          onAddPhoto={
+            user
+              ? (src) =>
+                  setHousePhotos((cur) => (cur.includes(src) || cur.length >= 8 ? cur : [...cur, src]))
+              : undefined
+          }
+          onRemovePhoto={
+            user ? (src) => setHousePhotos((cur) => cur.filter((p) => p !== src)) : undefined
+          }
         />
         <WizardSteps step={shownStep} items={STEPS} onSelect={goToStep} />
       </div>
 
       {shownStep === 1 && (
-        <div className="space-y-5">
+        <div className="space-y-3">
           <p className="text-muted-foreground">
             Start with the address. If this house already has a file, the measurements come with it.
           </p>
           {(dash.data?.properties.length ?? 0) > 0 && (
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="existing">Existing house</Label>
               <select
                 id="existing"
                 value={propertyId}
                 onChange={(e) => setPropertyId(e.target.value)}
-                className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="flex h-9 w-full rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 <option value="">New address</option>
                 {dash.data?.properties.map((p) => (
@@ -499,12 +535,12 @@ function NewQuote() {
             </div>
           )}
           {!propertyId && (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <Field label="Street" value={addressLine} onChange={setAddressLine} />
               </div>
               <Field label="City" value={city} onChange={setCity} />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <Field label="State" value={state} onChange={setState} />
                 <Field label="ZIP" value={zip} onChange={setZip} />
               </div>
@@ -525,7 +561,7 @@ function NewQuote() {
       )}
 
       {shownStep === 3 && (
-        <div className="space-y-5">
+        <div className="space-y-3">
           <p className="text-muted-foreground">
             Photos, then measurements, then line items from this shop’s materials. Work category is
             optional.
@@ -539,18 +575,12 @@ function NewQuote() {
               skipped={Boolean(!takeoff.__kit && takeoff[ESTIMATE_KEY])}
             />
           ) : null}
-          {inviteQ.data?.photos.length ? (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {inviteQ.data.photos.slice(0, 8).map((ph) => (
-                <img
-                  key={ph.id}
-                  src={ph.src}
-                  alt={ph.caption ?? ""}
-                  className="aspect-square w-full rounded-lg object-cover"
-                />
-              ))}
-            </div>
-          ) : null}
+          {housePhotos.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {housePhotos.length} house {housePhotos.length === 1 ? "photo" : "photos"} on this quote
+              {housePhotos.length < 8 ? " — add more on the house card above." : "."}
+            </p>
+          )}
           {work ? (
             <TakeoffForm
               work={work}
@@ -604,7 +634,7 @@ function NewQuote() {
       )}
 
       {shownStep === 4 && (
-        <div className="space-y-5">
+        <div className="space-y-3">
           <div>
             <p className="font-display text-2xl font-medium">
               {takeoff.__kit_name && work
@@ -657,7 +687,7 @@ function NewQuote() {
               </p>
               {missingBookCost.map((line) =>
                 line.bookId ? (
-                  <div key={line.bookId} className="space-y-1.5">
+                  <div key={line.bookId} className="space-y-1">
                     <Label htmlFor={`send-cost-${line.bookId}`}>
                       {line.name} cost ({line.unit})
                     </Label>
@@ -800,7 +830,7 @@ function Field({
 }) {
   const id = label.toLowerCase();
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>

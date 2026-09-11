@@ -168,25 +168,25 @@ function SettingsPage() {
         </section>
       ) : null}
       <form
-        className="space-y-4 border-t border-border pt-8"
+        className="space-y-2 border-t border-border pt-6"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
         }}
       >
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="cn">Company</Label>
           <Input id="cn" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="tr">Trade</Label>
           <Input id="tr" value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="paint, roofing, general" />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="ph">Phone</Label>
           <Input id="ph" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="em">Email</Label>
           <Input id="em" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
@@ -209,11 +209,11 @@ function SettingsPage() {
             />
           </label>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="ag">Estimate language</Label>
           <Textarea id="ag" rows={4} value={agreement} onChange={(e) => setAgreement(e.target.value)} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="tm">Terms and conditions</Label>
           <Textarea id="tm" rows={5} value={terms} onChange={(e) => setTerms(e.target.value)} />
         </div>
@@ -238,7 +238,7 @@ function SettingsPage() {
             ))}
           </div>
         </fieldset>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="pay">Payment link</Label>
           <Input
             id="pay"

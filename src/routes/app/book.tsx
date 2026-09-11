@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Camera, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,16 +11,22 @@ import {
   bookCsvTemplate,
   bookLabel,
   blockingPriceIssues,
+  parseBookPhoto,
   parseMoney,
   priceIssues,
+  slotsForOfferedWork,
+  type BookSlot,
   type BookSlotId,
   type PriceBookItem,
 } from "@/lib/housefile/book";
 import { money } from "@/lib/housefile/format";
+import { compressImage } from "@/lib/housefile/image";
 import { WorkKitEditor } from "@/components/work-kit-editor";
 import { shopCsvTemplate } from "@/lib/housefile/kits";
+import { workTypesFor } from "@/lib/housefile/quote";
 import {
   archivePriceBookItem,
+  getDashboard,
   importPriceBookCsv,
   listPriceBook,
   upsertPriceBookItem,
@@ -31,16 +38,24 @@ export const Route = createFileRoute("/app/book")({ component: PriceBookPage });
 function PriceBookPage() {
   const queryClient = useQueryClient();
   const q = useQuery({ queryKey: ["price-book"], queryFn: () => listPriceBook() });
+  const dash = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
   const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<Partial<PriceBookItem> | "new" | null>(null);
   const [csv, setCsv] = useState("");
+  const offered = dash.data ? workTypesFor(dash.data.company.trades) : [];
+  const offeredSlots = useMemo(() => slotsForOfferedWork(offered.map((w) => w.id)), [offered]);
+  const offeredSlotIds = useMemo(() => new Set(offeredSlots.map((s) => s.id)), [offeredSlots]);
+  const offeredTrades = useMemo(() => new Set(offeredSlots.map((s) => s.trade)), [offeredSlots]);
 
   const items = useMemo(() => {
     const list = (q.data?.items ?? []).filter((i) => i.active !== false);
+    const scoped = dash.data
+      ? list.filter((i) => offeredSlotIds.has(i.slot) || offeredTrades.has(i.trade))
+      : [];
     const f = filter.trim().toLowerCase();
-    if (!f) return list;
-    return list.filter((i) => bookLabel(i).toLowerCase().includes(f) || i.slot.includes(f) || i.trade.includes(f));
-  }, [q.data, filter]);
+    if (!f) return scoped;
+    return scoped.filter((i) => bookLabel(i).toLowerCase().includes(f) || i.slot.includes(f) || i.trade.includes(f));
+  }, [q.data, filter, dash.data, offeredSlotIds, offeredTrades]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, PriceBookItem[]>();
@@ -80,6 +95,7 @@ function PriceBookPage() {
       sell: string;
       warranty_years: string;
       warranty_terms: string;
+      photo?: string | null;
     }) => upsertPriceBookItem({ data: row }),
     onSuccess: () => {
       toast.success("Saved to materials");
@@ -174,6 +190,7 @@ function PriceBookPage() {
         <BookForm
           key="new"
           initial={null}
+          slots={offeredSlots}
           pending={save.isPending}
           onCancel={() => setEditing(null)}
           onSave={(row) => save.mutate(row)}
@@ -198,33 +215,68 @@ function PriceBookPage() {
                     <BookForm
                       key={item.id}
                       initial={item}
+                      slots={offeredSlots}
                       pending={save.isPending}
                       onCancel={() => setEditing(null)}
                       onSave={(row) => save.mutate(row)}
                     />
                   ) : (
                     <>
-                      <div>
-                        <p className="font-medium">{bookLabel(item)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Cost {item.cost == null ? "—" : money(item.cost)} / {item.unit}
-                          {item.sell != null ? ` · sell ${money(item.sell)}` : ""}
-                        </p>
-                        {priceIssues(item).map((issue) => (
-                          <p
-                            key={issue.code}
-                            className={
-                              issue.severity === "error"
-                                ? "text-sm text-destructive"
-                                : "text-sm text-muted-foreground"
-                            }
-                          >
-                            {issue.message}
+                      <div className="flex min-w-0 items-start gap-3">
+                        {item.photo ? (
+                          <img
+                            src={item.photo}
+                            alt=""
+                            className="size-14 shrink-0 rounded-md object-cover shadow-[var(--shadow-border)]"
+                          />
+                        ) : (
+                          <div className="grid size-14 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
+                            <Camera className="size-4" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium">{bookLabel(item)}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Cost {item.cost == null ? "—" : money(item.cost)} / {item.unit}
+                            {item.sell != null ? ` · sell ${money(item.sell)}` : ""}
                           </p>
-                        ))}
+                          {priceIssues(item).map((issue) => (
+                            <p
+                              key={issue.code}
+                              className={
+                                issue.severity === "error"
+                                  ? "text-sm text-destructive"
+                                  : "text-sm text-muted-foreground"
+                              }
+                            >
+                              {issue.message}
+                            </p>
+                          ))}
+                        </div>
                       </div>
                       {owner && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <ProductPhotoButton
+                            hasPhoto={Boolean(item.photo)}
+                            disabled={save.isPending}
+                            onPick={(photo) =>
+                              save.mutate({
+                                id: item.id,
+                                trade: item.trade,
+                                slot: item.slot,
+                                manufacturer: item.manufacturer ?? "",
+                                product_name: item.product_name,
+                                sku: item.sku ?? "",
+                                color: item.color ?? "",
+                                unit: item.unit,
+                                cost: item.cost == null ? "" : String(item.cost),
+                                sell: item.sell == null ? "" : String(item.sell),
+                                warranty_years: item.warranty_years == null ? "" : String(item.warranty_years),
+                                warranty_terms: item.warranty_terms ?? "",
+                                photo,
+                              })
+                            }
+                          />
                           <Button
                             type="button"
                             size="sm"
@@ -266,6 +318,7 @@ function PriceBookPage() {
                 <BookForm
                   key="new"
                   initial={null}
+                  slots={offeredSlots}
                   pending={save.isPending}
                   onCancel={() => setEditing(null)}
                   onSave={(row) => save.mutate(row)}
@@ -322,11 +375,13 @@ function PriceBookPage() {
 
 function BookForm({
   initial,
+  slots,
   pending,
   onCancel,
   onSave,
 }: {
   initial: Partial<PriceBookItem> | null;
+  slots: BookSlot[];
   pending: boolean;
   onCancel: () => void;
   onSave: (row: {
@@ -342,10 +397,14 @@ function BookForm({
     sell: string;
     warranty_years: string;
     warranty_terms: string;
+    photo?: string | null;
   }) => void;
 }) {
-  const [slot, setSlot] = useState<BookSlotId>((initial?.slot as BookSlotId) || "shingle");
-  const def = BOOK_SLOTS.find((s) => s.id === slot)!;
+  const slotChoices = slots.length ? slots : BOOK_SLOTS;
+  const [slot, setSlot] = useState<BookSlotId>(
+    (initial?.slot as BookSlotId) || slotChoices[0]?.id || "gutter",
+  );
+  const def = BOOK_SLOTS.find((s) => s.id === slot) ?? slotChoices[0]!;
   const [trade, setTrade] = useState(initial?.trade || def.trade);
   const [manufacturer, setManufacturer] = useState(initial?.manufacturer ?? "");
   const [product, setProduct] = useState(initial?.product_name ?? "");
@@ -356,6 +415,8 @@ function BookForm({
   const [sell, setSell] = useState(initial?.sell != null ? String(initial.sell) : "");
   const [years, setYears] = useState(initial?.warranty_years != null ? String(initial.warranty_years) : "");
   const [terms, setTerms] = useState(initial?.warranty_terms ?? "");
+  const [photo, setPhoto] = useState<string | null>(parseBookPhoto(initial?.photo));
+  const photoInput = useRef<HTMLInputElement>(null);
   const [issues, setIssues] = useState(() =>
     priceIssues({
       slot: (initial?.slot as BookSlotId) || "shingle",
@@ -400,11 +461,49 @@ function BookForm({
           sell,
           warranty_years: years,
           warranty_terms: terms,
+          photo,
         });
       }}
     >
       <p className="font-display text-lg font-medium sm:col-span-2">{heading}</p>
-      <div className="space-y-1.5 sm:col-span-2">
+      <div className="flex items-center gap-3 sm:col-span-2">
+        {photo ? (
+          <div className="relative shrink-0">
+            <img src={photo} alt="" className="size-16 rounded-md object-cover shadow-[var(--shadow-border)]" />
+            <button
+              type="button"
+              className="absolute -top-1 -right-1 grid size-6 place-items-center rounded-full bg-background shadow-[var(--shadow-border)]"
+              aria-label="Remove photo"
+              onClick={() => setPhoto(null)}
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="grid size-16 place-items-center rounded-md bg-muted text-muted-foreground">
+            <Camera className="size-5" />
+          </div>
+        )}
+        <Button type="button" size="sm" variant="outline" onClick={() => photoInput.current?.click()}>
+          <Camera className="size-4" />
+          {photo ? "Change photo" : "Add photo"}
+        </Button>
+        <input
+          ref={photoInput}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            void compressImage(file, 1000)
+              .then(setPhoto)
+              .catch((err) => toast.error(err instanceof Error ? err.message : "Could not read photo"));
+          }}
+        />
+      </div>
+      <div className="space-y-1 sm:col-span-2">
         <Label htmlFor="slot">Slot</Label>
         <select
           id="slot"
@@ -417,9 +516,14 @@ function BookForm({
             setUnit(s.unit);
             check(cost, sell, next);
           }}
-          className="flex h-11 w-full rounded-md bg-background px-3 text-sm shadow-[var(--shadow-border)] outline-none"
+          className="flex h-9 w-full rounded-md bg-background px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
         >
-          {BOOK_SLOTS.map((s) => (
+          {initial?.slot && !slotChoices.some((s) => s.id === initial.slot) ? (
+            <option value={initial.slot}>
+              {BOOK_SLOTS.find((s) => s.id === initial.slot)?.label ?? initial.slot}
+            </option>
+          ) : null}
+          {slotChoices.map((s) => (
             <option key={s.id} value={s.id}>
               {s.label}
             </option>
@@ -448,7 +552,7 @@ function BookForm({
         }}
       />
       <Field label="Warranty years" value={years} onChange={setYears} />
-      <div className="space-y-1.5 sm:col-span-2">
+      <div className="space-y-1 sm:col-span-2">
         <Label htmlFor="terms">Warranty terms</Label>
         <Input id="terms" value={terms} onChange={(e) => setTerms(e.target.value)} />
       </div>
@@ -483,6 +587,46 @@ function BookForm({
   );
 }
 
+function ProductPhotoButton({
+  hasPhoto,
+  disabled,
+  onPick,
+}: {
+  hasPhoto: boolean;
+  disabled?: boolean;
+  onPick: (photo: string) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => input.current?.click()}
+      >
+        <Camera className="size-4" />
+        {hasPhoto ? "Change photo" : "Add photo"}
+      </Button>
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          void compressImage(file, 1000)
+            .then(onPick)
+            .catch((err) => toast.error(err instanceof Error ? err.message : "Could not read photo"));
+        }}
+      />
+    </>
+  );
+}
+
 function Field({
   label,
   value,
@@ -494,7 +638,7 @@ function Field({
 }) {
   const id = label.toLowerCase().replace(/\s+/g, "-");
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>

@@ -82,7 +82,7 @@ export function EstimateGroups({
   const groups = groupByJob(visible);
 
   return (
-    <section id="estimates" className="space-y-6">
+    <section id="estimates" className="space-y-3">
       <div>
         <h2 className="font-display text-xl font-medium">Estimates</h2>
         <p className="text-sm text-muted-foreground">Grouped by the job they belong to.</p>

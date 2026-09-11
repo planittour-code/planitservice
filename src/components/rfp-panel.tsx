@@ -81,19 +81,19 @@ export function RfpForm({
 
   return (
     <form
-      className="space-y-4"
+      className="space-y-2"
       onSubmit={(e) => {
         e.preventDefault();
         save.mutate();
       }}
     >
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="trade">Trade</Label>
         <select
           id="trade"
           value={workId}
           onChange={(e) => setWorkId(e.target.value)}
-          className="flex h-11 w-full rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)] outline-none"
+          className="flex h-9 w-full rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
         >
           {WORK_TYPES.map((w) => (
             <option key={w.id} value={w.id}>
@@ -102,7 +102,7 @@ export function RfpForm({
           ))}
         </select>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="rfp-title">The job</Label>
         <Input
           id="rfp-title"
@@ -111,7 +111,7 @@ export function RfpForm({
           placeholder="Reroof before storm season"
         />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="rfp-body">What shops need to know</Label>
         <Textarea
           id="rfp-body"
@@ -121,7 +121,7 @@ export function RfpForm({
           placeholder="Squares, pitch, access, product you want named on the Property Record."
         />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="rfp-budget">Budget (optional)</Label>
         <Input
           id="rfp-budget"
@@ -131,21 +131,21 @@ export function RfpForm({
         />
       </div>
       {!houseToken && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2">
             <Label htmlFor="rfp-addr">Address</Label>
             <Input id="rfp-addr" value={addr} onChange={(e) => setAddr(e.target.value)} />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="rfp-city">City</Label>
             <Input id="rfp-city" value={town} onChange={(e) => setTown(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
               <Label htmlFor="rfp-st">State</Label>
               <Input id="rfp-st" value={st} onChange={(e) => setSt(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="rfp-zip">ZIP</Label>
               <Input id="rfp-zip" value={postal} onChange={(e) => setPostal(e.target.value)} />
             </div>

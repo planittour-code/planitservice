@@ -59,7 +59,7 @@ function HomeLayout() {
           </nav>
         </div>
       </header>
-      <div className="mx-auto max-w-5xl px-5 py-8">
+      <div className="mx-auto max-w-5xl px-5 py-5">
         <Outlet />
       </div>
     </div>

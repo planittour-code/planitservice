@@ -50,7 +50,7 @@ function HomeRecord() {
   const hero = house.photos.find((ph) => ph.category === "exterior") ?? house.photos[0];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {hero && (
         <img
           src={hero.src}
@@ -63,7 +63,7 @@ function HomeRecord() {
           {plan?.tier === "pro" ? "Pro Property Record" : "Property Record"}
           {plan ? ` · ${plan.cadence}` : ""}
         </p>
-        <h1 className="font-display text-4xl font-medium tracking-tight">{p.address_line}</h1>
+        <h1 className="font-display text-3xl font-medium tracking-tight">{p.address_line}</h1>
         <p className="text-muted-foreground">
           {p.city}, {p.state} {p.zip}
         </p>
@@ -87,9 +87,9 @@ function HomeRecord() {
         onDone={() => q.refetch()}
       />
 
-      <section className="space-y-4">
+      <section className="space-y-3">
         <div>
-          <h2 className="font-display text-xl font-medium">Maintenance</h2>
+          <h2 className="font-display text-lg font-medium">Maintenance</h2>
           <p className="text-sm text-muted-foreground">
             {due.length} due in the next two weeks. Log the work so the next season is not a guess.
           </p>
@@ -124,8 +124,8 @@ function HomeRecord() {
         </ul>
       </section>
 
-      <section className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
-        <h2 className="font-display text-xl font-medium">Transfer this Property Record</h2>
+      <section className="space-y-3 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]">
+        <h2 className="font-display text-lg font-medium">Transfer this Property Record</h2>
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
       </section>
 
@@ -176,7 +176,7 @@ function TransferForm({
 
   return (
     <form
-      className="space-y-3"
+      className="space-y-2"
       onSubmit={(e) => {
         e.preventDefault();
         send.mutate();
@@ -185,7 +185,7 @@ function TransferForm({
       <p className="text-sm text-muted-foreground">
         The Property Record moves with the house. They sign in with this email and take the record.
       </p>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="to">New owner email</Label>
         <Input id="to" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>

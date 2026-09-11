@@ -105,8 +105,8 @@ function Onboard() {
       </div>
 
       {step === 1 && (
-        <div className="space-y-5">
-          <div className="space-y-1.5">
+        <div className="space-y-3">
+          <div className="space-y-1">
             <Label htmlFor="shop">Shop name</Label>
             <Input
               id="shop"
@@ -169,30 +169,30 @@ function Onboard() {
       )}
 
       {step === 2 && (
-        <div className="space-y-5">
+        <div className="space-y-3">
           <p className="text-muted-foreground">
             Homeowners pick a shop they can place. Address, years, associations, and reviews you
             already earned elsewhere.
           </p>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="st">Shop address</Label>
             <Input id="st" value={street} onChange={(e) => setStreet(e.target.value)} placeholder="1840 Roswell Road" />
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5 sm:col-span-1">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="space-y-1 sm:col-span-1">
               <Label htmlFor="ct">City</Label>
               <Input id="ct" value={city} onChange={(e) => setCity(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="stt">State</Label>
               <Input id="stt" value={state} onChange={(e) => setState(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="zp">ZIP</Label>
               <Input id="zp" value={zip} onChange={(e) => setZip(e.target.value)} />
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="yr">Years in business</Label>
             <Input
               id="yr"
@@ -239,7 +239,7 @@ function Onboard() {
               Paste the public page. We do not import ratings. We show the link so a homeowner can
               read them where they were written.
             </p>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="g">Google</Label>
               <Input
                 id="g"
@@ -249,7 +249,7 @@ function Onboard() {
                 placeholder="https://maps.app.goo.gl/…"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="tp">Trustpilot</Label>
               <Input
                 id="tp"
@@ -259,7 +259,7 @@ function Onboard() {
                 placeholder="https://www.trustpilot.com/review/…"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="nd">Nextdoor</Label>
               <Input
                 id="nd"
@@ -269,7 +269,7 @@ function Onboard() {
                 placeholder="https://nextdoor.com/pages/…"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="ot">Houzz, Angi, or other</Label>
               <Input
                 id="ot"
@@ -352,7 +352,7 @@ function Onboard() {
               />
             </label>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="ag">Language on the estimate</Label>
             <Textarea
               id="ag"
@@ -364,7 +364,7 @@ function Onboard() {
               This is the cover note the homeowner sees with the number.
             </p>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="tm">Terms and conditions</Label>
             <Textarea id="tm" rows={6} value={terms} onChange={(e) => setTerms(e.target.value)} />
           </div>

@@ -344,11 +344,11 @@ function ContractorMeta({
   const photos = bundle.house.photos;
   return (
     <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="pt">Title</Label>
         <Input id="pt" value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <Label htmlFor="pc">Cover note</Label>
         <Textarea id="pc" value={cover} onChange={(e) => setCover(e.target.value)} rows={4} />
       </div>

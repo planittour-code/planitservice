@@ -42,7 +42,7 @@ export function NamedShopInvite({
   });
 
   return (
-    <section id="invite-shop" className="scroll-mt-24 space-y-4">
+    <section id="invite-shop" className="scroll-mt-24 space-y-3">
       <div>
         <h2 className="font-display text-xl font-medium">Invite a shop</h2>
         <p className="text-sm text-muted-foreground">
@@ -51,14 +51,14 @@ export function NamedShopInvite({
         </p>
       </div>
       <form
-        className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]"
+        className="space-y-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
         }}
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="space-y-1">
             <Label htmlFor="shop-email">Shop email</Label>
             <Input
               id="shop-email"
@@ -68,12 +68,12 @@ export function NamedShopInvite({
               required
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="shop-name">Shop name (optional)</Label>
             <Input id="shop-name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
           </div>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="job-title">The job</Label>
           <Input
             id="job-title"
@@ -83,7 +83,7 @@ export function NamedShopInvite({
             required
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="job-body">What they need to know</Label>
           <Textarea
             id="job-body"
