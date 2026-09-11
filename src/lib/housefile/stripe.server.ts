@@ -128,7 +128,8 @@ export async function createCheckoutSessionUrl(input: {
     },
   });
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
-  if (String(input.kind).startsWith("manage_")) {
+  // Funnel signup = base Portfolio only — not extras/seats.
+  if (isManageBaseKind(input.kind)) {
     const { trackEvent } = await import("@/lib/housefile/analytics.server");
     await trackEvent({
       name: "portfolio_signup_started",
