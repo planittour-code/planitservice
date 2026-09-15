@@ -20,7 +20,9 @@ import { num, shopSlugFromName, slugToken } from "./format";
 import {
   filledSocials,
   normalizeHttpUrl,
+  PROFILE_HAT_ORDER,
   profileSlugFromName,
+  type ProfileHat,
   type UserProfile,
 } from "./profile";
 import { asPaymentTerms, normalizePaymentLink } from "./payment";
@@ -3833,7 +3835,7 @@ export const getAccount = createServerFn({ method: "GET" })
 
 function asUserProfile(
   row: UserProfileRow | undefined,
-  fallback: { email: string | null; name: string | null; image: string | null },
+  fallback: { email: string | null; name: string | null; image: string | null; hats?: ProfileHat[] },
 ): UserProfile {
   const displayName =
     row?.display_name?.trim() || fallback.name?.trim() || fallback.email?.split("@")[0] || "You";
@@ -3845,6 +3847,7 @@ function asUserProfile(
     bio: row?.bio ?? "",
     photoSrc: row?.photo_src || (fallback.image && !fallback.image.startsWith("data:") ? fallback.image : null) || null,
     email: fallback.email,
+    hats: fallback.hats ?? [],
     website: row?.website ?? "",
     instagram: row?.instagram ?? "",
     facebook: row?.facebook ?? "",
@@ -3867,15 +3870,53 @@ async function uniqueProfileSlug(sql: Sql, base: string, userId: string) {
   return `${root}-${slugToken().slice(0, 6)}`;
 }
 
+async function hatsForUser(sql: Sql, userId: string): Promise<ProfileHat[]> {
+  const shop = await sql<{ id: string }>`
+    select id from companies
+    where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
+    limit 1
+  `;
+  const shopMember = shop[0]
+    ? []
+    : await sql<{ id: string }>`
+        select c.id
+        from company_members m
+        join companies c on c.id = m.company_id
+        where m.user_id = ${userId} and c.id <> ${HOUSEHOLD_COMPANY}
+        limit 1
+      `;
+  const houses = await sql<{ c: number }>`
+    select count(*)::int as c from properties where homeowner_user_id = ${userId}
+  `;
+  const ownedOffice = await sql<{ id: string }>`
+    select id from portfolios where user_id = ${userId} limit 1
+  `;
+  const officeMember = ownedOffice[0]
+    ? []
+    : await sql<{ id: string }>`
+        select p.id
+        from portfolio_members m
+        join portfolios p on p.id = m.portfolio_id
+        where m.user_id = ${userId}
+        limit 1
+      `;
+  const found: ProfileHat[] = [];
+  if ((houses[0]?.c ?? 0) > 0) found.push("homeowner");
+  if (shop[0] || shopMember[0]) found.push("contractor");
+  if (ownedOffice[0] || officeMember[0]) found.push("manager");
+  return PROFILE_HAT_ORDER.filter((hat) => found.includes(hat));
+}
+
 async function loadUserProfile(
   sql: Sql,
   userId: string,
-  fallback: { email: string | null; name: string | null; image: string | null },
+  fallback: { email: string | null; name: string | null; image: string | null; hats?: ProfileHat[] },
 ) {
   const row = (
     await sql<UserProfileRow>`select * from user_profiles where user_id = ${userId} limit 1`
   )[0];
-  return asUserProfile(row, fallback);
+  const hats = fallback.hats ?? (await hatsForUser(sql, userId));
+  return asUserProfile(row, { ...fallback, hats });
 }
 
 export const updateUserProfile = createServerFn({ method: "POST" })
@@ -3976,13 +4017,20 @@ export const getPublicProfile = createServerFn({ method: "GET" })
       await sql<UserProfileRow>`select * from user_profiles where slug = ${needle} limit 1`
     )[0];
     if (!row?.slug) throw new Error("Profile not found");
-    const profile = asUserProfile(row, { email: null, name: row.display_name, image: row.photo_src });
+    const hats = await hatsForUser(sql, row.user_id);
+    const profile = asUserProfile(row, {
+      email: null,
+      name: row.display_name,
+      image: row.photo_src,
+      hats,
+    });
     return {
       slug: row.slug,
       displayName: profile.displayName,
       headline: profile.headline,
       bio: profile.bio,
       photoSrc: profile.photoSrc,
+      hats,
       links: filledSocials(profile),
     };
   });

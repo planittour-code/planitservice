@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Wordmark } from "@/components/logo";
+import { ProfileHatBadges } from "@/components/profile-hats";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { SocialMark } from "@/components/social-mark";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,8 +81,15 @@ function PublicProfilePage() {
               )}
             </div>
             <h1 className="font-display text-3xl font-medium tracking-tight">{profile.displayName}</h1>
+            {profile.hats.length ? (
+              <div className="mt-2">
+                <ProfileHatBadges hats={profile.hats} />
+              </div>
+            ) : null}
             {profile.headline ? (
-              <p className="mt-1 text-muted-foreground">{profile.headline}</p>
+              <p className={profile.hats.length ? "mt-2 text-muted-foreground" : "mt-1 text-muted-foreground"}>
+                {profile.headline}
+              </p>
             ) : null}
             {profile.bio ? (
               <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed">{profile.bio}</p>

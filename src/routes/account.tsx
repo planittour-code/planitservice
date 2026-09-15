@@ -3,6 +3,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { Camera } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { ProfileHatBadges } from "@/components/profile-hats";
 import { SignedInHeader } from "@/components/site-chrome";
 import { SocialMark } from "@/components/social-mark";
 import { justSignedOut } from "@/lib/auth/client";
@@ -381,7 +382,12 @@ function ProfileCard({ profile }: { profile: UserProfile }) {
             />
             <div className="min-w-0 flex-1 pb-1">
               <p className="font-display text-2xl font-medium tracking-tight">{name.trim() || "Your name"}</p>
-              <p className="text-sm text-muted-foreground">{headline.trim() || profile.email}</p>
+              {profile.hats.length ? (
+                <div className="mt-2">
+                  <ProfileHatBadges hats={profile.hats} />
+                </div>
+              ) : null}
+              <p className="mt-1 text-sm text-muted-foreground">{headline.trim() || profile.email}</p>
             </div>
           </div>
 

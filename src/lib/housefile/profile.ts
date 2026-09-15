@@ -17,6 +17,16 @@ export const SOCIAL_LINKS: SocialLink[] = [
   { key: "youtube", label: "YouTube", placeholder: "youtube.com/@you", hostHint: "youtube.com" },
 ];
 
+export type ProfileHat = "homeowner" | "contractor" | "manager";
+
+export const PROFILE_HAT_LABEL: Record<ProfileHat, string> = {
+  homeowner: "Homeowner",
+  contractor: "Contractor",
+  manager: "Property manager",
+};
+
+export const PROFILE_HAT_ORDER: ProfileHat[] = ["homeowner", "contractor", "manager"];
+
 export type UserProfile = {
   userId: string;
   slug: string | null;
@@ -25,6 +35,7 @@ export type UserProfile = {
   bio: string;
   photoSrc: string | null;
   email: string | null;
+  hats: ProfileHat[];
   website: string;
   instagram: string;
   facebook: string;
@@ -40,6 +51,7 @@ export type PublicProfile = {
   headline: string;
   bio: string;
   photoSrc: string | null;
+  hats: ProfileHat[];
   links: { key: SocialKey; label: string; href: string }[];
 };
 
