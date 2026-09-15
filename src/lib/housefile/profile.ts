@@ -51,6 +51,7 @@ export type PublicProfile = {
   headline: string;
   bio: string;
   photoSrc: string | null;
+  email: string | null;
   hats: ProfileHat[];
   links: { key: SocialKey; label: string; href: string }[];
 };

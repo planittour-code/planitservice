@@ -4018,8 +4018,13 @@ export const getPublicProfile = createServerFn({ method: "GET" })
     )[0];
     if (!row?.slug) throw new Error("Profile not found");
     const hats = await hatsForUser(sql, row.user_id);
+    const authUser = (
+      await sql<{ email: string | null }>`
+        select email from "user" where id = ${row.user_id} limit 1
+      `
+    )[0];
     const profile = asUserProfile(row, {
-      email: null,
+      email: authUser?.email ?? null,
       name: row.display_name,
       image: row.photo_src,
       hats,
@@ -4030,6 +4035,7 @@ export const getPublicProfile = createServerFn({ method: "GET" })
       headline: profile.headline,
       bio: profile.bio,
       photoSrc: profile.photoSrc,
+      email: profile.email,
       hats,
       links: filledSocials(profile),
     };

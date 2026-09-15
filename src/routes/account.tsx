@@ -339,7 +339,11 @@ function ProfileCard({ profile }: { profile: UserProfile }) {
       </div>
 
       <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-        <div className="h-24 bg-ink" />
+        <div className="bg-ink px-5 pb-14 pt-6">
+          <p className="font-display text-2xl font-medium tracking-tight text-primary-foreground">
+            {name.trim() || "Your name"}
+          </p>
+        </div>
         <form
           className="space-y-5 px-5 pb-6"
           onSubmit={(e) => {
@@ -347,7 +351,7 @@ function ProfileCard({ profile }: { profile: UserProfile }) {
             save.mutate();
           }}
         >
-          <div className="-mt-10 flex flex-wrap items-end gap-4">
+          <div className="-mt-12">
             <button
               type="button"
               onClick={() => photoRef.current?.click()}
@@ -380,15 +384,12 @@ function ProfileCard({ profile }: { profile: UserProfile }) {
                   .catch((err) => toast.error(err instanceof Error ? err.message : "Could not read the photo"));
               }}
             />
-            <div className="min-w-0 flex-1 pb-1">
-              <p className="font-display text-2xl font-medium tracking-tight">{name.trim() || "Your name"}</p>
-              {profile.hats.length ? (
-                <div className="mt-2">
-                  <ProfileHatBadges hats={profile.hats} />
-                </div>
-              ) : null}
-              <p className="mt-1 text-sm text-muted-foreground">{headline.trim() || profile.email}</p>
-            </div>
+            {profile.email ? <p className="mt-3 text-sm text-muted-foreground">{profile.email}</p> : null}
+            {profile.hats.length ? (
+              <div className="mt-2">
+                <ProfileHatBadges hats={profile.hats} />
+              </div>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

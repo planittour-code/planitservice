@@ -65,9 +65,13 @@ function PublicProfilePage() {
       <PublicHeader path="choose" />
       <main className="mx-auto max-w-xl px-5 py-12">
         <article className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-          <div className="h-28 bg-ink" />
+          <div className="bg-ink px-6 pb-14 pt-6">
+            <h1 className="font-display text-3xl font-medium tracking-tight text-primary-foreground">
+              {profile.displayName}
+            </h1>
+          </div>
           <div className="px-6 pb-8">
-            <div className="-mt-12 mb-4">
+            <div className="-mt-12">
               {profile.photoSrc ? (
                 <img
                   src={profile.photoSrc}
@@ -80,16 +84,16 @@ function PublicProfilePage() {
                 </div>
               )}
             </div>
-            <h1 className="font-display text-3xl font-medium tracking-tight">{profile.displayName}</h1>
+            {profile.email ? (
+              <p className="mt-3 text-sm text-muted-foreground">{profile.email}</p>
+            ) : null}
             {profile.hats.length ? (
               <div className="mt-2">
                 <ProfileHatBadges hats={profile.hats} />
               </div>
             ) : null}
             {profile.headline ? (
-              <p className={profile.hats.length ? "mt-2 text-muted-foreground" : "mt-1 text-muted-foreground"}>
-                {profile.headline}
-              </p>
+              <p className="mt-3 text-muted-foreground">{profile.headline}</p>
             ) : null}
             {profile.bio ? (
               <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed">{profile.bio}</p>
