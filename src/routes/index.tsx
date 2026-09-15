@@ -30,7 +30,7 @@ function WelcomeSite() {
               PlanitService
             </p>
             <h1 className="font-display text-5xl font-extrabold tracking-tight text-balance text-white md:text-7xl">
-              The file for the house. The shop you call back.
+              The file for the house. The service with a plan.
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-white/90">
               Jobs, products, warranties, and the shops that already worked this house — at the
