@@ -3119,6 +3119,7 @@ async function knownProvidersForProperty(sql: Sql, property: Property): Promise<
         name: shop.name,
         phone: shop.phone,
         email: shop.email,
+        logo_src: shop.logo_src,
         lastWork: hit.lastWork,
         lastAt: hit.lastAt,
       } satisfies KnownProvider;

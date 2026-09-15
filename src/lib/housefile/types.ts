@@ -255,6 +255,7 @@ export type KnownProvider = {
   name: string;
   phone: string | null;
   email: string | null;
+  logo_src: string | null;
   lastWork: string;
   lastAt: string;
 };

@@ -7,9 +7,10 @@ import {
   JobTimeline,
   KnownProviders,
   PhotoGrid,
-  SectionRule,
+  RecordSection,
   WarrantyList,
 } from "@/components/house-panels";
+import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { MaintenanceBadge } from "@/components/status-badge";
-import { NamedShopInvite } from "@/components/named-shop-invite";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import {
   completeMaintenance,
@@ -75,30 +75,29 @@ function HomeRecord() {
       </header>
 
       <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <SectionRule />
       <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <SectionRule />
       <JobTimeline file={house} />
-      <SectionRule />
       <KnownProviders providers={q.data.knownProviders ?? []} />
-      <SectionRule />
       <WarrantyList file={house} />
-      <SectionRule />
-      <NamedShopInvite
-        propertyId={p.id}
-        invites={q.data.workInvites ?? []}
-        estimates={q.data.shopEstimates ?? []}
-        onDone={() => q.refetch()}
-      />
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-medium">Maintenance</h2>
-          <p className="text-sm text-muted-foreground">
-            {due.length} due in the next two weeks. Log the work so the next season is not a guess.
-          </p>
-        </div>
-        <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+      <RecordSection
+        title="Maintenance"
+        blurb={`${due.length} due in the next two weeks. Log the work so the next season is not a guess.`}
+        photo={CATEGORY_PHOTO.systems}
+        countLabel={`${open.length} open`}
+        chips={
+          due.length ? (
+            <ul className="flex flex-wrap gap-1.5">
+              {due.slice(0, 6).map((t) => (
+                <li key={t.id} className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+                  {t.title}
+                </li>
+              ))}
+            </ul>
+          ) : undefined
+        }
+      >
+        <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
           {open.map((t) => (
             <li key={t.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -126,23 +125,26 @@ function HomeRecord() {
             </li>
           ))}
         </ul>
-      </section>
+      </RecordSection>
 
-      <section className="space-y-3 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]">
-        <h2 className="font-display text-lg font-medium">Transfer this Property Record</h2>
+      <RecordSection
+        title="Transfer this Property Record"
+        blurb="The Property Record moves with the house."
+        photo={CATEGORY_PHOTO.house}
+      >
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
-      </section>
+      </RecordSection>
 
-      <SectionRule />
-      <section id="request-estimates" className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-medium">Request Estimates</h2>
-          <p className="text-sm text-muted-foreground">
-            {plan?.tier === "pro"
-              ? "Ask shops that offer this trade and service this address. Named shop above is Standard."
-              : "Named shop you already know is Standard. Request Estimates — bids from shops that service this street — is Pro."}
-          </p>
-        </div>
+      <RecordSection
+        id="request-estimates"
+        title="Request Estimates"
+        blurb={
+          plan?.tier === "pro"
+            ? "Ask shops that offer this trade and service this address."
+            : "Named shop you already know is Standard. Request Estimates is Pro."
+        }
+        photo={CATEGORY_PHOTO.paint}
+      >
         {plan?.tier === "pro" ? (
           <>
             <RfpList houseToken={p.share_token} />
@@ -160,7 +162,7 @@ function HomeRecord() {
             Upgrade this property to Pro to request estimates from shops in the area.
           </p>
         )}
-      </section>
+      </RecordSection>
     </div>
   );
 }

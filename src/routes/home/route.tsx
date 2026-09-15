@@ -1,9 +1,12 @@
-import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, Navigate, Outlet, useParams, useRouterState } from "@tanstack/react-router";
+import { NamedShopInvite } from "@/components/named-shop-invite";
 import { AppNavLink, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { justSignedOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { getHomeRecord } from "@/lib/housefile/server";
 import { useAudience } from "@/lib/housefile/use-audience";
 
 export const Route = createFileRoute("/home")({ component: HomeLayout });
@@ -37,6 +40,7 @@ function HomeLayout() {
           </AppNavLink>
           <AppNavLink to="/home/add">Add a property</AppNavLink>
           <AppNavLink to="/home/settings">Settings</AppNavLink>
+          <HouseInviteNav />
           <Button asChild size="sm">
             <Link to="/home/add">New record</Link>
           </Button>
@@ -47,5 +51,40 @@ function HomeLayout() {
         <Outlet />
       </div>
     </div>
+  );
+}
+
+function HouseInviteNav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const params = useParams({ strict: false }) as { id?: string };
+  const onHouse = pathname.startsWith("/home/") && Boolean(params.id) && params.id !== "add" && params.id !== "settings";
+  const q = useQuery({
+    queryKey: ["home-record", params.id],
+    queryFn: () => getHomeRecord({ data: params.id as string }),
+    enabled: onHouse,
+  });
+  if (!onHouse) return null;
+  const pro = q.data?.plan?.tier === "pro";
+  if (!q.data) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-semibold text-white/40"
+      >
+        Invite a shop
+      </button>
+    );
+  }
+  return (
+    <NamedShopInvite
+      propertyId={q.data.house.property.id}
+      invites={q.data.workInvites ?? []}
+      estimates={q.data.shopEstimates ?? []}
+      allowed={pro}
+      onDone={() => {
+        void q.refetch();
+      }}
+    />
   );
 }

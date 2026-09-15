@@ -1,16 +1,18 @@
 import { useMutation } from "@tanstack/react-query";
-import { Camera, ChevronDown, Copy, Mail, Shield } from "lucide-react";
-import { useRef, useState } from "react";
+import { Camera, ChevronDown, Copy, Mail } from "lucide-react";
+import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FIELD_CATALOG, FIELD_GROUPS, PHOTO_CATEGORIES } from "@/lib/housefile/fields";
+import { CATEGORY_PHOTO, FIELD_CATALOG, FIELD_GROUPS, PHOTO_CATEGORIES } from "@/lib/housefile/fields";
 import { shortDate } from "@/lib/housefile/format";
 import { compressImage } from "@/lib/housefile/image";
 import { invitationLetter, invitationSubject } from "@/lib/housefile/invite";
+import { jobWorkType } from "@/lib/housefile/quote";
+import type { KnownProvider } from "@/lib/housefile/types";
 import {
   addPhotoContractor,
   addPhotoPublic,
@@ -21,6 +23,49 @@ import {
 } from "@/lib/housefile/server";
 import type { HouseFile, JobSpec, JobWithSpecs } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
+
+export function RecordSection({
+  title,
+  blurb,
+  photo,
+  countLabel,
+  chips,
+  children,
+  id,
+}: {
+  title: string;
+  blurb: string;
+  photo?: string;
+  countLabel?: string;
+  chips?: ReactNode;
+  children: ReactNode;
+  id?: string;
+}) {
+  return (
+    <details
+      id={id}
+      className="group overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-3 sm:p-4 [&::-webkit-details-marker]:hidden">
+        {photo ? (
+          <img src={photo} alt="" className="size-14 shrink-0 rounded-md object-cover sm:size-16" />
+        ) : null}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-display text-lg font-bold tracking-tight">{title}</h2>
+            {countLabel ? (
+              <p className="text-xs font-semibold tabular-nums text-muted-foreground">{countLabel}</p>
+            ) : null}
+          </div>
+          <p className="text-sm text-muted-foreground">{blurb}</p>
+          {chips}
+        </div>
+        <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="space-y-3 border-t border-border p-3 sm:p-4">{children}</div>
+    </details>
+  );
+}
 
 export function Completeness({ filled, total }: { filled: number; total: number }) {
   const pct = total ? Math.round((filled / total) * 100) : 0;
@@ -162,16 +207,34 @@ export function PhotoGrid({
     setPending({ file: f, preview });
   }
 
+  const thumbs = file.photos.slice(0, 5);
   return (
-    <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-medium">Photos</h2>
-          <p className="text-sm text-muted-foreground">
-            Start here. Add elevations, rooms, and equipment tags. These stay with the address.
-          </p>
-        </div>
-      </div>
+    <RecordSection
+      title="Photos"
+      blurb="Start here. Add elevations, rooms, and equipment tags. These stay with the address."
+      photo={file.photos[0]?.src ?? CATEGORY_PHOTO.house}
+      countLabel={`${file.photos.length} on file`}
+      chips={
+        thumbs.length ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {thumbs.map((p) => (
+              <li key={p.id}>
+                <img
+                  src={p.src}
+                  alt=""
+                  className="size-8 rounded-full object-cover shadow-[var(--shadow-border)]"
+                />
+              </li>
+            ))}
+            {file.photos.length > thumbs.length ? (
+              <li className="grid size-8 place-items-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+                +{file.photos.length - thumbs.length}
+              </li>
+            ) : null}
+          </ul>
+        ) : undefined
+      }
+    >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {file.photos.map((p) => (
           <figure key={p.id} className="overflow-hidden rounded-lg bg-card shadow-[var(--shadow-border)]">
@@ -292,7 +355,7 @@ export function PhotoGrid({
           </div>
         </div>
       )}
-    </section>
+    </RecordSection>
   );
 }
 
@@ -327,16 +390,31 @@ export function FactsPanel({
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
 
+  const filledGroups = FIELD_GROUPS.filter((group) =>
+    FIELD_CATALOG.some((f) => f.group === group.id && byKey[f.key]?.value),
+  );
   return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="font-display text-lg font-medium">House data</h2>
-        <p className="text-sm text-muted-foreground">
-          Same categories as a quote. Fill what you know. Leave the rest — a contractor can add it
-          on site.
-        </p>
-      </div>
-
+    <RecordSection
+      title="House data"
+      blurb="Same categories as a quote. Fill what you know. Leave the rest — a contractor can add it on site."
+      photo={CATEGORY_PHOTO.house}
+      countLabel={`${file.filledCount} of ${file.totalCount} on file`}
+      chips={
+        filledGroups.length ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {filledGroups.map((group) => (
+              <li
+                key={group.id}
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted py-0.5 pr-2.5 pl-0.5 text-xs font-semibold"
+              >
+                <img src={group.photo} alt="" className="size-6 rounded-full object-cover" />
+                {group.label}
+              </li>
+            ))}
+          </ul>
+        ) : undefined
+      }
+    >
       {FIELD_GROUPS.map((group) => {
         const fields = FIELD_CATALOG.filter((f) => f.group === group.id);
         if (!fields.length) return null;
@@ -381,7 +459,7 @@ export function FactsPanel({
           </details>
         );
       })}
-    </section>
+    </RecordSection>
   );
 }
 
@@ -509,30 +587,66 @@ function FactInput({
 export function KnownProviders({
   providers,
 }: {
-  providers: { companyId: string; name: string; phone: string | null; email: string | null; lastWork: string; lastAt: string }[];
+  providers: KnownProvider[];
 }) {
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="font-display text-lg font-medium">Known shops</h2>
-        <p className="text-sm text-muted-foreground">
-          Shops that already worked this address. Call them back for repeat work. Request Estimates
-          when you want other bids.
-        </p>
-      </div>
+    <RecordSection
+      title="Known shops"
+      blurb="Shops that already worked this address. Call them back for repeat work."
+      photo={CATEGORY_PHOTO.house}
+      countLabel={`${providers.length} on file`}
+      chips={
+        providers.length ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {providers.slice(0, 8).map((shop) => (
+              <li key={shop.companyId}>
+                {shop.logo_src ? (
+                  <img
+                    src={shop.logo_src}
+                    alt={shop.name}
+                    title={shop.name}
+                    className="size-8 rounded-full bg-background object-contain p-0.5 shadow-[var(--shadow-border)]"
+                  />
+                ) : (
+                  <span
+                    title={shop.name}
+                    className="grid size-8 place-items-center rounded-full bg-secondary text-[11px] font-bold text-white"
+                  >
+                    {shop.name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : undefined
+      }
+    >
       {providers.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No shops on file yet. Accepted estimates and completed jobs land here.
         </p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+        <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
           {providers.map((shop) => (
             <li key={shop.companyId} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium">{shop.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {shop.lastWork} · {shortDate(shop.lastAt)}
-                </p>
+              <div className="flex items-center gap-3">
+                {shop.logo_src ? (
+                  <img
+                    src={shop.logo_src}
+                    alt=""
+                    className="size-10 shrink-0 rounded-md bg-background object-contain p-0.5"
+                  />
+                ) : (
+                  <span className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-sm font-bold text-white">
+                    {shop.name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <div>
+                  <p className="font-medium">{shop.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {shop.lastWork} · {shortDate(shop.lastAt)}
+                  </p>
+                </div>
               </div>
               <p className="text-sm text-muted-foreground">
                 {[shop.phone, shop.email].filter(Boolean).join(" · ") || "On the File"}
@@ -541,58 +655,88 @@ export function KnownProviders({
           ))}
         </ul>
       )}
-    </section>
+    </RecordSection>
   );
 }
 
 export function JobTimeline({ file }: { file: HouseFile }) {
-  if (!file.jobs.length) {
-    return (
-      <section className="space-y-2">
-        <h2 className="font-display text-lg font-medium">Jobs at this address</h2>
-        <p className="text-sm text-muted-foreground">No completed jobs yet. Accepted work will land here.</p>
-      </section>
-    );
-  }
+  const categories = file.jobs
+    .map((job) => jobWorkType(job))
+    .filter((w): w is NonNullable<typeof w> => Boolean(w));
+  const unique = [...new Map(categories.map((w) => [w.id, w])).values()];
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="font-display text-lg font-medium">Jobs at this address</h2>
-        <p className="text-sm text-muted-foreground">
-          Colors, products, and measurements stay with the house.
-        </p>
-      </div>
-      <ol className="space-y-2">
-        {file.jobs.map((job) => (
-          <li key={job.id} className="rounded-lg bg-card p-3 shadow-[var(--shadow-border)]">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-display text-lg font-medium">{job.title}</h3>
-              <time className="text-sm text-muted-foreground">{shortDate(job.completed_at)}</time>
-            </div>
-            {job.summary && <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>}
-            {job.specs.length > 0 && (
-              <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                {job.specs.map((spec) => (
-                  <div key={spec.id} className="rounded-md bg-muted/60 px-3 py-2">
-                    <dt className="text-xs tracking-wide text-muted-foreground uppercase">{spec.label}</dt>
-                    <dd className="text-sm font-medium">{spec.value}</dd>
-                    {spec.location_note && (
-                      <dd className="text-xs text-muted-foreground">{spec.location_note}</dd>
-                    )}
-                    {spec.manufacturer && (
-                      <dd className="text-xs text-muted-foreground">
-                        {spec.manufacturer}
-                        {spec.product_name ? ` · ${spec.product_name}` : ""}
-                      </dd>
-                    )}
+    <RecordSection
+      title="Jobs at this address"
+      blurb="Colors, products, and measurements stay with the house."
+      photo={unique[0] ? CATEGORY_PHOTO[unique[0].id] ?? CATEGORY_PHOTO.house : CATEGORY_PHOTO.house}
+      countLabel={`${file.jobs.length} on file`}
+      chips={
+        unique.length ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {unique.map((work) => (
+              <li
+                key={work.id}
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted py-0.5 pr-2.5 pl-0.5 text-xs font-semibold"
+              >
+                <img
+                  src={CATEGORY_PHOTO[work.id] ?? CATEGORY_PHOTO.house}
+                  alt=""
+                  className="size-6 rounded-full object-cover"
+                />
+                {work.name}
+              </li>
+            ))}
+          </ul>
+        ) : undefined
+      }
+    >
+      {file.jobs.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No completed jobs yet. Accepted work will land here.</p>
+      ) : (
+        <ol className="space-y-2">
+          {file.jobs.map((job) => {
+            const work = jobWorkType(job);
+            return (
+              <li key={job.id} className="rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {work ? (
+                      <img
+                        src={CATEGORY_PHOTO[work.id] ?? CATEGORY_PHOTO.house}
+                        alt=""
+                        className="size-8 rounded-md object-cover"
+                      />
+                    ) : null}
+                    <h3 className="font-display text-lg font-medium">{job.title}</h3>
                   </div>
-                ))}
-              </dl>
-            )}
-          </li>
-        ))}
-      </ol>
-    </section>
+                  <time className="text-sm text-muted-foreground">{shortDate(job.completed_at)}</time>
+                </div>
+                {job.summary && <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>}
+                {job.specs.length > 0 && (
+                  <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {job.specs.map((spec) => (
+                      <div key={spec.id} className="rounded-md bg-muted/60 px-3 py-2">
+                        <dt className="text-xs tracking-wide text-muted-foreground uppercase">{spec.label}</dt>
+                        <dd className="text-sm font-medium">{spec.value}</dd>
+                        {spec.location_note && (
+                          <dd className="text-xs text-muted-foreground">{spec.location_note}</dd>
+                        )}
+                        {spec.manufacturer && (
+                          <dd className="text-xs text-muted-foreground">
+                            {spec.manufacturer}
+                            {spec.product_name ? ` · ${spec.product_name}` : ""}
+                          </dd>
+                        )}
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </RecordSection>
   );
 }
 
@@ -615,6 +759,12 @@ export function PreviousJobsStrip({ jobs }: { jobs: JobWithSpecs[] }) {
   );
 }
 
+function manufacturerMark(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase() || "M";
+}
+
 export function WarrantyList({ file }: { file: HouseFile }) {
   const items: (JobSpec & { jobTitle: string; completed: string })[] = [];
   for (const job of file.jobs) {
@@ -624,30 +774,46 @@ export function WarrantyList({ file }: { file: HouseFile }) {
       }
     }
   }
-  if (!items.length) {
-    return (
-      <section className="space-y-2">
-        <h2 className="font-display text-lg font-medium">Manufacturer warranties</h2>
+  const makers = [
+    ...new Map(
+      items
+        .map((w) => w.manufacturer?.trim())
+        .filter((name): name is string => Boolean(name))
+        .map((name) => [name.toLowerCase(), name]),
+    ).values(),
+  ];
+  return (
+    <RecordSection
+      title="Manufacturer warranties"
+      blurb="Tied to this address, not a PDF in a drawer."
+      photo={CATEGORY_PHOTO.systems}
+      countLabel={`${items.length} on file`}
+      chips={
+        makers.length ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {makers.map((name) => (
+              <li
+                key={name}
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted py-0.5 pr-2.5 pl-0.5 text-xs font-semibold"
+              >
+                <span className="grid size-6 place-items-center rounded-full bg-secondary text-[10px] font-bold text-white">
+                  {manufacturerMark(name)}
+                </span>
+                {name}
+              </li>
+            ))}
+          </ul>
+        ) : undefined
+      }
+    >
+      {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           When a job is marked complete, product warranties are copied here.
         </p>
-      </section>
-    );
-  }
-  return (
-    <section className="space-y-3">
-      <div className="flex items-start gap-2">
-        <Shield className="mt-0.5 size-4 text-primary" />
-        <div>
-          <h2 className="font-display text-lg font-medium">Manufacturer warranties</h2>
-          <p className="text-sm text-muted-foreground">
-            Tied to this address, not a PDF in a drawer.
-          </p>
-        </div>
-      </div>
+      ) : (
       <ul className="space-y-2">
         {items.map((w) => (
-          <li key={w.id} className="rounded-md bg-card px-3 py-2 shadow-[var(--shadow-border)]">
+          <li key={w.id} className="rounded-md bg-background px-3 py-2 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="font-medium">
                 {w.manufacturer ? `${w.manufacturer} ` : ""}
@@ -668,7 +834,8 @@ export function WarrantyList({ file }: { file: HouseFile }) {
           </li>
         ))}
       </ul>
-    </section>
+      )}
+    </RecordSection>
   );
 }
 

@@ -133,19 +133,15 @@ function HousePage() {
           )}
         </section>
 
-        <SectionRule />
         <div id="photos">
           <PhotoGrid file={file} mode="homeowner" token={token} onChanged={() => q.refetch()} />
         </div>
-        <SectionRule />
         <div id="jobs">
           <JobTimeline file={file} />
         </div>
-        <SectionRule />
         <div id="warranties">
           <WarrantyList file={file} />
         </div>
-        <SectionRule />
         <div id="house-data">
           <FactsPanel file={file} mode="homeowner" token={token} onChanged={() => q.refetch()} />
         </div>

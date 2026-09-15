@@ -7,7 +7,7 @@ import {
   JobTimeline,
   KnownProviders,
   PhotoGrid,
-  SectionRule,
+  RecordSection,
   WarrantyList,
 } from "@/components/house-panels";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,8 @@ import { MaintenanceBadge } from "@/components/status-badge";
 import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
-import { NamedShopInvite } from "@/components/named-shop-invite";
-import { QuoteFromHistoryStub } from "@/components/invite-shop-cta";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
+import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import {
   completePortfolioMaintenance,
   getPortfolioRecord,
@@ -68,9 +67,6 @@ function ManageRecord() {
   const open = tasks.filter((t) => !t.completed_at);
   const due = open.filter((t) => new Date(t.due_on) <= new Date(Date.now() + 14 * 86400000));
   const hero = house.photos.find((ph) => ph.category === "exterior") ?? house.photos[0];
-  const issued = q.data.shopEstimates ?? house.proposals.filter(
-    (pr) => pr.status !== "pending" && pr.status !== "draft",
-  );
   const agreed = acceptedEstimates ?? [];
 
   return (
@@ -110,34 +106,17 @@ function ManageRecord() {
         office={q.data.portfolioName}
         onDone={() => q.refetch()}
       />
-      <SectionRule />
       <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <SectionRule />
       <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <SectionRule />
       <JobTimeline file={house} />
-      <QuoteFromHistoryStub />
-      <SectionRule />
       <KnownProviders providers={q.data.knownProviders ?? []} />
-      <SectionRule />
       <WarrantyList file={house} />
-      <SectionRule />
-
-      <NamedShopInvite
-        propertyId={p.id}
-        invites={q.data.workInvites ?? []}
-        estimates={issued}
-        onDone={() => q.refetch()}
-      />
-      <SectionRule />
-      <section id="request-estimates" className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-medium">Request Estimates</h2>
-          <p className="text-sm text-muted-foreground">
-            Known shop first. When you want bids, this goes to shops that offer the trade and
-            service this address.
-          </p>
-        </div>
+      <RecordSection
+        id="request-estimates"
+        title="Request Estimates"
+        blurb="Known shop first. When you want bids, this goes to shops that offer the trade and service this address."
+        photo={CATEGORY_PHOTO.paint}
+      >
         <RfpList houseToken={p.share_token} />
         <RfpForm
           houseToken={p.share_token}
@@ -147,19 +126,16 @@ function ManageRecord() {
           zip={p.zip}
           homeownerName={p.homeowner_name}
         />
-      </section>
-      <SectionRule />
+      </RecordSection>
 
       {agreed.length > 0 ? (
-        <section className="space-y-4">
-          <div>
-            <h2 className="font-display text-xl font-medium">Agreed work</h2>
-            <p className="text-sm text-muted-foreground">
-              Estimates the owner has already accepted. They count as scheduled until the shop
-              logs the job complete.
-            </p>
-          </div>
-          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+        <RecordSection
+          title="Agreed work"
+          blurb="Estimates the owner has already accepted. They count as scheduled until the shop logs the job complete."
+          photo={CATEGORY_PHOTO.house}
+          countLabel={`${agreed.length} on file`}
+        >
+          <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
             {agreed.map((pr) => (
               <li key={pr.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                 <div>
@@ -181,18 +157,16 @@ function ManageRecord() {
               </li>
             ))}
           </ul>
-        </section>
+        </RecordSection>
       ) : null}
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="font-display text-xl font-medium">Maintenance</h2>
-          <p className="text-sm text-muted-foreground">
-            {due.length} due in the next two weeks. Set a date when the work is agreed, then log it
-            when it is done.
-          </p>
-        </div>
-        <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+      <RecordSection
+        title="Maintenance"
+        blurb={`${due.length} due in the next two weeks. Set a date when the work is agreed, then log it when it is done.`}
+        photo={CATEGORY_PHOTO.systems}
+        countLabel={`${open.length} open`}
+      >
+        <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
           {open.map((t) => (
             <li key={t.id} className="space-y-3 px-4 py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -225,7 +199,7 @@ function ManageRecord() {
             </li>
           ))}
         </ul>
-      </section>
+      </RecordSection>
     </div>
   );
 }

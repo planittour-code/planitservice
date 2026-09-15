@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,13 @@ export function NamedShopInvite({
   invites,
   estimates,
   onDone,
+  allowed = true,
 }: {
   propertyId: string;
   invites: FileWorkInvite[];
   estimates: ProposalListRow[];
   onDone: () => void;
+  allowed?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [shopName, setShopName] = useState("");
@@ -41,17 +44,37 @@ export function NamedShopInvite({
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not invite"),
   });
 
-  return (
-    <section id="invite-shop" className="scroll-mt-24 space-y-3">
-      <div>
-        <h2 className="font-display text-xl font-medium">Invite a shop</h2>
-        <p className="text-sm text-muted-foreground">
-          Send this address and the ask to one shop. They quote from the jobs already on this
-          record. Their accepted quote writes this File.
-        </p>
+  if (!allowed) {
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          disabled
+          title="Invite a shop is on Pro"
+          className="inline-flex min-h-11 items-center gap-1 rounded-sm px-3 text-sm font-semibold text-white/40"
+        >
+          Invite a shop
+          <ChevronDown className="size-4" aria-hidden />
+        </button>
       </div>
+    );
+  }
+
+  return (
+    <details className="relative">
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-sm px-3 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden">
+        Invite a shop
+        <ChevronDown className="size-4" aria-hidden />
+      </summary>
+      <div
+        id="invite-shop"
+        className="absolute right-0 z-40 mt-1 w-[min(24rem,calc(100vw-2rem))] space-y-3 rounded-xl bg-card p-3 text-foreground shadow-[var(--shadow-border-hover)]"
+      >
+      <p className="text-sm text-muted-foreground">
+        Send this address and the ask to one shop. They quote from the jobs already on this record.
+      </p>
       <form
-        className="space-y-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]"
+        className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
@@ -155,19 +178,7 @@ export function NamedShopInvite({
           ))}
         </ul>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            document.getElementById("invite-shop")?.scrollIntoView({ behavior: "smooth" });
-            toast.message("Invite a shop to quote from the jobs on this record.");
-          }}
-        >
-          Quote from this history
-        </Button>
       </div>
-    </section>
+    </details>
   );
 }

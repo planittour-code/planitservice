@@ -271,6 +271,17 @@ export const WORK_TYPES: WorkType[] = [
 
 export const WORK_BY_ID = Object.fromEntries(WORK_TYPES.map((w) => [w.id, w]));
 
+/** Best estimating category for a completed job, from title / summary / specs. */
+export function jobWorkType(job: { title: string; summary: string | null; specs: { label: string }[] }): WorkType | undefined {
+  const hay = `${job.title} ${job.summary ?? ""} ${job.specs.map((s) => s.label).join(" ")}`.toLowerCase();
+  return WORK_TYPES.find((w) => {
+    const name = w.name.toLowerCase();
+    const trade = w.trade.toLowerCase();
+    const singular = name.endsWith("s") ? name.slice(0, -1) : name;
+    return hay.includes(name) || hay.includes(singular) || hay.includes(trade);
+  });
+}
+
 export const CUSTOM_WORK_PREFIX = "custom:";
 export const CUSTOM_TEMPLATE_ID = "tmpl_custom";
 
