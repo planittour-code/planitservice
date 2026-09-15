@@ -65,6 +65,7 @@ function AppLayout() {
             <nav className="ml-auto hidden items-center gap-1 sm:flex">
               <NavLink to="/app">Shop</NavLink>
               <NavLink to="/app/leads">Leads</NavLink>
+              <NavLink to="/app/campaign">Customers</NavLink>
               <NavLink to="/app/properties">Jobs</NavLink>
               <NavLink to="/app/book">Materials</NavLink>
               <NavLink to="/app/settings">Shop settings</NavLink>
@@ -83,6 +84,7 @@ function AppLayout() {
         <nav className="flex gap-1 overflow-x-auto border-t border-border px-2 py-1 sm:hidden">
           <NavLink to="/app">Shop</NavLink>
           <NavLink to="/app/leads">Leads</NavLink>
+          <NavLink to="/app/campaign">Customers</NavLink>
           <NavLink to="/app/properties">Jobs</NavLink>
           <NavLink to="/app/book">Materials</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>

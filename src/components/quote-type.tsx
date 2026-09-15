@@ -50,7 +50,9 @@ export function QuoteTypePicker({
       <CustomWorkDialog
         open={adding}
         onClose={() => setAdding(false)}
-        onSave={(name) => addWork.mutateAsync(name)}
+        onSave={(name) => {
+          void addWork.mutateAsync(name);
+        }}
         busy={addWork.isPending}
       />
     </div>

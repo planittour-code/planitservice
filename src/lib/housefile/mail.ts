@@ -37,6 +37,22 @@ export async function deliverManagerInviteEmail(input: {
   await sendManagerInviteEmail(input);
 }
 
+export async function deliverRepeatServiceEmail(input: {
+  to: string;
+  name: string;
+  company: string;
+  address: string;
+  lastWork: string;
+  repeatWork: string;
+  extraWork: string[];
+  note: string;
+  fileUrl: string;
+  homeUrl: string;
+}) {
+  const { sendRepeatServiceEmail } = await import("@/lib/auth/mail.server");
+  await sendRepeatServiceEmail(input);
+}
+
 export async function deliverNamedShopInviteEmail(input: {
   to: string;
   shopName?: string;

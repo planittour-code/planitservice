@@ -938,6 +938,68 @@ export const listShopIndex = createServerFn({ method: "GET" })
     return { role, houses, work, clients };
   });
 
+export const sendRepeatServiceCampaign = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: {
+      propertyIds: string[];
+      repeatWork: string;
+      extraWork?: string[];
+      note?: string;
+    }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the shop owner can send this campaign.");
+    const ids = [...new Set(data.propertyIds)].slice(0, 40);
+    if (!ids.length) throw new Error("Pick at least one past customer.");
+    const repeatWork = data.repeatWork.trim();
+    if (!repeatWork) throw new Error("Name the repeat service.");
+    const extraWork = (data.extraWork ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 8);
+    const note = data.note?.trim() ?? "";
+    const { deliverRepeatServiceEmail } = await import("./mail");
+    let emailed = 0;
+    let skipped = 0;
+    for (const propertyId of ids) {
+      const rows = await sql<Property>`
+        select * from properties where id = ${propertyId} and company_id = ${company.id} limit 1
+      `;
+      const property = rows[0];
+      if (!property) {
+        skipped += 1;
+        continue;
+      }
+      const to = property.homeowner_email.trim();
+      if (!isMail(to)) {
+        skipped += 1;
+        continue;
+      }
+      const last = await sql<{ title: string }>`
+        select title from jobs where property_id = ${property.id} and company_id = ${company.id}
+        order by completed_at desc limit 1
+      `;
+      const lastWork = last[0]?.title ?? "";
+      const address = `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`;
+      await deliverRepeatServiceEmail({
+        to,
+        name: property.homeowner_name,
+        company: company.name,
+        address,
+        lastWork,
+        repeatWork,
+        extraWork,
+        note,
+        fileUrl: `${(process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "")}/invite/${property.invite_token}`,
+        homeUrl: `${(process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "")}/homeowner`,
+      });
+      emailed += 1;
+    }
+    return { emailed, skipped };
+  });
+
 async function shopMailbox(sql: Sql, company: Company, sessionEmail?: string | null) {
   const members = await sql<{ email: string }>`
     select email from company_members where company_id = ${company.id}
@@ -1025,6 +1087,7 @@ function clientsFromHouses(houses: PropertyListRow[]): ShopClientRow[] {
       city: house.city,
       state: house.state,
       zip: house.zip,
+      invite_token: house.invite_token,
     };
     if (!existing) {
       map.set(key, {

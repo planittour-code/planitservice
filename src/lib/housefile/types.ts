@@ -233,6 +233,7 @@ export type ShopClientRow = {
     city: string;
     state: string;
     zip: string;
+    invite_token: string;
   }[];
 };
 

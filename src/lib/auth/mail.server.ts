@@ -189,6 +189,70 @@ export async function sendManagerInviteEmail(data: {
   });
 }
 
+export async function sendRepeatServiceEmail(data: {
+  to: string;
+  name: string;
+  company: string;
+  address: string;
+  lastWork: string;
+  repeatWork: string;
+  extraWork: string[];
+  note: string;
+  fileUrl: string;
+  homeUrl: string;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const extras = data.extraWork.filter(Boolean);
+  const extraLine = extras.length
+    ? `We also quote ${extras.join(", ")} at this address.`
+    : "";
+  const subject = `${data.company}: schedule your next ${data.repeatWork.toLowerCase()} at ${data.address}`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    data.lastWork
+      ? `${data.company} already completed ${data.lastWork} at ${data.address}.`
+      : `${data.company} already worked ${data.address}.`,
+    `When you are ready, schedule your next ${data.repeatWork.toLowerCase()} from the Property Record:`,
+    "",
+    data.fileUrl,
+    "",
+    extraLine,
+    extras.length
+      ? "Open the File to request that work from us, or Request Estimates from other PlanitService shops that service your street."
+      : "Keep the File so the next visit is not a guess. Request Estimates if you want bids from other shops in the area.",
+    data.note ? `\n${data.note}\n` : "",
+    `Your houses: ${data.homeUrl}`,
+    "",
+    data.company,
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>${escapeHtml(
+    data.lastWork
+      ? `${data.company} already completed ${data.lastWork} at ${data.address}.`
+      : `${data.company} already worked ${data.address}.`,
+  )} When you are ready, schedule your next ${escapeHtml(data.repeatWork.toLowerCase())} from the Property Record.</p>
+<p><a href="${escapeHtml(data.fileUrl)}">Open the Property Record</a></p>
+${
+  extras.length
+    ? `<p>We also quote ${escapeHtml(extras.join(", "))} at this address. Open the File to request that work from us, or Request Estimates from other PlanitService shops that service your street.</p>`
+    : `<p>Keep the File so the next visit is not a guess. Request Estimates if you want bids from other shops in the area.</p>`
+}
+${data.note ? `<p>${escapeHtml(data.note).replace(/\n/g, "<br>")}</p>` : ""}
+<p><a href="${escapeHtml(data.homeUrl)}">Your houses</a></p>
+<p>${escapeHtml(data.company)}</p>`;
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: LEGAL_EMAIL,
+  });
+}
+
 export async function sendNamedShopInviteEmail(data: {
   to: string;
   shopName?: string;

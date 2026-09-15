@@ -141,11 +141,16 @@ function ShopHome() {
                 {jobCount === 1 ? "job" : "jobs"}
               </p>
             </div>
-            <Button asChild variant="outline">
-              <Link to="/app/properties" search={{ view: "clients" }}>
-                All clients
-              </Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline">
+                <Link to="/app/campaign">Email past customers</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/app/properties" search={{ view: "clients" }}>
+                  All clients
+                </Link>
+              </Button>
+            </div>
           </div>
           <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
             {clients.slice(0, 8).map((client) => (

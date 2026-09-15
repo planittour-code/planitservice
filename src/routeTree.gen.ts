@@ -25,6 +25,7 @@ import { Route as SlaRouteImport } from './routes/sla'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
+import { Route as AppCampaignRouteImport } from './routes/app/campaign'
 import { Route as AppLeadsRouteImport } from './routes/app/leads'
 import { Route as AppMarketRouteImport } from './routes/app/market'
 import { Route as AppNewRouteImport } from './routes/app/new'
@@ -132,6 +133,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppBookRoute = AppBookRouteImport.update({
   id: '/book',
   path: '/book',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCampaignRoute = AppCampaignRouteImport.update({
+  id: '/campaign',
+  path: '/campaign',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppLeadsRoute = AppLeadsRouteImport.update({
@@ -291,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
+  '/app/campaign': typeof AppCampaignRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
   '/app/new': typeof AppNewRoute
@@ -334,6 +341,7 @@ export interface FileRoutesByTo {
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
+  '/app/campaign': typeof AppCampaignRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
   '/app/new': typeof AppNewRoute
@@ -381,6 +389,7 @@ export interface FileRoutesById {
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
+  '/app/campaign': typeof AppCampaignRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
   '/app/new': typeof AppNewRoute
@@ -429,6 +438,7 @@ export interface FileRouteTypes {
     | '/sla'
     | '/terms'
     | '/app/book'
+    | '/app/campaign'
     | '/app/leads'
     | '/app/market'
     | '/app/new'
@@ -472,6 +482,7 @@ export interface FileRouteTypes {
     | '/sla'
     | '/terms'
     | '/app/book'
+    | '/app/campaign'
     | '/app/leads'
     | '/app/market'
     | '/app/new'
@@ -518,6 +529,7 @@ export interface FileRouteTypes {
     | '/sla'
     | '/terms'
     | '/app/book'
+    | '/app/campaign'
     | '/app/leads'
     | '/app/market'
     | '/app/new'
@@ -686,6 +698,13 @@ declare module '@tanstack/react-router' {
       path: '/book'
       fullPath: '/app/book'
       preLoaderRoute: typeof AppBookRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/campaign': {
+      id: '/app/campaign'
+      path: '/campaign'
+      fullPath: '/app/campaign'
+      preLoaderRoute: typeof AppCampaignRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/app/leads': {
@@ -901,6 +920,7 @@ const AppPropertiesRouteWithChildren = AppPropertiesRoute._addFileChildren(
 
 interface AppRouteRouteChildren {
   AppBookRoute: typeof AppBookRoute
+  AppCampaignRoute: typeof AppCampaignRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMarketRoute: typeof AppMarketRoute
   AppNewRoute: typeof AppNewRoute
@@ -914,6 +934,7 @@ interface AppRouteRouteChildren {
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppBookRoute: AppBookRoute,
+  AppCampaignRoute: AppCampaignRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMarketRoute: AppMarketRoute,
   AppNewRoute: AppNewRoute,
