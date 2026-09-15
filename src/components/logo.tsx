@@ -17,7 +17,7 @@ export function Mark({ className }: { className?: string }) {
 export function Wordmark({ className, to = "/" }: { className?: string; to?: string }) {
   return (
     <Link to={to} className={cn("flex items-center gap-2", className)}>
-      <Mark />
+      <Mark className="size-20" />
       <span className="font-display text-xl font-extrabold uppercase tracking-wide text-inherit">
         PlanitService
       </span>
