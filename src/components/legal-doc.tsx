@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import {
   LEGAL_EFFECTIVE,
   LEGAL_EMAIL,
@@ -21,9 +21,7 @@ export function LegalShell({
 }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <PublicHeader path="choose">
-        <AuthSlot signedInTo="/home" />
-      </PublicHeader>
+      <PublicHeader path="choose" />
       <main className="mx-auto max-w-3xl px-4 py-12 sm:px-5 sm:py-16">
         <p className="text-sm tracking-wide text-muted-foreground uppercase">{kicker}</p>
         <h1 className="mt-2 font-display text-4xl font-medium tracking-tight md:text-5xl">{title}</h1>

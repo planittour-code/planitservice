@@ -54,7 +54,7 @@ function ForgotPassword() {
 
   return (
     <main className="min-h-screen bg-background">
-      <PublicHeader>
+      <PublicHeader path="public">
         <Link to="/login" search={loginSearch} className="text-sm text-muted-foreground hover:text-foreground">
           Back to sign in
         </Link>

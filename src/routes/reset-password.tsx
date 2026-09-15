@@ -55,7 +55,7 @@ function ResetPassword() {
 
   return (
     <main className="min-h-screen bg-background">
-      <PublicHeader>
+      <PublicHeader path="public">
         <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground">
           Sign in
         </Link>

@@ -64,7 +64,7 @@ export function PublicHeader({
   home?: "/" | "/shop";
   path?: "choose" | "homeowner" | "contractor" | "manager" | "public";
 }) {
-  const { user } = useCurrentUserState();
+  const { user, isPending } = useCurrentUserState();
   const lane = path ?? (home === "/shop" ? "contractor" : "choose");
   return (
     <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
@@ -76,13 +76,18 @@ export function PublicHeader({
       >
         <Wordmark to="/" className="text-secondary-foreground [&_span]:text-white" />
         <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2">
-          {lane === "choose" && (
-            <>
-              <HeaderLink to="/homeowner">Homeowner</HeaderLink>
-              <HeaderLink to="/shop">Contractor</HeaderLink>
-              <HeaderLink to="/manage">Property manager</HeaderLink>
-            </>
-          )}
+          {lane === "choose" &&
+            (isPending ? (
+              <div className="h-11 w-24 animate-pulse rounded-md bg-white/15" />
+            ) : user ? (
+              <UserButton tone="dark" />
+            ) : (
+              <Button asChild>
+                <Link from="/" to="/login">
+                  Sign in
+                </Link>
+              </Button>
+            ))}
           {lane === "homeowner" && (
             <>
               <HeaderLink to="/homeowner">Start a record</HeaderLink>

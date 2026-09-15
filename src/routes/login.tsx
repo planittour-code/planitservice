@@ -163,7 +163,7 @@ function Login() {
 
   return (
     <main className="min-h-screen bg-background">
-      <PublicHeader>
+      <PublicHeader path="public">
         <Link to="/" className="rounded-sm px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white">
           Back
         </Link>
