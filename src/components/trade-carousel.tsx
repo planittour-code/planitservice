@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 import { TRADE_FACE } from "@/components/trade-face";
 import { Button } from "@/components/ui/button";
+import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import { WORK_TYPES } from "@/lib/housefile/quote";
 import { useAudience } from "@/lib/housefile/use-audience";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ export function TradeCarousel() {
         >
           {WORK_TYPES.map((work) => {
             const face = TRADE_FACE[work.id] ?? TRADE_FACE.paint;
+            const photo = CATEGORY_PHOTO[work.id];
             const Icon = face.icon;
             return (
               <button
@@ -55,15 +57,21 @@ export function TradeCarousel() {
                   )
                 }
                 className={cn(
-                  "w-[min(18rem,80vw)] shrink-0 snap-start rounded-xl p-5 text-left",
+                  "relative isolate w-[min(18rem,80vw)] shrink-0 snap-start overflow-hidden rounded-xl p-5 text-left text-white",
                   "transition-opacity duration-150 hover:opacity-95",
-                  face.surface,
+                  photo ? "" : face.surface,
                 )}
               >
-                <Icon className="size-8" aria-hidden />
-                <p className="mt-4 font-display text-2xl font-bold">{work.name}</p>
-                <p className="mt-2 text-sm leading-relaxed text-primary-foreground/80">{work.blurb}</p>
-                <p className="mt-4 text-sm font-medium">Quote {work.name}</p>
+                {photo ? (
+                  <>
+                    <img src={photo} alt="" className="absolute inset-0 size-full object-cover" />
+                    <span className="absolute inset-0 bg-ink/65" />
+                  </>
+                ) : null}
+                <Icon className="relative size-8" aria-hidden />
+                <p className="relative mt-4 font-display text-2xl font-bold">{work.name}</p>
+                <p className="relative mt-2 text-sm leading-relaxed text-white/85">{work.blurb}</p>
+                <p className="relative mt-4 text-sm font-medium">Quote {work.name}</p>
               </button>
             );
           })}

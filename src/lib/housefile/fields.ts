@@ -17,53 +17,77 @@ export type FieldDef = {
   placeholder: string;
 };
 
-export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string }[] = [
+export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo: string }[] = [
   {
     id: "house",
     label: "The house",
     blurb: "Size, stories, and site rules every quote uses.",
+    photo: "/houses/cat-house.jpg",
   },
   {
     id: "paint",
     label: "Paint",
     blurb: "Interior rooms and exterior colors that stay with the house.",
+    photo: "/houses/cat-paint.jpg",
   },
   {
     id: "roof",
     label: "Roof",
     blurb: "Squares, pitch, layers, and what is on it now.",
+    photo: "/houses/cat-roof.jpg",
   },
   {
     id: "windows",
     label: "Windows",
     blurb: "Count, type, year, and the product that was installed.",
+    photo: "/houses/cat-windows.jpg",
   },
   {
     id: "gutters",
     label: "Gutters",
     blurb: "Eave run, downspouts, size, and material.",
+    photo: "/houses/cat-gutters.jpg",
   },
   {
     id: "siding",
     label: "Siding",
     blurb: "What is on the elevations and what went on last.",
+    photo: "/houses/cat-siding.jpg",
   },
   {
     id: "decks",
     label: "Decks",
     blurb: "Walking surface and the stain that has to match.",
+    photo: "/houses/cat-decks.jpg",
   },
   {
     id: "porches",
     label: "Porches",
     blurb: "Floor area and whether it is open, covered, or screened.",
+    photo: "/houses/cat-porches.jpg",
   },
   {
     id: "systems",
     label: "Systems",
     blurb: "HVAC, water heater, electrical, and attic — not a takeoff, but the next shop asks.",
+    photo: "/houses/cat-systems.jpg",
   },
 ];
+
+/** Same photos as FIELD_GROUPS, keyed for estimating work ids (deck / porch) too. */
+export const CATEGORY_PHOTO: Record<string, string> = {
+  house: "/houses/cat-house.jpg",
+  paint: "/houses/cat-paint.jpg",
+  roof: "/houses/cat-roof.jpg",
+  windows: "/houses/cat-windows.jpg",
+  gutters: "/houses/cat-gutters.jpg",
+  siding: "/houses/cat-siding.jpg",
+  decks: "/houses/cat-decks.jpg",
+  deck: "/houses/cat-decks.jpg",
+  porches: "/houses/cat-porches.jpg",
+  porch: "/houses/cat-porches.jpg",
+  systems: "/houses/cat-systems.jpg",
+};
 
 export const FIELD_CATALOG: FieldDef[] = [
   {

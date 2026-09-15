@@ -11,6 +11,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
+import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import type { WorkType } from "@/lib/housefile/quote";
 import { isCustomWorkId } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
@@ -37,21 +38,30 @@ export function TradeTile({
   compact?: boolean;
 }) {
   const face = TRADE_FACE[work.id] ?? (isCustomWorkId(work.id) ? CUSTOM_FACE : TRADE_FACE.paint);
+  const photo = CATEGORY_PHOTO[work.id];
   const Icon = face.icon;
   const className = cn(
-    "flex w-full flex-col items-start text-left shadow-[var(--shadow-border)]",
+    "relative isolate flex w-full flex-col items-start overflow-hidden text-left shadow-[var(--shadow-border)]",
     "transition-[box-shadow,opacity] duration-150 hover:opacity-95 hover:shadow-[var(--shadow-border-hover)]",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-    face.surface,
+    photo ? "text-white" : face.surface,
     compact ? "min-h-20 rounded-lg p-3" : "min-h-28 rounded-xl p-4",
   );
   const inner = (
     <>
-      <Icon className={compact ? "size-5" : "size-7"} aria-hidden />
-      <p className={cn("font-display font-medium leading-tight", compact ? "mt-2 text-base" : "mt-3 text-lg")}>
+      {photo ? (
+        <>
+          <img src={photo} alt="" className="absolute inset-0 size-full object-cover" />
+          <span className="absolute inset-0 bg-ink/65" />
+        </>
+      ) : null}
+      <Icon className={cn("relative", compact ? "size-5" : "size-7")} aria-hidden />
+      <p className={cn("relative font-display font-medium leading-tight", compact ? "mt-2 text-base" : "mt-3 text-lg")}>
         {work.name}
       </p>
-      {!compact && <p className="mt-1 text-sm text-primary-foreground/80">{work.blurb}</p>}
+      {!compact && (
+        <p className="relative mt-1 text-sm text-white/85">{work.blurb}</p>
+      )}
     </>
   );
   if (onPick) {

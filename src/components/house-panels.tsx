@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Camera, Copy, Mail, Shield } from "lucide-react";
+import { Camera, ChevronDown, Copy, Mail, Shield } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -342,17 +342,28 @@ export function FactsPanel({
         if (!fields.length) return null;
         const filled = fields.filter((f) => Boolean(byKey[f.key]?.value)).length;
         return (
-          <div key={group.id} className="space-y-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)] sm:p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div>
-                <h3 className="font-display text-lg font-bold tracking-tight">{group.label}</h3>
+          <details
+            key={group.id}
+            className="group overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]"
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-3 p-3 sm:p-4 [&::-webkit-details-marker]:hidden">
+              <img
+                src={group.photo}
+                alt=""
+                className="size-14 shrink-0 rounded-md object-cover sm:size-16"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="font-display text-lg font-bold tracking-tight">{group.label}</h3>
+                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">
+                    {filled} of {fields.length} on file
+                  </p>
+                </div>
                 <p className="text-sm text-muted-foreground">{group.blurb}</p>
               </div>
-              <p className="text-xs font-semibold tabular-nums text-muted-foreground">
-                {filled} of {fields.length} on file
-              </p>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
+              <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+            </summary>
+            <div className="grid gap-2 border-t border-border p-3 md:grid-cols-2 sm:p-4">
               {fields.map((field) => (
                 <FactInput
                   key={`${field.key}-${byKey[field.key]?.value ?? ""}`}
@@ -367,7 +378,7 @@ export function FactsPanel({
                 />
               ))}
             </div>
-          </div>
+          </details>
         );
       })}
     </section>
