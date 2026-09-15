@@ -35,7 +35,6 @@ import {
   workFromId,
   workTypesFor,
   WORK_BY_ID,
-  WORK_TYPES,
 } from "./quote";
 import type {
   AddressTease,
@@ -106,6 +105,8 @@ function asCompany(row: Company): Company {
     payment_link: row.payment_link ?? null,
     kits_seeded_at: row.kits_seeded_at ?? null,
     slug: row.slug ?? null,
+    stripe_customer_id: row.stripe_customer_id ?? null,
+    stripe_subscription_id: row.stripe_subscription_id ?? null,
   };
 }
 
@@ -1148,6 +1149,10 @@ export const updateCompany = createServerFn({ method: "POST" })
           payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)}
       where id = ${company.id}
     `;
+    if (data.trades !== undefined) {
+      const { syncShopCategoryQuantity } = await import("@/lib/housefile/stripe-shop.server");
+      await syncShopCategoryQuantity(company.stripe_subscription_id, parseTradeTokens(data.trades).length);
+    }
     const rows = await sql<Company>`select * from companies where id = ${company.id}`;
     return asCompany(rows[0]!);
   });
@@ -1166,16 +1171,17 @@ export const addCustomWork = createServerFn({ method: "POST" })
     if (name.length > 40) throw new Error("Keep the category name under 40 characters.");
     const id = customWorkId(name);
     const existing = parseTradeTokens(company.trades);
-    const tokens = existing.length ? existing : WORK_TYPES.map((w) => w.id);
-    if (tokens.some((token) => token.toLowerCase() === id.toLowerCase() || token.toLowerCase() === name.toLowerCase())) {
+    if (existing.some((token) => token.toLowerCase() === id.toLowerCase() || token.toLowerCase() === name.toLowerCase())) {
       return { workId: id, already: true as const };
     }
-    const next = [...tokens, id];
+    const next = [...existing, id];
     await sql`
       update companies
       set trades = ${next.join(",")}
       where id = ${company.id}
     `;
+    const { syncShopCategoryQuantity } = await import("@/lib/housefile/stripe-shop.server");
+    await syncShopCategoryQuantity(company.stripe_subscription_id, next.length);
     return { workId: id, already: false as const };
   });
 
@@ -1236,7 +1242,7 @@ export const completeOnboard = createServerFn({ method: "POST" })
       trades.map((id) => WORK_BY_ID[id]?.trade).filter((trade): trade is string => Boolean(trade)),
     );
     const rows = catalogFor(data.book).filter((r) => allowed.has(r.trade));
-    for (const row of rows.length ? rows : catalogFor(data.book)) {
+    for (const row of rows) {
       assertBookPrices(row);
       await sql`
         insert into price_book (
@@ -1250,6 +1256,8 @@ export const completeOnboard = createServerFn({ method: "POST" })
       `;
     }
     await seedStarterKits(sql, company.id, trades);
+    const { syncShopCategoryQuantity } = await import("@/lib/housefile/stripe-shop.server");
+    await syncShopCategoryQuantity(company.stripe_subscription_id, trades.length);
     return { ok: true as const };
   });
 
@@ -3302,14 +3310,14 @@ export const listMarketRfps = createServerFn({ method: "GET" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company } = await requirePaidShop(sql, context.userId, session?.email);
-    const trades = (company.trades ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const trades = parseTradeTokens(company.trades);
+    if (trades.length === 0) {
+      return { rfps: [], trades, area: { city: company.city, zip: company.zip } };
+    }
     const rows = await sql<Rfp>`
       select * from rfps where status = ${"open"} order by created_at desc limit 80
     `;
-    const byTrade = trades.length ? rows.filter((r) => trades.includes(r.work_id)) : rows;
+    const byTrade = rows.filter((r) => trades.includes(r.work_id));
     const matched = byTrade.filter((r) =>
       shopCoversAddress(company, { city: r.city, state: r.state, zip: r.zip }),
     );
@@ -3638,15 +3646,30 @@ export const getAccount = createServerFn({ method: "GET" })
       where user_id = ${context.userId} and id <> ${HOUSEHOLD_COMPANY}
       limit 1
     `;
-    let shop: { id: string; name: string; role: "owner" | "sales"; seats: number } | null = null;
+    let shop: {
+      id: string;
+      name: string;
+      role: "owner" | "sales";
+      seats: number;
+      categories: number;
+    } | null = null;
     if (owned[0]) {
       const seats = await sql<{ c: number }>`
         select count(*)::int as c from company_members where company_id = ${owned[0].id}
       `;
-      shop = { id: owned[0].id, name: owned[0].name, role: "owner", seats: num(seats[0]?.c) };
+      const company = await sql<{ trades: string | null }>`
+        select trades from companies where id = ${owned[0].id} limit 1
+      `;
+      shop = {
+        id: owned[0].id,
+        name: owned[0].name,
+        role: "owner",
+        seats: num(seats[0]?.c),
+        categories: parseTradeTokens(company[0]?.trades).length,
+      };
     } else {
-      const byUser = await sql<{ id: string; name: string; member_role: string }>`
-        select c.id, c.name, m.role as member_role
+      const byUser = await sql<{ id: string; name: string; member_role: string; trades: string | null }>`
+        select c.id, c.name, c.trades, m.role as member_role
         from company_members m
         join companies c on c.id = m.company_id
         where m.user_id = ${context.userId} and c.id <> ${HOUSEHOLD_COMPANY}
@@ -3661,6 +3684,7 @@ export const getAccount = createServerFn({ method: "GET" })
           name: byUser[0].name,
           role: byUser[0].member_role === "owner" ? "owner" : "sales",
           seats: num(seats[0]?.c),
+          categories: parseTradeTokens(byUser[0].trades).length,
         };
       }
     }

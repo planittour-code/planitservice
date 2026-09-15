@@ -131,8 +131,11 @@ function AccountPage() {
                       Shop · {data.shop.role === "owner" ? "Owner" : "Sales seat"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {data.shop.name}. ${dollars(SHOP_MONTHLY)}/month or ${dollars(SHOP_ANNUAL)}/year
-                      for the shop
+                      {data.shop.name}. ${dollars(SHOP_MONTHLY)}/month per category
+                      {data.shop.categories
+                        ? ` · ${data.shop.categories} ${data.shop.categories === 1 ? "category" : "categories"} · $${dollars(data.shop.categories * SHOP_MONTHLY)}/month`
+                        : ""}
+                      {` · or $${dollars(SHOP_ANNUAL)}/year per category`}
                       {data.shop.seats > 1
                         ? ` · ${data.shop.seats - 1} extra ${data.shop.seats - 1 === 1 ? "seat" : "seats"} at $${dollars(SEAT_MONTHLY)}/month`
                         : ""}

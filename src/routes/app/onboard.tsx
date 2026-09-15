@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { WizardSteps } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CustomWorkDialog } from "@/components/custom-work-dialog";
 import { compressImage } from "@/lib/housefile/image";
-import { customWorkId, isCustomWorkId, workFromId, WORK_TYPES } from "@/lib/housefile/quote";
+import { SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { customWorkId, isCustomWorkId, parseTradeTokens, workFromId, WORK_TYPES } from "@/lib/housefile/quote";
 import { completeOnboard, getDashboard } from "@/lib/housefile/server";
 import { cn } from "@/lib/utils";
 
@@ -35,9 +36,10 @@ function Onboard() {
   const queryClient = useQueryClient();
   const dash = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
   const logoRef = useRef<HTMLInputElement>(null);
+  const seededTrades = useRef(false);
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
-  const [trades, setTrades] = useState<string[]>(["paint", "roof", "gutters"]);
+  const [trades, setTrades] = useState<string[]>([]);
   const [addingWork, setAddingWork] = useState(false);
   const [book, setBook] = useState<"homedepot" | "lowes" | "starter">("homedepot");
   const [logo, setLogo] = useState<string | null>(null);
@@ -85,6 +87,14 @@ function Onboard() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not finish"),
   });
 
+  useEffect(() => {
+    if (seededTrades.current) return;
+    const paid = parseTradeTokens(dash.data?.company.trades);
+    if (!paid.length) return;
+    seededTrades.current = true;
+    setTrades(paid);
+  }, [dash.data?.company.trades]);
+
   if (dash.data?.company.onboarded_at) {
     return <Navigate to="/app" />;
   }
@@ -99,8 +109,9 @@ function Onboard() {
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Shop setup</p>
         <h1 className="font-display text-3xl font-medium tracking-tight">Open the shop.</h1>
         <p className="text-muted-foreground">
-          Services and service area first — that is how Request Estimates find you. Then materials
-          and your name on the estimate.
+          Pick the categories you want to offer — ${dollars(SHOP_MONTHLY)}/month each. Request
+          Estimates only match shops that offer that work. Then service area, materials, and your
+          name on the estimate.
         </p>
         <WizardSteps step={step} items={STEPS} />
       </div>
@@ -117,6 +128,10 @@ function Onboard() {
             />
           </div>
           <p className="text-sm font-medium">What do you quote?</p>
+          <p className="text-sm text-muted-foreground">
+            ${dollars(SHOP_MONTHLY)}/month per category. Adding or removing later updates the
+            subscription.
+          </p>
           <ul className="grid gap-3 sm:grid-cols-2">
             {[
               ...WORK_TYPES,
@@ -138,6 +153,9 @@ function Onboard() {
                     <p className="font-display text-lg font-medium">{w.name}</p>
                     <p className={cn("mt-1 text-sm", on ? "opacity-80" : "text-muted-foreground")}>
                       {w.blurb}
+                    </p>
+                    <p className={cn("mt-2 text-xs", on ? "opacity-80" : "text-muted-foreground")}>
+                      ${dollars(SHOP_MONTHLY)}/month
                     </p>
                   </button>
                 </li>
@@ -163,6 +181,12 @@ function Onboard() {
               setAddingWork(false);
             }}
           />
+          {trades.length > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {trades.length} {trades.length === 1 ? "category" : "categories"} · $
+              {dollars(trades.length * SHOP_MONTHLY)} / month
+            </p>
+          ) : null}
           <Button
             type="button"
             disabled={trades.length === 0}

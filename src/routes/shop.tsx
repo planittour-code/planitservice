@@ -52,9 +52,9 @@ function HomePage() {
                   Turn one job into the next visit.
                 </h1>
                 <p className="max-w-xl text-lg leading-relaxed text-pretty text-primary-foreground/80">
-                  Quote onto the File so you are the known shop for repeat work. Upsell the other
-                  trades you offer. Catch Request Estimates from homeowners and offices in your
-                  service area.
+                  Quote onto the File so you are the known shop for repeat work. Choose the
+                  categories you offer — ${dollars(SHOP_MONTHLY)}/month each — and catch Request
+                  Estimates that match those trades in your service area.
                 </p>
                 <div className="rounded-xl bg-card p-2 text-left text-foreground shadow-[var(--shadow-border)]">
                   <AddressLookup onTease={setTease} />
@@ -147,15 +147,16 @@ function HomePage() {
               <p className="text-sm tracking-wide uppercase opacity-80">The shop</p>
               <p className="mt-3 font-display text-5xl font-extrabold tracking-tight">
                 ${dollars(SHOP_MONTHLY)}
-                <span className="ml-2 text-lg font-sans font-normal opacity-80">/ month</span>
+                <span className="ml-2 text-lg font-sans font-normal opacity-80">/ category / month</span>
               </p>
               <p className="mt-2 text-sm opacity-80">
-                or ${dollars(SHOP_ANNUAL)} a year. Extra seats ${dollars(SEAT_MONTHLY)}/month.
+                or ${dollars(SHOP_ANNUAL)} a year per category. Extra seats ${dollars(SEAT_MONTHLY)}
+                /month.
               </p>
               <ul className="mt-6 space-y-2 text-sm">
+                <li>You pick the categories you want to offer</li>
                 <li>Quote onto the File — you become the known shop</li>
-                <li>Repeat and upsell from jobs already at the address</li>
-                <li>Request Estimates leads in your trades and area</li>
+                <li>Request Estimates only match the work you offer</li>
                 <li>The next visit is already yours</li>
               </ul>
               <div className="mt-8">
@@ -170,7 +171,8 @@ function HomePage() {
                 </Button>
               </div>
               <p className="mt-3 text-center text-xs opacity-80">
-                Annual is ${dollars(SHOP_ANNUAL)}. Extra seats ${dollars(SEAT_MONTHLY)}/month.
+                Annual is ${dollars(SHOP_ANNUAL)} per category. Extra seats ${dollars(SEAT_MONTHLY)}
+                /month.
               </p>
               <p className="mt-3 text-center text-xs opacity-70">
                 The Property Record you open is theirs. They keep it for ${dollars(PROPERTY_MONTHLY)} a month.

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CustomWorkDialog } from "@/components/custom-work-dialog";
 import { TradeGrid } from "@/components/trade-face";
+import { SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { WORK_TYPES, type WorkType, workTypesFor } from "@/lib/housefile/quote";
 import { addCustomWork, getDashboard } from "@/lib/housefile/server";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -24,7 +25,9 @@ export function QuoteTypePicker({
     queryFn: () => getDashboard(),
     enabled: Boolean(user) && !types,
   });
-  const offered = types ?? workTypesFor(dash.data?.company.trades);
+  const offered =
+    types ??
+    (user ? workTypesFor(dash.data?.company.trades) : WORK_TYPES);
   const [adding, setAdding] = useState(false);
   const addWork = useMutation({
     mutationFn: (name: string) => addCustomWork({ data: { name } }),
@@ -41,12 +44,19 @@ export function QuoteTypePicker({
         <p className="font-medium">{title}</p>
         <p className="text-sm text-muted-foreground">{hint}</p>
       </div>
-      <TradeGrid
-        types={offered.length ? offered : WORK_TYPES}
-        onPick={onPick}
-        compact
-        onAddCustom={user ? () => setAdding(true) : undefined}
-      />
+      {offered.length ? (
+        <TradeGrid
+          types={offered}
+          onPick={onPick}
+          compact
+          onAddCustom={user ? () => setAdding(true) : undefined}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          This shop has not chosen categories yet. Add the work you offer in shop settings — $
+          {dollars(SHOP_MONTHLY)}/month each — then quote from those.
+        </p>
+      )}
       <CustomWorkDialog
         open={adding}
         onClose={() => setAdding(false)}

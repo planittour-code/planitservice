@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient, clearSignedOutFlag } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars, shopCategoryTotal } from "@/lib/housefile/pricing";
+import { WORK_TYPES } from "@/lib/housefile/quote";
 import { shopKind } from "@/lib/housefile/stripe";
 import { claimShopCheckout, startCheckout, startShopCheckout } from "@/lib/housefile/stripe-billing";
 import { useAudience } from "@/lib/housefile/use-audience";
@@ -18,23 +19,37 @@ export function ShopSignupForm() {
   const { audience } = useAudience();
   const [name, setName] = useState("");
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
+  const [trades, setTrades] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const price = cadence === "annual" ? SHOP_ANNUAL : SHOP_MONTHLY;
+  const quantity = trades.length;
+  const price = shopCategoryTotal(quantity, cadence);
+  const unit = cadence === "annual" ? SHOP_ANNUAL : SHOP_MONTHLY;
+
+  function toggle(id: string) {
+    setTrades((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (quantity < 1) {
+      setError("Pick at least one category of work you want to offer.");
+      return;
+    }
     setBusy(true);
     try {
       if (user && audience.kind === "contractor" && audience.paying) {
         void navigate({ to: "/app" });
         return;
       }
+      const packed = trades.join(",");
       if (user) {
         const checkout = await startCheckout({
           data: {
             kind: shopKind(cadence),
+            quantity,
+            trades: packed,
             successPath: "/shop/open",
             cancelPath: "/shop/open",
           },
@@ -46,6 +61,8 @@ export function ShopSignupForm() {
         data: {
           kind: cadence === "annual" ? "shop_annual" : "shop_monthly",
           shopName: name.trim() || undefined,
+          quantity,
+          trades: packed,
         },
       });
       window.location.href = checkout.url;
@@ -69,6 +86,35 @@ export function ShopSignupForm() {
         </div>
       )}
       <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Categories you offer</legend>
+        <p className="text-sm text-muted-foreground">
+          ${dollars(SHOP_MONTHLY)}/month each. Request Estimates only go to shops that offer that
+          category.
+        </p>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {WORK_TYPES.map((w) => {
+            const on = trades.includes(w.id);
+            return (
+              <li key={w.id}>
+                <button
+                  type="button"
+                  onClick={() => toggle(w.id)}
+                  className={cn(
+                    "h-full w-full rounded-xl p-3 text-left shadow-[var(--shadow-border)]",
+                    on ? "bg-primary text-primary-foreground" : "bg-background",
+                  )}
+                >
+                  <p className="font-medium">{w.name}</p>
+                  <p className={cn("mt-1 text-xs", on ? "opacity-80" : "text-muted-foreground")}>
+                    ${dollars(SHOP_MONTHLY)}/month
+                  </p>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
+      <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Billing</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           <button
@@ -79,7 +125,7 @@ export function ShopSignupForm() {
               cadence === "monthly" ? "bg-primary text-primary-foreground" : "bg-background",
             )}
           >
-            <p className="font-medium">${dollars(SHOP_MONTHLY)} / month</p>
+            <p className="font-medium">${dollars(SHOP_MONTHLY)} / category / month</p>
             <p className={cn("mt-1 text-sm", cadence === "monthly" ? "opacity-80" : "text-muted-foreground")}>
               Extra seats ${dollars(SEAT_MONTHLY)}/month
             </p>
@@ -92,17 +138,27 @@ export function ShopSignupForm() {
               cadence === "annual" ? "bg-primary text-primary-foreground" : "bg-background",
             )}
           >
-            <p className="font-medium">${dollars(SHOP_ANNUAL)} / year</p>
+            <p className="font-medium">${dollars(SHOP_ANNUAL)} / category / year</p>
             <p className={cn("mt-1 text-sm", cadence === "annual" ? "opacity-80" : "text-muted-foreground")}>
               Two months included
             </p>
           </button>
         </div>
       </fieldset>
+      {quantity > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {quantity} {quantity === 1 ? "category" : "categories"} · ${dollars(unit)} each · $
+          {dollars(price)} {cadence === "annual" ? "this year" : "/ month"}
+        </p>
+      ) : null}
       {error && <p className="text-sm text-destructive">{error}</p>}
       <TermsAgree id="shop-agree-terms" />
-      <Button type="submit" className="min-h-12 w-full" disabled={busy}>
-        {busy ? "Sending you to Stripe…" : `Continue to Stripe · $${dollars(price)}`}
+      <Button type="submit" className="min-h-12 w-full" disabled={busy || quantity < 1}>
+        {busy
+          ? "Sending you to Stripe…"
+          : quantity < 1
+            ? "Pick a category to continue"
+            : `Continue to Stripe · $${dollars(price)}`}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         Card details stay on Stripe. No PlanitService account until payment finishes.

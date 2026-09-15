@@ -1,8 +1,13 @@
-/** Contractor shop. Owner is one seat. Extra seats are billed. */
-export const SHOP_MONTHLY = 9.99;
-export const SHOP_ANNUAL = 99;
+/** Contractor shop. Billed per work category the shop offers. Extra seats are billed. */
+export const SHOP_MONTHLY = 10;
+export const SHOP_ANNUAL = 100;
 export const SEAT_MONTHLY = 5;
 export const SEAT_ANNUAL = 50;
+
+export function shopCategoryTotal(count: number, cadence: "monthly" | "annual" = "monthly") {
+  const n = Math.max(0, Math.floor(count));
+  return cadence === "annual" ? n * SHOP_ANNUAL : n * SHOP_MONTHLY;
+}
 
 /** Homeowner PlanitService — billed per property. */
 export const PROPERTY_MONTHLY = 7.99;

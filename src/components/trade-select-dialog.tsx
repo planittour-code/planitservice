@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CustomWorkDialog } from "@/components/custom-work-dialog";
 import { Button } from "@/components/ui/button";
+import { SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { customWorkId, isCustomWorkId, workFromId, WORK_TYPES } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,8 @@ export function TradeSelectDialog({
         <div>
           <p className="font-display text-xl font-medium">What do you quote?</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            These are the trades this shop offers. They appear on the public shop page and in Start a Quote.
+            ${dollars(SHOP_MONTHLY)}/month per category. Request Estimates only match the work you
+            offer here.
           </p>
         </div>
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -62,6 +64,9 @@ export function TradeSelectDialog({
                 >
                   <p className="font-display text-lg font-medium">{w.name}</p>
                   <p className={cn("mt-1 text-sm", on ? "opacity-80" : "text-muted-foreground")}>{w.blurb}</p>
+                  <p className={cn("mt-2 text-xs", on ? "opacity-80" : "text-muted-foreground")}>
+                    ${dollars(SHOP_MONTHLY)}/month
+                  </p>
                 </button>
               </li>
             );
@@ -91,7 +96,11 @@ export function TradeSelectDialog({
             Cancel
           </Button>
           <Button type="button" disabled={busy || ids.length === 0} onClick={() => onSave(ids)}>
-            {busy ? "Saving…" : "Save trades"}
+            {busy
+              ? "Saving…"
+              : ids.length
+                ? `Save · ${ids.length} ${ids.length === 1 ? "category" : "categories"} · $${dollars(ids.length * SHOP_MONTHLY)}/mo`
+                : "Save trades"}
           </Button>
         </div>
       </div>

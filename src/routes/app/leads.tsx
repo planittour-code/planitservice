@@ -23,14 +23,16 @@ function LeadsPage() {
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Request Estimates</p>
         <h1 className="font-display text-3xl font-medium tracking-tight">Leads in your area</h1>
         <p className="mt-2 max-w-xl text-muted-foreground">
-          Open requests for {trades.length ? trades.join(", ") : "your services"}
-          {place ? ` near ${place}` : ""}. Same trade and service area as this shop.
+          Open requests for {trades.length ? trades.join(", ") : "the categories you offer"}
+          {place ? ` near ${place}` : ""}. Only jobs in those categories, in this shop’s service
+          area.
         </p>
       </div>
       {rfps.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No matching Request Estimates right now. Keep the shop address and services current so
-          new jobs in this area show up here.
+          {trades.length === 0
+            ? "Pick the categories you offer in shop settings. Request Estimates only match those trades."
+            : "No matching Request Estimates right now. Keep the shop address and services current so new jobs in this area show up here."}
         </p>
       ) : (
         <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">

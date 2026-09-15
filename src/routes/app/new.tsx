@@ -40,6 +40,7 @@ import {
   workForTemplate,
   workFromId,
   workTypesFor,
+  WORK_TYPES,
 } from "@/lib/housefile/quote";
 import { formatLine } from "@/lib/housefile/geocode";
 import { namedShopInviteToken } from "@/lib/housefile/invite";
@@ -133,9 +134,16 @@ function NewQuote() {
   const [addingWork, setAddingWork] = useState(false);
   const [localCustom, setLocalCustom] = useState<string[]>([]);
 
-  const offered = workTypesFor(
-    [...(dash.data?.company.trades ? dash.data.company.trades.split(",") : []), ...localCustom].join(","),
-  );
+  const offered = user
+    ? workTypesFor(
+        [...(dash.data?.company.trades ? dash.data.company.trades.split(",") : []), ...localCustom].join(","),
+      )
+    : [
+        ...WORK_TYPES,
+        ...localCustom
+          .map((id) => workFromId(id))
+          .filter((w): w is NonNullable<typeof w> => Boolean(w)),
+      ];
   const work = workFromId(workId);
   const addWork = useMutation({
     mutationFn: (name: string) => addCustomWork({ data: { name } }),

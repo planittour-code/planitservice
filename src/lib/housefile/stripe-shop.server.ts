@@ -2,7 +2,12 @@ import { getStripe } from "@/lib/housefile/stripe-client.server";
 
 const HOUSEHOLD_COMPANY = "co_household";
 
-export async function markShopPaid(userId: string, email?: string | null, shopName?: string | null) {
+export async function markShopPaid(
+  userId: string,
+  email?: string | null,
+  shopName?: string | null,
+  stripeIds?: { customerId?: string | null; subscriptionId?: string | null; trades?: string | null } | null,
+) {
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
   const owned = await sql<{ id: string }>`
@@ -10,10 +15,16 @@ export async function markShopPaid(userId: string, email?: string | null, shopNa
     where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
     limit 1
   `;
+  const customerId = stripeIds?.customerId?.trim() || null;
+  const subscriptionId = stripeIds?.subscriptionId?.trim() || null;
+  const trades = stripeIds?.trades?.trim() || null;
   if (owned[0]) {
     await sql`
       update companies
-      set shop_paid_at = coalesce(shop_paid_at, now())
+      set shop_paid_at = coalesce(shop_paid_at, now()),
+          stripe_customer_id = coalesce(${customerId}, stripe_customer_id),
+          stripe_subscription_id = coalesce(${subscriptionId}, stripe_subscription_id),
+          trades = coalesce(${trades}, trades)
       where id = ${owned[0].id}
     `;
     return owned[0].id;
@@ -28,7 +39,10 @@ export async function markShopPaid(userId: string, email?: string | null, shopNa
   if (member[0]) {
     await sql`
       update companies
-      set shop_paid_at = coalesce(shop_paid_at, now())
+      set shop_paid_at = coalesce(shop_paid_at, now()),
+          stripe_customer_id = coalesce(${customerId}, stripe_customer_id),
+          stripe_subscription_id = coalesce(${subscriptionId}, stripe_subscription_id),
+          trades = coalesce(${trades}, trades)
       where id = ${member[0].id}
     `;
     return member[0].id;
@@ -38,8 +52,8 @@ export async function markShopPaid(userId: string, email?: string | null, shopNa
   const name = local.replace(/\b\w/g, (c) => c.toUpperCase()) || "My shop";
   const mail = email?.trim().toLowerCase() || null;
   await sql`
-    insert into companies (id, user_id, name, trade, email, shop_paid_at)
-    values (${id}, ${userId}, ${name}, ${"general"}, ${mail}, now())
+    insert into companies (id, user_id, name, trade, email, shop_paid_at, stripe_customer_id, stripe_subscription_id, trades)
+    values (${id}, ${userId}, ${name}, ${"general"}, ${mail}, now(), ${customerId}, ${subscriptionId}, ${trades})
   `;
   await sql`
     insert into company_members (id, company_id, user_id, email, role)
@@ -50,6 +64,22 @@ export async function markShopPaid(userId: string, email?: string | null, shopNa
     on conflict (company_id, email) do nothing
   `;
   return id;
+}
+
+/** Keep Stripe subscription quantity in line with categories this shop offers. */
+export async function syncShopCategoryQuantity(subscriptionId: string | null | undefined, count: number) {
+  const subId = subscriptionId?.trim();
+  const quantity = Math.max(1, Math.floor(count));
+  if (!subId) return;
+  try {
+    const stripe = getStripe();
+    const sub = await stripe.subscriptions.retrieve(subId);
+    const item = sub.items.data[0];
+    if (!item || item.quantity === quantity) return;
+    await stripe.subscriptionItems.update(item.id, { quantity });
+  } catch (err) {
+    console.error("[stripe] could not sync shop category quantity", err);
+  }
 }
 
 function shopEmailFromSession(session: {
@@ -77,6 +107,9 @@ export async function readPaidShopSession(sessionId: string) {
     email,
     userId: session.metadata?.userId?.trim() || "",
     shopName: session.metadata?.shopName?.trim() || "",
+    trades: session.metadata?.trades?.trim() || "",
+    customerId: typeof session.customer === "string" ? session.customer : null,
+    subscriptionId: typeof session.subscription === "string" ? session.subscription : null,
   };
 }
 
@@ -105,7 +138,11 @@ export async function claimPaidShopSession(input: {
     body: { email: paid.email, password: input.password, name },
   });
   const userId = signed.user.id;
-  await markShopPaid(userId, paid.email, paid.shopName || name);
+  await markShopPaid(userId, paid.email, paid.shopName || name, {
+    customerId: paid.customerId,
+    subscriptionId: paid.subscriptionId,
+    trades: paid.trades,
+  });
   return { ok: true as const, email: paid.email };
 }
 
@@ -117,6 +154,10 @@ export async function confirmPaidShopSession(input: { sessionId: string; userId:
   }
   const { getSessionUser } = await import("@/lib/auth/verify.server");
   const session = await getSessionUser();
-  await markShopPaid(input.userId, session?.email ?? paid.email, paid.shopName);
+  await markShopPaid(input.userId, session?.email ?? paid.email, paid.shopName, {
+    customerId: paid.customerId,
+    subscriptionId: paid.subscriptionId,
+    trades: paid.trades,
+  });
   return { ok: true as const };
 }

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { workTypesFor } from "@/lib/housefile/quote";
 import { getDashboard } from "@/lib/housefile/server";
 
@@ -15,10 +16,15 @@ function TemplatesPage() {
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Work types</h1>
         <p className="mt-2 max-w-xl text-muted-foreground">
-          Paint, roof, windows, gutters, siding, decks, porches, plus any category you add. Each one
-          asks the house for the numbers that price it.
+          Only the categories this shop offers. Each one asks the house for the numbers that price
+          it. Add or remove categories in shop settings — ${dollars(SHOP_MONTHLY)}/month each.
         </p>
       </div>
+      {types.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No categories on this shop yet. Add the work you offer in shop settings.
+        </p>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         {types.map((w) => (
           <Card key={w.id}>

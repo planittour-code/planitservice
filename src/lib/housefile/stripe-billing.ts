@@ -18,6 +18,7 @@ export const startCheckout = createServerFn({ method: "POST" })
       propertyId?: string;
       officeName?: string;
       quantity?: number;
+      trades?: string;
       successPath: string;
       cancelPath: string;
     }) => input,
@@ -31,6 +32,7 @@ export const startCheckout = createServerFn({ method: "POST" })
       propertyId: data.propertyId,
       officeName: data.officeName,
       quantity: data.quantity,
+      trades: data.trades,
       customerEmail: session?.email,
       successPath: data.successPath,
       cancelPath: data.cancelPath,
@@ -40,11 +42,20 @@ export const startCheckout = createServerFn({ method: "POST" })
 
 /** Guest contractor: Stripe-hosted Checkout before any PlanitService account. */
 export const startShopCheckout = createServerFn({ method: "POST" })
-  .validator((input: { kind: "shop_monthly" | "shop_annual"; shopName?: string }) => input)
+  .validator(
+    (input: {
+      kind: "shop_monthly" | "shop_annual";
+      shopName?: string;
+      quantity?: number;
+      trades?: string;
+    }) => input,
+  )
   .handler(async ({ data }) => {
     const url = await createCheckoutSessionUrl({
       kind: data.kind,
       shopName: data.shopName,
+      quantity: data.quantity,
+      trades: data.trades,
       successPath: "/shop/open",
       cancelPath: "/shop/open",
     });
@@ -102,11 +113,20 @@ export const startBillingPortal = createServerFn({ method: "POST" })
     const { getSql } = await import("@/lib/db");
     const session = await getSessionUser();
     const sql = await getSql();
-    const rows = await sql<{ stripe_customer_id: string | null }>`
+    const preferShop = data.returnPath.startsWith("/app");
+    const shop = await sql<{ stripe_customer_id: string | null }>`
+      select stripe_customer_id from companies
+      where user_id = ${context.userId} and id <> ${"co_household"}
+      limit 1
+    `;
+    const portfolio = await sql<{ stripe_customer_id: string | null }>`
       select stripe_customer_id from portfolios where user_id = ${context.userId} limit 1
     `;
+    const customerId = preferShop
+      ? shop[0]?.stripe_customer_id || portfolio[0]?.stripe_customer_id
+      : portfolio[0]?.stripe_customer_id || shop[0]?.stripe_customer_id;
     const url = await createPortalSessionUrl({
-      customerId: rows[0]?.stripe_customer_id,
+      customerId,
       customerEmail: session?.email,
       returnPath: data.returnPath,
     });

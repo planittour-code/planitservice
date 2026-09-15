@@ -184,7 +184,7 @@ function Login() {
               ? "Jobs, warranties, known shops, and maintenance at the address. Pro is Request Estimates from shops that service this street."
               : manager
                 ? "Records, a maintenance calendar, and Request Estimates when a house needs bids. Add a house from the portfolio."
-                : "Quote onto the File so you are the known shop. Catch Request Estimates in your trades and service area."}
+                : "Quote onto the File so you are the known shop. Catch Request Estimates in the categories you offer and the area you work."}
           </p>
         </div>
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">

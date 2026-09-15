@@ -26,6 +26,8 @@ export type Company = {
   payment_link: string | null;
   kits_seeded_at: string | null;
   slug: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
 };
 

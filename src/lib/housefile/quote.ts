@@ -329,11 +329,10 @@ export function workFromId(id: string | undefined | null): WorkType | undefined 
   return undefined;
 }
 
+/** Categories this shop chose to offer. Empty means none — not every trade. */
 export function workTypesFor(trades: string | null | undefined) {
   const ids = parseTradeTokens(trades);
-  if (ids.length === 0) return WORK_TYPES;
-  const picked = ids.map((id) => workFromId(id)).filter((w): w is WorkType => Boolean(w));
-  return picked.length ? picked : WORK_TYPES;
+  return ids.map((id) => workFromId(id)).filter((w): w is WorkType => Boolean(w));
 }
 
 export function workForTemplate(templateId: string): WorkType | undefined {

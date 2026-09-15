@@ -101,13 +101,14 @@ function OpenShop() {
                 Repeat work, then Request Estimates leads.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                Quote onto the File so the homeowner calls you back. Offer the other categories you
-                do. Catch Request Estimates from houses in your service area.
+                Quote onto the File so the homeowner calls you back. Choose the categories you want
+                to offer — ${dollars(SHOP_MONTHLY)}/month each. Catch Request Estimates that match
+                those trades in your service area.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
                 <li>You become the known shop on every File you quote.</li>
                 <li>Materials stay in the shop. The File stays with the house.</li>
-                <li>Leads match your services and the area you work.</li>
+                <li>Leads match only the categories you offer, in the area you work.</li>
               </ul>
             </div>
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
@@ -130,11 +131,14 @@ function OpenShop() {
                   <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a shop</p>
                   <p className="mt-2 font-display text-3xl font-extrabold tracking-tight">
                     ${dollars(SHOP_MONTHLY)}
-                    <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">/ month</span>
+                    <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">
+                      / category / month
+                    </span>
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    or ${dollars(SHOP_ANNUAL)} a year. Extra seats ${dollars(SEAT_MONTHLY)}/month. You pay
-                    for the people who quote — not per house.
+                    or ${dollars(SHOP_ANNUAL)} a year per category. Extra seats $
+                    {dollars(SEAT_MONTHLY)}/month. You pay for the work you offer — not every trade
+                    on the site.
                   </p>
                   <div className="mt-5">
                     {confirmError ? <p className="mb-3 text-sm text-destructive">{confirmError}</p> : null}

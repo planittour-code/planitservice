@@ -38,6 +38,8 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 kind?: string;
                 propertyId?: string;
                 officeName?: string;
+                shopName?: string;
+                trades?: string;
               };
               customer?: string | null;
               subscription?: string | null;
@@ -55,6 +57,14 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 set status = ${"active"}
                 where property_id = ${propertyId}
               `;
+            }
+            if (userId && (kind === "shop_monthly" || kind === "shop_annual")) {
+              const { markShopPaid } = await import("@/lib/housefile/stripe-shop.server");
+              await markShopPaid(userId, null, session.metadata?.shopName, {
+                customerId,
+                subscriptionId,
+                trades: session.metadata?.trades,
+              });
             }
             if (userId && (kind === "manage_monthly" || kind === "manage_annual")) {
               await markPortfolioPaid(userId, null, session.metadata?.officeName, {

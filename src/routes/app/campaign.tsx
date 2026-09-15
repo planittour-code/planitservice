@@ -83,13 +83,18 @@ function CampaignPage() {
         <h1 className="font-display text-3xl font-medium tracking-tight">Schedule the next visit</h1>
         <p className="mt-2 text-muted-foreground">
           Email people you already worked. Offer the same service again, then the other categories
-          you quote in this area. They open the File, keep the record, and book you — or Request
-          Estimates if they want other bids.
+          this shop offers. They open the File, keep the record, and book you — or Request Estimates
+          if they want other bids.
         </p>
       </div>
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Repeat service</legend>
+        {offered.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Pick the categories this shop offers in settings first. Campaigns only cover that work.
+          </p>
+        ) : null}
         <div className="grid gap-2 sm:grid-cols-2">
           {offered.map((w) => (
             <button

@@ -68,8 +68,8 @@ function WelcomeSite() {
               <PathCard
                 kicker="Contractors"
                 title="Turn one job into the next visit."
-                body="Quote onto the File so you are the known shop for repeat work. Upsell the other trades you offer. Catch Request Estimates from homeowners and offices in your service area."
-                price={`Shop from $${dollars(SHOP_MONTHLY)} / month`}
+                body="Quote onto the File so you are the known shop for repeat work. Choose the categories you offer. Catch Request Estimates that match those trades in your service area."
+                price={`$${dollars(SHOP_MONTHLY)} / month per category`}
                 to="/shop"
                 cta="I’m a contractor"
                 emphasis

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
 import { PAYMENT_TERM_LABELS, PAYMENT_TERMS, asPaymentTerms } from "@/lib/housefile/payment";
+import { SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { parseTradeTokens, workTypesFor } from "@/lib/housefile/quote";
 import { addTeamMember, getDashboard, listTeam, updateCompany } from "@/lib/housefile/server";
 import { startBillingPortal } from "@/lib/housefile/stripe-billing";
@@ -103,9 +104,16 @@ function SettingsPage() {
         <div>
           <h2 className="font-display text-xl font-medium">Services Offered</h2>
           <p className="text-sm text-muted-foreground">
-            These trades show on your public shop page and in Start a Quote.
+            ${dollars(SHOP_MONTHLY)}/month per category. These are the only trades this shop quotes,
+            and the only Request Estimates you receive.
           </p>
         </div>
+        {trades.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No categories yet. Add the work you want to offer — you will not see Request Estimates
+            until you pick at least one.
+          </p>
+        ) : null}
         <ul className="flex flex-wrap gap-2">
           {trades.map((work) => (
             <li key={work.id}>
@@ -128,10 +136,16 @@ function SettingsPage() {
             </button>
           </li>
         </ul>
+        {trades.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {trades.length} {trades.length === 1 ? "category" : "categories"} · $
+            {dollars(trades.length * SHOP_MONTHLY)} / month
+          </p>
+        ) : null}
       </section>
       <TradeSelectDialog
         open={pickingTrades}
-        selected={tradeIds.length ? tradeIds : trades.map((w) => w.id)}
+        selected={tradeIds}
         onClose={() => setPickingTrades(false)}
         onSave={(ids) => saveTrades.mutate(ids)}
         busy={saveTrades.isPending}
@@ -286,8 +300,9 @@ function BillingSection() {
       <div>
         <h2 className="font-display text-2xl font-medium tracking-tight">Billing</h2>
         <p className="text-sm text-muted-foreground">
-          Shop subscription and extra seats. Cancel anytime — access continues through the paid
-          period.
+          ${dollars(SHOP_MONTHLY)}/month per category you offer, plus extra seats. Adding or
+          removing a category updates the subscription. Cancel anytime — access continues through
+          the paid period.
         </p>
       </div>
       <Button

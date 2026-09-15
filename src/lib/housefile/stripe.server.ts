@@ -98,6 +98,7 @@ export async function createCheckoutSessionUrl(input: {
   officeName?: string;
   propertyId?: string;
   quantity?: number;
+  trades?: string;
   successPath: string;
   cancelPath: string;
 }): Promise<string> {
@@ -110,6 +111,7 @@ export async function createCheckoutSessionUrl(input: {
     propertyId: input.propertyId ?? "",
     shopName: input.shopName ?? "",
     officeName: input.officeName ?? "",
+    trades: input.trades ?? "",
   };
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
