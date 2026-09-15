@@ -17,6 +17,12 @@ import {
 import { FIELD_CATALOG } from "./fields";
 import { coverLetter } from "./cover-letter";
 import { num, shopSlugFromName, slugToken } from "./format";
+import {
+  filledSocials,
+  normalizeHttpUrl,
+  profileSlugFromName,
+  type UserProfile,
+} from "./profile";
 import { asPaymentTerms, normalizePaymentLink } from "./payment";
 import { geocodeLine, parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
@@ -76,6 +82,7 @@ import type {
   Rfp,
   RfpQuote,
   ShopRole,
+  UserProfileRow,
 } from "./types";
 import {
   MAINTENANCE_LIBRARY,
@@ -3780,10 +3787,21 @@ export const getAccount = createServerFn({ method: "GET" })
         select * from homeowner_profiles where user_id = ${context.userId} limit 1
       `
     )[0];
+    const authUser = (
+      await sql<{ name: string | null; image: string | null }>`
+        select name, image from "user" where id = ${context.userId} limit 1
+      `
+    )[0];
+    const profile = await loadUserProfile(sql, context.userId, {
+      email,
+      name: household?.display_name ?? authUser?.name ?? null,
+      image: authUser?.image ?? null,
+    });
 
     return {
       email,
-      name: household?.display_name?.trim() || email?.split("@")[0] || "Account",
+      name: profile.displayName,
+      profile,
       shop,
       quoteCount: num(quotes[0]?.c),
       houses: houses.map((h) => ({
@@ -3805,6 +3823,162 @@ export const getAccount = createServerFn({ method: "GET" })
             role: portfolio.role,
           }
         : null,
+    };
+  });
+
+function asUserProfile(
+  row: UserProfileRow | undefined,
+  fallback: { email: string | null; name: string | null; image: string | null },
+): UserProfile {
+  const displayName =
+    row?.display_name?.trim() || fallback.name?.trim() || fallback.email?.split("@")[0] || "You";
+  return {
+    userId: row?.user_id ?? "",
+    slug: row?.slug ?? null,
+    displayName,
+    headline: row?.headline ?? "",
+    bio: row?.bio ?? "",
+    photoSrc: row?.photo_src || fallback.image || null,
+    email: fallback.email,
+    website: row?.website ?? "",
+    instagram: row?.instagram ?? "",
+    facebook: row?.facebook ?? "",
+    x: row?.x_url ?? "",
+    linkedin: row?.linkedin ?? "",
+    nextdoor: row?.nextdoor ?? "",
+    youtube: row?.youtube ?? "",
+  };
+}
+
+async function uniqueProfileSlug(sql: Sql, base: string, userId: string) {
+  const root = profileSlugFromName(base);
+  for (let i = 0; i < 12; i++) {
+    const slug = i === 0 ? root : `${root}-${i + 1}`;
+    const taken = await sql<{ user_id: string }>`
+      select user_id from user_profiles where slug = ${slug} and user_id <> ${userId} limit 1
+    `;
+    if (!taken[0]) return slug;
+  }
+  return `${root}-${slugToken().slice(0, 6)}`;
+}
+
+async function loadUserProfile(
+  sql: Sql,
+  userId: string,
+  fallback: { email: string | null; name: string | null; image: string | null },
+) {
+  const row = (
+    await sql<UserProfileRow>`select * from user_profiles where user_id = ${userId} limit 1`
+  )[0];
+  return asUserProfile(row, fallback);
+}
+
+export const updateUserProfile = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: {
+      displayName: string;
+      headline?: string;
+      bio?: string;
+      photoSrc?: string | null;
+      website?: string;
+      instagram?: string;
+      facebook?: string;
+      x?: string;
+      linkedin?: string;
+      nextdoor?: string;
+      youtube?: string;
+    }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const name = data.displayName.trim();
+    if (name.length < 2) throw new Error("Add the name people should see.");
+    if (name.length > 80) throw new Error("Keep the name under 80 characters.");
+    const headline = (data.headline ?? "").trim();
+    if (headline.length > 120) throw new Error("Keep the headline under 120 characters.");
+    const bio = (data.bio ?? "").trim();
+    if (bio.length > 600) throw new Error("Keep the bio under 600 characters.");
+    const photo = data.photoSrc === undefined ? undefined : data.photoSrc;
+    if (photo && photo.length > 500_000) throw new Error("That photo is too large. Try a smaller one.");
+    const links = {
+      website: normalizeHttpUrl(data.website ?? ""),
+      instagram: normalizeHttpUrl(data.instagram ?? "", "instagram.com"),
+      facebook: normalizeHttpUrl(data.facebook ?? "", "facebook.com"),
+      x: normalizeHttpUrl(data.x ?? "", "x.com"),
+      linkedin: normalizeHttpUrl(data.linkedin ?? "", "linkedin.com"),
+      nextdoor: normalizeHttpUrl(data.nextdoor ?? "", "nextdoor.com"),
+      youtube: normalizeHttpUrl(data.youtube ?? "", "youtube.com"),
+    };
+    const existing = (
+      await sql<UserProfileRow>`select * from user_profiles where user_id = ${context.userId} limit 1`
+    )[0];
+    const slug = existing?.slug || (await uniqueProfileSlug(sql, name, context.userId));
+    const photoSrc = photo === undefined ? (existing?.photo_src ?? null) : photo;
+    await sql`
+      insert into user_profiles (
+        user_id, slug, display_name, headline, bio, photo_src,
+        website, instagram, facebook, x_url, linkedin, nextdoor, youtube, updated_at
+      ) values (
+        ${context.userId}, ${slug}, ${name}, ${headline || null}, ${bio || null}, ${photoSrc},
+        ${links.website || null}, ${links.instagram || null}, ${links.facebook || null},
+        ${links.x || null}, ${links.linkedin || null}, ${links.nextdoor || null},
+        ${links.youtube || null}, now()
+      )
+      on conflict (user_id) do update set
+        slug = excluded.slug,
+        display_name = excluded.display_name,
+        headline = excluded.headline,
+        bio = excluded.bio,
+        photo_src = excluded.photo_src,
+        website = excluded.website,
+        instagram = excluded.instagram,
+        facebook = excluded.facebook,
+        x_url = excluded.x_url,
+        linkedin = excluded.linkedin,
+        nextdoor = excluded.nextdoor,
+        youtube = excluded.youtube,
+        updated_at = now()
+    `;
+    await sql`
+      update "user"
+      set name = ${name},
+          image = ${photoSrc},
+          "updatedAt" = now()
+      where id = ${context.userId}
+    `;
+    await sql`
+      update homeowner_profiles
+      set display_name = ${name}
+      where user_id = ${context.userId}
+    `;
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    return loadUserProfile(sql, context.userId, {
+      email: session?.email ?? null,
+      name,
+      image: photoSrc,
+    });
+  });
+
+export const getPublicProfile = createServerFn({ method: "GET" })
+  .validator((slug: string) => slug)
+  .handler(async ({ data: slug }) => {
+    const sql = await getSql();
+    const needle = slug.trim().toLowerCase();
+    if (!needle) throw new Error("Profile not found");
+    const row = (
+      await sql<UserProfileRow>`select * from user_profiles where slug = ${needle} limit 1`
+    )[0];
+    if (!row?.slug) throw new Error("Profile not found");
+    const profile = asUserProfile(row, { email: null, name: row.display_name, image: row.photo_src });
+    return {
+      slug: row.slug,
+      displayName: profile.displayName,
+      headline: profile.headline,
+      bio: profile.bio,
+      photoSrc: profile.photoSrc,
+      links: filledSocials(profile),
     };
   });
 

@@ -319,6 +319,23 @@ export type HomeownerProfile = {
   created_at: string;
 };
 
+export type UserProfileRow = {
+  user_id: string;
+  slug: string | null;
+  display_name: string | null;
+  headline: string | null;
+  bio: string | null;
+  photo_src: string | null;
+  website: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  x_url: string | null;
+  linkedin: string | null;
+  nextdoor: string | null;
+  youtube: string | null;
+  updated_at: string;
+};
+
 export type Portfolio = {
   id: string;
   user_id: string;

@@ -49,6 +49,7 @@ import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as RfpTokenRouteImport } from './routes/rfp.$token'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ShopOpenRouteImport } from './routes/shop.open'
+import { Route as USlugRouteImport } from './routes/u.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as AppPropertiesIdRouteImport } from './routes/app/properties.$id'
@@ -255,6 +256,11 @@ const ShopOpenRoute = ShopOpenRouteImport.update({
   path: '/open',
   getParentRoute: () => ShopRoute,
 } as any)
+const USlugRoute = USlugRouteImport.update({
+  id: '/u/$slug',
+  path: '/u/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -319,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
+  '/u/$slug': typeof USlugRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/manage/': typeof ManageIndexRoute
@@ -363,6 +370,7 @@ export interface FileRoutesByTo {
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
+  '/u/$slug': typeof USlugRoute
   '/app': typeof AppIndexRoute
   '/home': typeof HomeIndexRoute
   '/manage': typeof ManageIndexRoute
@@ -411,6 +419,7 @@ export interface FileRoutesById {
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
+  '/u/$slug': typeof USlugRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/manage/': typeof ManageIndexRoute
@@ -460,6 +469,7 @@ export interface FileRouteTypes {
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
+    | '/u/$slug'
     | '/app/'
     | '/home/'
     | '/manage/'
@@ -504,6 +514,7 @@ export interface FileRouteTypes {
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
+    | '/u/$slug'
     | '/app'
     | '/home'
     | '/manage'
@@ -551,6 +562,7 @@ export interface FileRouteTypes {
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
+    | '/u/$slug'
     | '/app/'
     | '/home/'
     | '/manage/'
@@ -582,6 +594,7 @@ export interface RootRouteChildren {
   PTokenRoute: typeof PTokenRouteWithChildren
   RfpTokenRoute: typeof RfpTokenRoute
   SSlugRoute: typeof SSlugRoute
+  USlugRoute: typeof USlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
@@ -868,6 +881,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopOpenRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/u/$slug': {
+      id: '/u/$slug'
+      path: '/u/$slug'
+      fullPath: '/u/$slug'
+      preLoaderRoute: typeof USlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -1030,6 +1050,7 @@ const rootRouteChildren: RootRouteChildren = {
   PTokenRoute: PTokenRouteWithChildren,
   RfpTokenRoute: RfpTokenRoute,
   SSlugRoute: SSlugRoute,
+  USlugRoute: USlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }

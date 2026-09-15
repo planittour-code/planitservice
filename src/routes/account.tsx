@@ -1,16 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { Camera } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { SignedInHeader } from "@/components/site-chrome";
+import { SocialMark } from "@/components/social-mark";
 import { justSignedOut } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth/client";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { getAccount } from "@/lib/housefile/server";
+import { compressImage } from "@/lib/housefile/image";
+import { filledSocials, initialsFrom, SOCIAL_LINKS, type UserProfile } from "@/lib/housefile/profile";
+import { getAccount, updateUserProfile } from "@/lib/housefile/server";
 import {
   MANAGE_ANNUAL,
   MANAGE_EXTRA_MONTHLY,
@@ -73,6 +79,8 @@ function AccountPage() {
         </div>
 
         {q.isLoading && <Skeleton className="h-40 w-full" />}
+
+        {data?.profile ? <ProfileCard profile={data.profile} /> : null}
 
         {data && (
           <>
@@ -252,6 +260,234 @@ function AccountPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function ProfileCard({ profile }: { profile: UserProfile }) {
+  const queryClient = useQueryClient();
+  const photoRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState(profile.displayName);
+  const [headline, setHeadline] = useState(profile.headline);
+  const [bio, setBio] = useState(profile.bio);
+  const [photo, setPhoto] = useState<string | null>(profile.photoSrc);
+  const [links, setLinks] = useState({
+    website: profile.website,
+    instagram: profile.instagram,
+    facebook: profile.facebook,
+    x: profile.x,
+    linkedin: profile.linkedin,
+    nextdoor: profile.nextdoor,
+    youtube: profile.youtube,
+  });
+
+  useEffect(() => {
+    setName(profile.displayName);
+    setHeadline(profile.headline);
+    setBio(profile.bio);
+    setPhoto(profile.photoSrc);
+    setLinks({
+      website: profile.website,
+      instagram: profile.instagram,
+      facebook: profile.facebook,
+      x: profile.x,
+      linkedin: profile.linkedin,
+      nextdoor: profile.nextdoor,
+      youtube: profile.youtube,
+    });
+  }, [profile]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateUserProfile({
+        data: {
+          displayName: name,
+          headline,
+          bio,
+          photoSrc: photo,
+          ...links,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Profile saved");
+      await queryClient.invalidateQueries({ queryKey: ["account"] });
+      await authClient.getSession({ query: { disableCookieCache: true } });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save profile"),
+  });
+
+  const live: UserProfile = { ...profile, displayName: name, headline, bio, photoSrc: photo, ...links };
+  const previewLinks = filledSocials(live);
+  const sharePath = profile.slug ? `/u/${profile.slug}` : null;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="font-display text-xl font-medium">Your profile</h2>
+          <p className="text-sm text-muted-foreground">
+            Name, photo, and the links people can open about you.
+          </p>
+        </div>
+        {sharePath ? (
+          <Button asChild variant="outline" size="sm">
+            <Link to="/u/$slug" params={{ slug: profile.slug! }}>
+              View public page
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
+        <div className="h-24 bg-ink" />
+        <form
+          className="space-y-5 px-5 pb-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate();
+          }}
+        >
+          <div className="-mt-10 flex flex-wrap items-end gap-4">
+            <button
+              type="button"
+              onClick={() => photoRef.current?.click()}
+              className="relative shrink-0 rounded-full outline outline-4 outline-card"
+              aria-label="Change profile photo"
+            >
+              {photo ? (
+                <img src={photo} alt="" className="size-24 rounded-full object-cover" />
+              ) : (
+                <span className="grid size-24 place-items-center rounded-full bg-muted font-display text-3xl font-medium text-muted-foreground">
+                  {initialsFrom(name || "You")}
+                </span>
+              )}
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 rounded-b-full bg-ink/70 py-1 text-center text-[10px] font-medium tracking-wide text-primary-foreground uppercase">
+                <Camera className="size-3" aria-hidden />
+                Photo
+              </span>
+            </button>
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                void compressImage(file, 400, 0.7)
+                  .then(setPhoto)
+                  .catch((err) => toast.error(err instanceof Error ? err.message : "Could not read the photo"));
+              }}
+            />
+            <div className="min-w-0 flex-1 pb-1">
+              <p className="font-display text-2xl font-medium tracking-tight">{name.trim() || "Your name"}</p>
+              <p className="text-sm text-muted-foreground">{headline.trim() || profile.email}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="profile-name">Name</Label>
+              <Input
+                id="profile-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="profile-headline">Headline</Label>
+              <Input
+                id="profile-headline"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                placeholder="Painter in Marietta · property manager"
+                maxLength={120}
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="profile-bio">About you</Label>
+            <Textarea
+              id="profile-bio"
+              rows={4}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="A short note people can share — how you work, the neighborhood, what you want them to know."
+              maxLength={600}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Social links</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {SOCIAL_LINKS.map((s) => (
+                <div key={s.key} className="space-y-1">
+                  <Label htmlFor={`profile-${s.key}`}>{s.label}</Label>
+                  <Input
+                    id={`profile-${s.key}`}
+                    value={links[s.key]}
+                    onChange={(e) => setLinks((cur) => ({ ...cur, [s.key]: e.target.value }))}
+                    placeholder={s.placeholder}
+                    inputMode="url"
+                    autoComplete="url"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {previewLinks.length > 0 ? (
+            <ul className="flex flex-wrap gap-2">
+              {previewLinks.map((link) => (
+                <li key={link.key}>
+                  <span className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-muted px-3 text-sm">
+                    <SocialMark kind={link.key} className="size-3.5 text-muted-foreground" />
+                    {link.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save profile"}
+            </Button>
+            {sharePath ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Share{" "}
+                  <Link to="/u/$slug" params={{ slug: profile.slug! }} className="underline underline-offset-2">
+                    planitservice.com{sharePath}
+                  </Link>
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const url =
+                      typeof window !== "undefined"
+                        ? `${window.location.origin}${sharePath}`
+                        : `https://planitservice.com${sharePath}`;
+                    void navigator.clipboard.writeText(url).then(
+                      () => toast.success("Profile link copied"),
+                      () => toast.error("Could not copy the link"),
+                    );
+                  }}
+                >
+                  Copy link
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Save once to get a public page you can share.</p>
+            )}
+          </div>
+        </form>
+      </div>
+    </section>
   );
 }
 
