@@ -35,12 +35,17 @@ function WelcomeSite() {
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-white/90">
               Jobs, Products, Warranties & Request Estimates.
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button asChild size="lg">
-                <Link to="/homeowner">I’m a homeowner</Link>
-              </Button>
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/shop">I’m a contractor</Link>
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button asChild size="lg">
+                  <Link to="/homeowner">I’m a homeowner</Link>
+                </Button>
+                <Button asChild size="lg" variant="secondary">
+                  <Link to="/shop">I’m a contractor</Link>
+                </Button>
+              </div>
+              <Button asChild size="lg" variant="outline" className="border-white/40 bg-white/10 text-white hover:border-white hover:bg-white/20 hover:text-white">
+                <Link to="/manage">I’m a property manager</Link>
               </Button>
             </div>
           </div>
