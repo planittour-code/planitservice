@@ -204,7 +204,7 @@ export async function sendRepeatServiceEmail(data: {
   const first = data.name.trim().split(/\s+/)[0] || "there";
   const extras = data.extraWork.filter(Boolean);
   const extraLine = extras.length
-    ? `We also quote ${extras.join(", ")} at this address.`
+    ? `We also offer ${extras.join(", ")} at this address — work this shop quotes.`
     : "";
   const subject = `${data.company}: schedule your next ${data.repeatWork.toLowerCase()} at ${data.address}`;
   const text = [
@@ -219,8 +219,8 @@ export async function sendRepeatServiceEmail(data: {
     "",
     extraLine,
     extras.length
-      ? "Open the File to request that work from us, or Request Estimates from other PlanitService shops that service your street."
-      : "Keep the File so the next visit is not a guess. Request Estimates if you want bids from other shops in the area.",
+      ? "Open the File to request that work from us. Request Estimates is for other shops that offer those same categories on your street."
+      : "Keep the File so the next visit is not a guess. Request Estimates if you want bids from other shops that offer this work in the area.",
     data.note ? `\n${data.note}\n` : "",
     `Your houses: ${data.homeUrl}`,
     "",
@@ -237,8 +237,8 @@ export async function sendRepeatServiceEmail(data: {
 <p><a href="${escapeHtml(data.fileUrl)}">Open the Property Record</a></p>
 ${
   extras.length
-    ? `<p>We also quote ${escapeHtml(extras.join(", "))} at this address. Open the File to request that work from us, or Request Estimates from other PlanitService shops that service your street.</p>`
-    : `<p>Keep the File so the next visit is not a guess. Request Estimates if you want bids from other shops in the area.</p>`
+    ? `<p>We also offer ${escapeHtml(extras.join(", "))} at this address — work this shop quotes. Open the File to request that work from us. Request Estimates is for other shops that offer those same categories on your street.</p>`
+    : `<p>Keep the File so the next visit is not a guess. Request Estimates if you want bids from other shops that offer this work in the area.</p>`
 }
 ${data.note ? `<p>${escapeHtml(data.note).replace(/\n/g, "<br>")}</p>` : ""}
 <p><a href="${escapeHtml(data.homeUrl)}">Your houses</a></p>

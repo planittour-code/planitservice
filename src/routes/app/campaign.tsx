@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { getDashboard, listShopIndex, sendRepeatServiceCampaign } from "@/lib/housefile/server";
 import { workTypesFor } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
@@ -33,21 +34,22 @@ function CampaignPage() {
       .flatMap((c) => c.houses.map((h) => h.id));
   }, [clients, picked]);
 
+  const extrasOffered = offered.filter((w) => w.id !== (repeatId || offered[0]?.id));
+  const extraPaid = extra.filter((id) => extrasOffered.some((w) => w.id === id));
   const repeat = offered.find((w) => w.id === repeatId) ?? offered[0];
-  const extraNames = extra
-    .map((id) => offered.find((w) => w.id === id)?.name)
-    .filter((n): n is string => Boolean(n));
 
   const send = useMutation({
-    mutationFn: () =>
-      sendRepeatServiceCampaign({
+    mutationFn: () => {
+      if (!repeat) throw new Error("Pick a paid category to offer.");
+      return sendRepeatServiceCampaign({
         data: {
           propertyIds: selectedIds,
-          repeatWork: repeat?.name ?? "service",
-          extraWork: extraNames,
+          repeatWorkId: repeat.id,
+          extraWorkIds: extraPaid,
           note,
         },
-      }),
+      });
+    },
     onSuccess: (res) => {
       toast.success(
         res.emailed
@@ -82,19 +84,30 @@ function CampaignPage() {
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Past customers</p>
         <h1 className="font-display text-3xl font-medium tracking-tight">Schedule the next visit</h1>
         <p className="mt-2 text-muted-foreground">
-          Email people you already worked. Offer the same service again, then the other categories
-          this shop offers. They open the File, keep the record, and book you — or Request Estimates
-          if they want other bids.
+          Email people you already worked. Offer only the categories this shop pays for — $
+          {dollars(SHOP_MONTHLY)}/month each. They open the File and book you for that work.
         </p>
       </div>
 
+      {offered.length === 0 ? (
+        <div className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+          <p className="font-medium">No paid categories on this shop.</p>
+          <p className="text-sm text-muted-foreground">
+            Campaigns only offer work you pay ${dollars(SHOP_MONTHLY)}/month to quote. Add
+            categories in shop settings, then come back.
+          </p>
+          <Button asChild variant="outline">
+            <Link to="/app/settings">Choose categories</Link>
+          </Button>
+        </div>
+      ) : (
+        <>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Repeat service</legend>
-        {offered.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Pick the categories this shop offers in settings first. Campaigns only cover that work.
-          </p>
-        ) : null}
+        <p className="text-sm text-muted-foreground">
+          Only categories this shop pays for. Homeowners hear about this work — not every trade on
+          PlanitService.
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {offered.map((w) => (
             <button
@@ -110,22 +123,23 @@ function CampaignPage() {
               )}
             >
               <p className="font-medium">{w.name}</p>
+              <p className={cn("mt-1 text-xs", (repeat?.id ?? "") === w.id ? "opacity-80" : "text-muted-foreground")}>
+                Paid category
+              </p>
             </button>
           ))}
         </div>
       </fieldset>
 
-      {offered.length > 1 && (
+      {extrasOffered.length > 0 && (
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Also offer</legend>
           <p className="text-sm text-muted-foreground">
-            Other work this shop does at the same address.
+            Other paid categories at the same address. Unpaid trades do not show here.
           </p>
           <div className="flex flex-wrap gap-2">
-            {offered
-              .filter((w) => w.id !== repeat?.id)
-              .map((w) => {
-                const on = extra.includes(w.id);
+            {extrasOffered.map((w) => {
+                const on = extraPaid.includes(w.id);
                 return (
                   <button
                     key={w.id}
@@ -143,7 +157,11 @@ function CampaignPage() {
           </div>
         </fieldset>
       )}
+        </>
+      )}
 
+      {offered.length > 0 ? (
+        <>
       <div className="space-y-1">
         <Label htmlFor="note">Note (optional)</Label>
         <Textarea
@@ -215,8 +233,11 @@ function CampaignPage() {
         {send.isPending ? "Sending…" : `Email ${picked.length || "selected"} customers`}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        They keep the File (Standard). Request Estimates is Pro if they want other shops.
+        They keep the File (Standard). Request Estimates is Pro if they want other shops that offer
+        these same paid categories.
       </p>
+        </>
+      ) : null}
       <p className="text-center text-sm">
         <Link to="/app/properties" search={{ view: "clients" }} className="underline underline-offset-2">
           Back to clients

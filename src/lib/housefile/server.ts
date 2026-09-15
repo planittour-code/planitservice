@@ -944,8 +944,8 @@ export const sendRepeatServiceCampaign = createServerFn({ method: "POST" })
   .validator(
     (input: {
       propertyIds: string[];
-      repeatWork: string;
-      extraWork?: string[];
+      repeatWorkId: string;
+      extraWorkIds?: string[];
       note?: string;
     }) => input,
   )
@@ -955,11 +955,20 @@ export const sendRepeatServiceCampaign = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the shop owner can send this campaign.");
+    const offered = workTypesFor(company.trades);
+    if (!offered.length) {
+      throw new Error("Pick the categories this shop offers in settings first. Campaigns only cover paid work.");
+    }
+    const repeat = offered.find((w) => w.id === data.repeatWorkId.trim());
+    if (!repeat) throw new Error("Repeat service has to be a category this shop pays for.");
+    const extraWork = (data.extraWorkIds ?? [])
+      .map((id) => offered.find((w) => w.id === id.trim()))
+      .filter((w): w is NonNullable<typeof w> => Boolean(w && w.id !== repeat.id))
+      .slice(0, 8)
+      .map((w) => w.name);
     const ids = [...new Set(data.propertyIds)].slice(0, 40);
     if (!ids.length) throw new Error("Pick at least one past customer.");
-    const repeatWork = data.repeatWork.trim();
-    if (!repeatWork) throw new Error("Name the repeat service.");
-    const extraWork = (data.extraWork ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 8);
+    const repeatWork = repeat.name;
     const note = data.note?.trim() ?? "";
     const { deliverRepeatServiceEmail } = await import("./mail");
     let emailed = 0;
