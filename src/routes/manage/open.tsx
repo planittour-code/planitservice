@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ManageClaimForm, ManageSignupForm } from "@/components/manage-signup";
 import { PathSignInForm } from "@/components/path-sign-in";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { justSignedOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   MANAGE_ANNUAL,
@@ -72,10 +73,10 @@ function OpenPortfolio() {
     };
   }, [user, search.session_id, queryClient, navigate]);
 
-  if (!isPending && audience.hats.manager && !search.session_id) {
+  if (!justSignedOut() && !isPending && audience.hats.manager && !search.session_id) {
     return <Navigate to="/manage" />;
   }
-  if (!isPending && audience.signedIn && !audience.hats.manager && !search.session_id) {
+  if (!justSignedOut() && !isPending && audience.signedIn && !audience.hats.manager && !search.session_id) {
     if (audience.hats.contractor) return <Navigate to="/app" />;
     if (audience.hats.homeowner) return <Navigate to="/home" />;
   }

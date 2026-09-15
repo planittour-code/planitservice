@@ -121,6 +121,7 @@ export async function signIn(
   // Clear any prior session so switching providers actually switches identity.
   // In the live preview the iframe has no session cookie — only a bearer token —
   // so skip the network signOut when there's nothing to clear.
+  clearSignedOutFlag();
   const hadBearer = Boolean(getBearerToken());
   if (hadBearer || !inLivePreview()) {
     try {
@@ -217,12 +218,52 @@ function waitForPopupToken(popup: Window): Promise<string | null> {
   });
 }
 
-/** Sign out of THIS app's local session, clear the preview token, then redirect. */
+const SIGNED_OUT_KEY = "planit.signedOut";
+
+/** Set when the visitor just signed out so marketing pages do not bounce them back into /app. */
+export function markSignedOut(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(SIGNED_OUT_KEY, String(Date.now()));
+  } catch {
+    /* storage unavailable — ignore */
+  }
+}
+
+export function clearSignedOutFlag(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(SIGNED_OUT_KEY);
+  } catch {
+    /* storage unavailable — ignore */
+  }
+}
+
+/** True after Sign out until the next successful sign-in, even if a cookie cache still looks signed in. */
+export function justSignedOut(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return Boolean(window.sessionStorage.getItem(SIGNED_OUT_KEY));
+  } catch {
+    return false;
+  }
+}
+
+/** Sign out of THIS app's local session, then leave the current page. Never wait on a hung auth POST. */
 export async function signOut(redirectTo = "/"): Promise<void> {
+  markSignedOut();
+  setBearerToken(null);
+  let left = false;
+  const leave = () => {
+    if (left) return;
+    left = true;
+    window.location.replace(redirectTo);
+  };
+  window.setTimeout(leave, 800);
   try {
     await authClient.signOut();
-  } finally {
-    setBearerToken(null);
+  } catch {
+    // Cookie clear may have failed — still leave the signed-in shell.
   }
-  window.location.href = redirectTo;
+  leave();
 }

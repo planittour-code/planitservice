@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, Navigate } from "@tanstack/react-router";
 import { authEnabled, signOut } from "./client";
 import { useCurrentUser, useCurrentUserState } from "./use-current-user";
@@ -51,6 +51,7 @@ export function RedirectToSignIn({ to = SIGN_IN_PATH }: { to?: string }) {
  */
 export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
   const user = useCurrentUser();
+  const [leaving, setLeaving] = useState(false);
   if (!user) return null;
   const label = user.displayName ?? user.primaryEmail ?? "Account";
   const dark = tone === "dark";
@@ -87,14 +88,18 @@ export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
       {authEnabled && (
         <button
           type="button"
-          onClick={() => void signOut()}
+          disabled={leaving}
+          onClick={() => {
+            setLeaving(true);
+            void signOut();
+          }}
           className={
             dark
-              ? "cursor-pointer text-sm font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline"
-              : "cursor-pointer text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              ? "cursor-pointer text-sm font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline disabled:opacity-70"
+              : "cursor-pointer text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-70"
           }
         >
-          Sign out
+          {leaving ? "Signing out…" : "Sign out"}
         </button>
       )}
     </div>

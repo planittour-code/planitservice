@@ -4,6 +4,7 @@ import { PathSignInForm } from "@/components/path-sign-in";
 import { PaidLanding } from "@/components/paid-landing";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
+import { justSignedOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   MANAGE_ANNUAL,
@@ -24,11 +25,11 @@ function ManageFrame() {
 
   if (pathname === "/manage/open") return <Outlet />;
 
-  if (authReady && audience.hats.contractor && !audience.hats.manager) {
+  if (!justSignedOut() && authReady && audience.hats.contractor && !audience.hats.manager) {
     return <Navigate to="/app" />;
   }
 
-  if (authReady && audience.hats.manager) {
+  if (!justSignedOut() && authReady && audience.hats.manager) {
     return (
       <div className="min-h-screen bg-background">
         <SignedInHeader to="/manage" max="max-w-5xl">

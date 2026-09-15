@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { SignedInHeader } from "@/components/site-chrome";
+import { justSignedOut } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,7 +47,7 @@ function AccountPage() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" />;
+  if (!user || justSignedOut()) return <Navigate to="/login" />;
 
   const data = q.data;
   const isShop = Boolean(data?.shop);

@@ -2,6 +2,7 @@ import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router"
 import { AppNavLink, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
+import { justSignedOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useAudience } from "@/lib/housefile/use-audience";
 
@@ -19,7 +20,7 @@ function HomeLayout() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" search={{ role: "homeowner", next: "/home" }} />;
+  if (!user || justSignedOut()) return <Navigate to="/login" search={{ role: "homeowner", next: "/home" }} />;
   if (audience.hats.contractor && !audience.hats.homeowner) {
     return <Navigate to="/app" />;
   }

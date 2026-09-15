@@ -6,6 +6,7 @@ import { PathSignInForm } from "@/components/path-sign-in";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { ShopClaimForm, ShopSignupForm } from "@/components/shop-signup";
 import { Button } from "@/components/ui/button";
+import { justSignedOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { confirmShopCheckout } from "@/lib/housefile/stripe-billing";
@@ -65,7 +66,13 @@ function OpenShop() {
     };
   }, [user, search.session_id, queryClient, navigate]);
 
-  if (!isPending && audience.kind === "contractor" && audience.paying && !search.session_id) {
+  if (
+    !justSignedOut() &&
+    !isPending &&
+    audience.kind === "contractor" &&
+    audience.paying &&
+    !search.session_id
+  ) {
     return <Navigate to="/app" />;
   }
   if (!isPending && audience.signedIn && !audience.hats.contractor && !search.session_id) {

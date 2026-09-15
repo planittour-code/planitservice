@@ -4,7 +4,7 @@ import { TermsAgree } from "@/components/legal-doc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth/client";
+import { authClient, clearSignedOutFlag } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { shopKind } from "@/lib/housefile/stripe";
@@ -131,6 +131,7 @@ export function ShopClaimForm({ sessionId }: { sessionId: string }) {
         callbackURL: "/app/onboard",
       });
       if (signed.error) throw new Error(signed.error.message || "Account created. Sign in to continue.");
+      clearSignedOutFlag();
       window.location.href = "/app/onboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not finish shop setup");

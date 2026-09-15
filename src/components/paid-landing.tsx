@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import { justSignedOut } from "@/lib/auth/client";
 import { useAudience } from "@/lib/housefile/use-audience";
 
 /** Paying customers skip marketing and land on their dashboard. */
 export function PaidLanding({ prefer }: { prefer?: "homeowner" | "contractor" | "manager" }) {
   const { audience, isPending } = useAudience();
   useEffect(() => {
+    if (justSignedOut()) return;
     if (isPending || !audience.paying) return;
     let to = audience.homePath;
     if (prefer === "homeowner") {

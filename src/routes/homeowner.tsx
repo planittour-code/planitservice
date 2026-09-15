@@ -6,7 +6,7 @@ import { PageFooter, PublicHeader, AuthSlot, SignInCta } from "@/components/site
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth/client";
+import { authClient, clearSignedOutFlag } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   PROPERTY_ANNUAL,
@@ -57,6 +57,7 @@ function StartHouseRecord() {
         callbackURL: next,
       });
       if (res.error) throw new Error(res.error.message || "Could not create the account");
+      clearSignedOutFlag();
       window.location.href = next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create the account");

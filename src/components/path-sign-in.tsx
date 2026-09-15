@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient, authEnabled } from "@/lib/auth/client";
+import { authClient, authEnabled, clearSignedOutFlag } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function PathSignInForm({
@@ -45,6 +45,7 @@ export function PathSignInForm({
     try {
       const res = await authClient.signIn.email({ email, password, callbackURL: next });
       if (res.error) throw new Error(res.error.message || "Could not sign in");
+      clearSignedOutFlag();
       window.location.href = next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");

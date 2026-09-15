@@ -7,7 +7,7 @@ import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GROK_PROVIDERS, authClient, authEnabled, grokOauthOnThisHost, signIn } from "@/lib/auth/client";
+import { GROK_PROVIDERS, authClient, authEnabled, clearSignedOutFlag, grokOauthOnThisHost, justSignedOut, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { namedShopInviteToken, safeNextPath } from "@/lib/housefile/invite";
 import { useAudience } from "@/lib/housefile/use-audience";
@@ -86,7 +86,7 @@ function Login() {
     );
   }
 
-  if (user) {
+  if (user && !justSignedOut()) {
     if (shopInvite) {
       return <Navigate to="/app/new" search={{ invite: shopInvite }} />;
     }
@@ -152,6 +152,7 @@ function Login() {
         const res = await authClient.signIn.email({ email, password, callbackURL: after });
         if (res.error) throw new Error(res.error.message || "Could not sign in");
       }
+      clearSignedOutFlag();
       window.location.href = after;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");

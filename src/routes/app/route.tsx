@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import { AppNavLink, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
+import { justSignedOut } from "@/lib/auth/client";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getDashboard } from "@/lib/housefile/server";
@@ -20,6 +21,10 @@ function AppLayout() {
     queryFn: () => getDashboard(),
     enabled: Boolean(user) && audience.hats.contractor,
   });
+
+  if (justSignedOut()) {
+    return <Navigate to="/shop" />;
+  }
 
   if (isPending || (user && audiencePending)) {
     return (
@@ -40,7 +45,7 @@ function AppLayout() {
         />
       );
     }
-    return <Navigate to="/shop/open" />;
+    return <Navigate to="/shop" />;
   }
 
   if (!audience.hats.contractor) {

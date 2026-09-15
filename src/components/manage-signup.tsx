@@ -4,7 +4,7 @@ import { TermsAgree } from "@/components/legal-doc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth/client";
+import { authClient, clearSignedOutFlag } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   MANAGE_ANNUAL,
@@ -148,6 +148,7 @@ export function ManageClaimForm({ sessionId }: { sessionId: string }) {
         callbackURL: "/manage",
       });
       if (signed.error) throw new Error(signed.error.message || "Account created. Sign in to continue.");
+      clearSignedOutFlag();
       window.location.href = "/manage";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not finish portfolio setup");
