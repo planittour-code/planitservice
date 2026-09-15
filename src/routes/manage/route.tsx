@@ -35,7 +35,7 @@ function ManageFrame() {
   if (!justSignedOut() && authReady && audience.hats.manager) {
     return (
       <div className="min-h-screen bg-background">
-        <SignedInHeader to="/manage" max="max-w-5xl">
+        <SignedInHeader to="/manage" max="max-w-6xl">
           <nav className="ml-auto flex items-center gap-1">
             <AppNavLink to="/manage" exact>
               Work
@@ -49,7 +49,7 @@ function ManageFrame() {
             <UserButton tone="dark" />
           </nav>
         </SignedInHeader>
-        <div className="mx-auto max-w-5xl px-5 py-5">
+        <div className="mx-auto max-w-6xl px-5 py-5">
           <Outlet />
         </div>
       </div>

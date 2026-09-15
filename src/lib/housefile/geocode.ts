@@ -147,6 +147,22 @@ export function houseNumber(line: string) {
   return m?.[1] ?? "";
 }
 
+/** Census first, Photon if Census has no coordinates. */
+export async function geocodeLine(query: string): Promise<AddressHit> {
+  const census = await standardizeFromCensus(query);
+  if (census.lat != null && census.lng != null) return census;
+  try {
+    const hits = await suggestFromPhoton(query);
+    const withCoords = hits.find((h) => h.lat != null && h.lng != null);
+    if (withCoords?.lat != null && withCoords.lng != null) {
+      return { ...census, lat: withCoords.lat, lng: withCoords.lng };
+    }
+  } catch {
+    /* keep census */
+  }
+  return census;
+}
+
 export async function standardizeFromCensus(query: string): Promise<AddressHit> {
   const fallback = parseStreet(query);
   const q = query.trim().slice(0, 80);

@@ -18,7 +18,7 @@ import { FIELD_CATALOG } from "./fields";
 import { coverLetter } from "./cover-letter";
 import { num, shopSlugFromName, slugToken } from "./format";
 import { asPaymentTerms, normalizePaymentLink } from "./payment";
-import { parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
+import { geocodeLine, parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
   ESTIMATE_KEY,
   estimatePhotos,
@@ -1850,7 +1850,7 @@ export const suggestAddresses = createServerFn({ method: "GET" })
 export const standardizeAddress = createServerFn({ method: "GET" })
   .validator((query: string) => query)
   .handler(async ({ data }): Promise<AddressHit> => {
-    return standardizeFromCensus(data);
+    return geocodeLine(data);
   });
 
 export const peekHouseByAddress = createServerFn({ method: "GET" })

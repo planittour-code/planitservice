@@ -11,6 +11,7 @@ import { getPortfolio } from "@/lib/housefile/server";
 import type { MaintenanceStatus } from "@/lib/housefile/maintain";
 import type { PortfolioHouse, PortfolioOwner } from "@/lib/housefile/types";
 import { InviteShopHeaderButton, InviteShopHintCard } from "@/components/invite-shop-cta";
+import { PortfolioWorkBoard } from "@/components/portfolio-work-board";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/manage/")({ component: ManageDashboard });
@@ -141,6 +142,7 @@ function ManageDashboard() {
           ) : (
             <>
             <InviteShopHintCard propertyId={houses[0]!.id} />
+            <PortfolioWorkBoard houses={houses} upcoming={upcoming} />
             <section className="space-y-3">
               <div>
                 <h2 className="font-display text-xl font-medium">By owner</h2>
