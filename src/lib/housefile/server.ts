@@ -3787,6 +3787,11 @@ export const getAccount = createServerFn({ method: "GET" })
         select * from homeowner_profiles where user_id = ${context.userId} limit 1
       `
     )[0];
+    await sql`
+      update "user"
+      set image = null
+      where id = ${context.userId} and image like ${"data:%"}
+    `;
     const authUser = (
       await sql<{ name: string | null; image: string | null }>`
         select name, image from "user" where id = ${context.userId} limit 1
@@ -3795,7 +3800,7 @@ export const getAccount = createServerFn({ method: "GET" })
     const profile = await loadUserProfile(sql, context.userId, {
       email,
       name: household?.display_name ?? authUser?.name ?? null,
-      image: authUser?.image ?? null,
+      image: authUser?.image && !authUser.image.startsWith("data:") ? authUser.image : null,
     });
 
     return {
@@ -3838,7 +3843,7 @@ function asUserProfile(
     displayName,
     headline: row?.headline ?? "",
     bio: row?.bio ?? "",
-    photoSrc: row?.photo_src || fallback.image || null,
+    photoSrc: row?.photo_src || (fallback.image && !fallback.image.startsWith("data:") ? fallback.image : null) || null,
     email: fallback.email,
     website: row?.website ?? "",
     instagram: row?.instagram ?? "",
@@ -3943,7 +3948,7 @@ export const updateUserProfile = createServerFn({ method: "POST" })
     await sql`
       update "user"
       set name = ${name},
-          image = ${photoSrc},
+          image = case when image like ${"data:%"} then null else image end,
           "updatedAt" = now()
       where id = ${context.userId}
     `;
@@ -3957,7 +3962,7 @@ export const updateUserProfile = createServerFn({ method: "POST" })
     return loadUserProfile(sql, context.userId, {
       email: session?.email ?? null,
       name,
-      image: photoSrc,
+      image: photoSrc && !photoSrc.startsWith("data:") ? photoSrc : null,
     });
   });
 
