@@ -96,16 +96,36 @@ function ManageRecord() {
         </p>
       </header>
 
-      <InviteOwner
-        propertyId={p.id}
-        claimed={claimed}
-        currentEmail={p.homeowner_email}
-        currentName={p.homeowner_name}
-        inviteToken={p.invite_token}
-        address={`${p.address_line}, ${p.city}, ${p.state} ${p.zip}`}
-        office={q.data.portfolioName}
-        onDone={() => q.refetch()}
-      />
+      <RecordSection
+        title="Invite the owner"
+        blurb={
+          claimed
+            ? "The owner has a login on this record. You still keep the file in the portfolio."
+            : "They claim the same Property Record. You keep managing the house."
+        }
+        photo={CATEGORY_PHOTO.house}
+        countLabel={claimed ? "Claimed" : p.homeowner_email ? "Invite sent" : "Not claimed"}
+        chips={
+          p.homeowner_email ? (
+            <ul className="flex flex-wrap gap-1.5">
+              <li className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+                {p.homeowner_name && p.homeowner_name !== "Owner" ? p.homeowner_name : p.homeowner_email}
+              </li>
+            </ul>
+          ) : undefined
+        }
+      >
+        <InviteOwner
+          propertyId={p.id}
+          claimed={claimed}
+          currentEmail={p.homeowner_email}
+          currentName={p.homeowner_name}
+          inviteToken={p.invite_token}
+          address={`${p.address_line}, ${p.city}, ${p.state} ${p.zip}`}
+          office={q.data.portfolioName}
+          onDone={() => q.refetch()}
+        />
+      </RecordSection>
       <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       <JobTimeline file={house} />
@@ -114,9 +134,26 @@ function ManageRecord() {
       <RecordSection
         id="request-estimates"
         title="Request Estimates"
-        blurb="Known shop first. When you want bids, this goes to shops that offer the trade and service this address."
+        blurb="Measure first. Known shop from Estimates in the navbar, or request bids from shops that service this address."
         photo={CATEGORY_PHOTO.paint}
+        chips={
+          <ul className="flex flex-wrap gap-1.5">
+            <li className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+              Invite a shop
+            </li>
+            <li className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+              How to measure
+            </li>
+          </ul>
+        }
       >
+        <p className="text-sm text-muted-foreground">
+          Invite a go-to shop and take measurements on{" "}
+          <Link to="/manage/estimates" className="underline underline-offset-2">
+            Estimates
+          </Link>
+          .
+        </p>
         <RfpList houseToken={p.share_token} />
         <RfpForm
           houseToken={p.share_token}
@@ -165,6 +202,17 @@ function ManageRecord() {
         blurb={`${due.length} due in the next two weeks. Set a date when the work is agreed, then log it when it is done.`}
         photo={CATEGORY_PHOTO.systems}
         countLabel={`${open.length} open`}
+        chips={
+          due.length ? (
+            <ul className="flex flex-wrap gap-1.5">
+              {due.slice(0, 6).map((t) => (
+                <li key={t.id} className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+                  {t.title}
+                </li>
+              ))}
+            </ul>
+          ) : undefined
+        }
       >
         <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
           {open.map((t) => (
@@ -318,15 +366,7 @@ function InviteOwner({
   const subject = managerInviteSubject(office, address);
 
   return (
-    <section className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
-      <div>
-        <h2 className="font-display text-xl font-medium">Invite the owner</h2>
-        <p className="text-sm text-muted-foreground">
-          {claimed
-            ? "The owner has a login on this record. You still keep the file in the portfolio."
-            : "They claim the same Property Record. You keep managing the house."}
-        </p>
-      </div>
+    <div className="space-y-4">
       {claimed ? (
         <p className="text-sm text-muted-foreground">
           Claimed
@@ -383,6 +423,6 @@ function InviteOwner({
           </div>
         </form>
       )}
-    </section>
+    </div>
   );
 }

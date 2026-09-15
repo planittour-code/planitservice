@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { MaintenanceBadge } from "@/components/status-badge";
+import { MeasureGuidePanel } from "@/components/measure-guide";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import {
   completeMaintenance,
@@ -135,15 +136,26 @@ function HomeRecord() {
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
       </RecordSection>
 
+      <MeasureGuidePanel audience="homeowner" />
+
       <RecordSection
         id="request-estimates"
         title="Request Estimates"
         blurb={
           plan?.tier === "pro"
-            ? "Ask shops that offer this trade and service this address."
+            ? "Ask shops that offer this trade and service this address. Put measurements on the record first."
             : "Named shop you already know is Standard. Request Estimates is Pro."
         }
         photo={CATEGORY_PHOTO.paint}
+        chips={
+          <ul className="flex flex-wrap gap-1.5">
+            {["Paint", "Roof", "Windows", "Gutters"].map((label) => (
+              <li key={label} className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+                {label}
+              </li>
+            ))}
+          </ul>
+        }
       >
         {plan?.tier === "pro" ? (
           <>

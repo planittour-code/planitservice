@@ -43,6 +43,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ManageIndexRouteImport } from './routes/manage/index'
 import { Route as ManageIdRouteImport } from './routes/manage/$id'
 import { Route as ManageAddRouteImport } from './routes/manage/add'
+import { Route as ManageEstimatesRouteImport } from './routes/manage/estimates'
 import { Route as ManageOpenRouteImport } from './routes/manage/open'
 import { Route as ManageSettingsRouteImport } from './routes/manage/settings'
 import { Route as PTokenRouteImport } from './routes/p.$token'
@@ -226,6 +227,11 @@ const ManageAddRoute = ManageAddRouteImport.update({
   path: '/add',
   getParentRoute: () => ManageRouteRoute,
 } as any)
+const ManageEstimatesRoute = ManageEstimatesRouteImport.update({
+  id: '/estimates',
+  path: '/estimates',
+  getParentRoute: () => ManageRouteRoute,
+} as any)
 const ManageOpenRoute = ManageOpenRouteImport.update({
   id: '/open',
   path: '/open',
@@ -319,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/manage/$id': typeof ManageIdRoute
   '/manage/add': typeof ManageAddRoute
+  '/manage/estimates': typeof ManageEstimatesRoute
   '/manage/open': typeof ManageOpenRoute
   '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/manage/$id': typeof ManageIdRoute
   '/manage/add': typeof ManageAddRoute
+  '/manage/estimates': typeof ManageEstimatesRoute
   '/manage/open': typeof ManageOpenRoute
   '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
@@ -413,6 +421,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/manage/$id': typeof ManageIdRoute
   '/manage/add': typeof ManageAddRoute
+  '/manage/estimates': typeof ManageEstimatesRoute
   '/manage/open': typeof ManageOpenRoute
   '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
@@ -463,6 +472,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/manage/$id'
     | '/manage/add'
+    | '/manage/estimates'
     | '/manage/open'
     | '/manage/settings'
     | '/p/$token'
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/manage/$id'
     | '/manage/add'
+    | '/manage/estimates'
     | '/manage/open'
     | '/manage/settings'
     | '/p/$token'
@@ -556,6 +567,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/manage/$id'
     | '/manage/add'
+    | '/manage/estimates'
     | '/manage/open'
     | '/manage/settings'
     | '/p/$token'
@@ -839,6 +851,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManageAddRouteImport
       parentRoute: typeof ManageRouteRoute
     }
+    '/manage/estimates': {
+      id: '/manage/estimates'
+      path: '/estimates'
+      fullPath: '/manage/estimates'
+      preLoaderRoute: typeof ManageEstimatesRouteImport
+      parentRoute: typeof ManageRouteRoute
+    }
     '/manage/open': {
       id: '/manage/open'
       path: '/open'
@@ -991,6 +1010,7 @@ const HomeRouteRouteWithChildren = HomeRouteRoute._addFileChildren(
 interface ManageRouteRouteChildren {
   ManageIdRoute: typeof ManageIdRoute
   ManageAddRoute: typeof ManageAddRoute
+  ManageEstimatesRoute: typeof ManageEstimatesRoute
   ManageOpenRoute: typeof ManageOpenRoute
   ManageSettingsRoute: typeof ManageSettingsRoute
   ManageIndexRoute: typeof ManageIndexRoute
@@ -999,6 +1019,7 @@ interface ManageRouteRouteChildren {
 const ManageRouteRouteChildren: ManageRouteRouteChildren = {
   ManageIdRoute: ManageIdRoute,
   ManageAddRoute: ManageAddRoute,
+  ManageEstimatesRoute: ManageEstimatesRoute,
   ManageOpenRoute: ManageOpenRoute,
   ManageSettingsRoute: ManageSettingsRoute,
   ManageIndexRoute: ManageIndexRoute,

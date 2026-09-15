@@ -24,26 +24,6 @@ export function NamedShopInvite({
   onDone: () => void;
   allowed?: boolean;
 }) {
-  const [email, setEmail] = useState("");
-  const [shopName, setShopName] = useState("");
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const save = useMutation({
-    mutationFn: () =>
-      inviteNamedShop({
-        data: { propertyId, shopEmail: email, shopName, title, body },
-      }),
-    onSuccess: (res) => {
-      toast.success(res.emailed ? "Invite sent to the shop." : "Invite saved. Email did not go out.");
-      setEmail("");
-      setShopName("");
-      setTitle("");
-      setBody("");
-      onDone();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not invite"),
-  });
-
   if (!allowed) {
     return (
       <div className="relative">
@@ -70,6 +50,50 @@ export function NamedShopInvite({
         id="invite-shop"
         className="absolute right-0 z-40 mt-1 w-[min(24rem,calc(100vw-2rem))] space-y-3 rounded-xl bg-card p-3 text-foreground shadow-[var(--shadow-border-hover)]"
       >
+        <NamedShopInviteForm
+          propertyId={propertyId}
+          invites={invites}
+          estimates={estimates}
+          onDone={onDone}
+        />
+      </div>
+    </details>
+  );
+}
+
+export function NamedShopInviteForm({
+  propertyId,
+  invites,
+  estimates,
+  onDone,
+}: {
+  propertyId: string;
+  invites: FileWorkInvite[];
+  estimates: ProposalListRow[];
+  onDone: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [shopName, setShopName] = useState("");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const save = useMutation({
+    mutationFn: () =>
+      inviteNamedShop({
+        data: { propertyId, shopEmail: email, shopName, title, body },
+      }),
+    onSuccess: (res) => {
+      toast.success(res.emailed ? "Invite sent to the shop." : "Invite saved. Email did not go out.");
+      setEmail("");
+      setShopName("");
+      setTitle("");
+      setBody("");
+      onDone();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not invite"),
+  });
+
+  return (
+    <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
         Send this address and the ask to one shop. They quote from the jobs already on this record.
       </p>
@@ -123,7 +147,7 @@ export function NamedShopInvite({
       </form>
 
       {invites.length > 0 ? (
-        <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+        <ul className="divide-y divide-border rounded-xl bg-background shadow-[var(--shadow-border)]">
           {invites.map((invite) => (
             <li key={invite.id} className="px-4 py-3">
               <p className="font-medium">{invite.title}</p>
@@ -140,24 +164,11 @@ export function NamedShopInvite({
         <p className="text-sm text-muted-foreground">Quotes shops have already sent for this house.</p>
       </div>
       {estimates.length === 0 ? (
-        <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-          <p className="text-sm text-muted-foreground">
-            None yet. Invite a go-to shop above for an estimate on this record.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              document.getElementById("invite-shop")?.scrollIntoView({ behavior: "smooth" });
-              toast.message("Invite a shop to quote from the jobs on this record.");
-            }}
-          >
-            Quote from this history
-          </Button>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          None yet. Invite a go-to shop above for an estimate on this record.
+        </p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+        <ul className="divide-y divide-border rounded-xl bg-background shadow-[var(--shadow-border)]">
           {estimates.map((pr) => (
             <li key={pr.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div>
@@ -178,7 +189,6 @@ export function NamedShopInvite({
           ))}
         </ul>
       )}
-      </div>
-    </details>
+    </div>
   );
 }

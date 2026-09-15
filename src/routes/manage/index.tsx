@@ -1,15 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { RecordSection } from "@/components/house-panels";
 import { MaintenanceBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import { shortDate } from "@/lib/housefile/format";
 import { getPortfolio } from "@/lib/housefile/server";
 import type { MaintenanceStatus } from "@/lib/housefile/maintain";
 import type { PortfolioHouse, PortfolioOwner } from "@/lib/housefile/types";
-import { InviteShopHeaderButton, InviteShopHintCard } from "@/components/invite-shop-cta";
 import { PortfolioLookup } from "@/components/portfolio-lookup";
 import { PortfolioWorkBoard } from "@/components/portfolio-work-board";
 import { cn } from "@/lib/utils";
@@ -65,7 +66,11 @@ function ManageDashboard() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {count > 0 ? <InviteShopHeaderButton propertyId={portfolio.data.houses[0]!.id} /> : null}
+          {count > 0 ? (
+            <Button asChild>
+              <Link to="/manage/estimates">Estimates</Link>
+            </Button>
+          ) : null}
           <Button asChild variant="outline">
             <Link to="/manage/add">Add a house</Link>
           </Button>
@@ -78,8 +83,7 @@ function ManageDashboard() {
             <p className="font-medium">No houses in this portfolio yet</p>
             <p className="text-sm text-muted-foreground">
               Add an address you manage. Maintenance dates land on the calendar as soon as the
-              record exists. When a house is on file, invite a go-to shop from the Property Record
-              for an estimate against what is already known.
+              record exists. Invite a shop and take measurements from Estimates.
             </p>
             <Button asChild>
               <Link to="/manage/add">Add a house</Link>
@@ -128,36 +132,89 @@ function ManageDashboard() {
             <p className="text-sm text-muted-foreground">No houses match that filter.</p>
           ) : (
             <>
-            <InviteShopHintCard propertyId={houses[0]!.id} />
-            <PortfolioWorkBoard houses={houses} upcoming={upcoming} />
-            <section className="space-y-3">
-              <div>
-                <h2 className="font-display text-xl font-medium">By owner</h2>
-                <p className="text-sm text-muted-foreground">
-                  Open a house to log work or set a scheduled date once the owner has agreed.
-                </p>
-              </div>
-              <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            <RecordSection
+              title="Calendar and map"
+              blurb="Current, overdue, and scheduled work on the month. Pins are the houses — color matches the date."
+              photo={CATEGORY_PHOTO.house}
+              countLabel={`${houses.length} houses`}
+              chips={
+                <ul className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      ["overdue", "Overdue", counts.overdue],
+                      ["dueSoon", "Due soon", counts.dueSoon],
+                      ["scheduled", "Scheduled", counts.scheduled],
+                      ["current", "Current", counts.current],
+                    ] as const
+                  )
+                    .filter(([, , n]) => n > 0)
+                    .map(([key, label, n]) => (
+                      <li
+                        key={key}
+                        className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
+                      >
+                        {label} {n}
+                      </li>
+                    ))}
+                </ul>
+              }
+            >
+              <PortfolioWorkBoard houses={houses} upcoming={upcoming} />
+            </RecordSection>
+            <RecordSection
+              title="By owner"
+              blurb="Open a house to log work or set a scheduled date once the owner has agreed."
+              photo={CATEGORY_PHOTO.systems}
+              countLabel={`${owners.length} ${owners.length === 1 ? "owner" : "owners"}`}
+              chips={
+                owners.length ? (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {owners.slice(0, 8).map((owner) => (
+                      <li
+                        key={owner.key}
+                        className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
+                      >
+                        {owner.name}
+                        {owner.overdueCount ? ` · ${owner.overdueCount} overdue` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                ) : undefined
+              }
+            >
+              <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
                 {owners.map((owner) => (
                   <OwnerBlock key={owner.key} owner={owner} />
                 ))}
               </ul>
-            </section>
+            </RecordSection>
             </>
           )}
 
-          <section className="space-y-3">
-            <div>
-              <h2 className="font-display text-xl font-medium">Upcoming</h2>
-              <p className="text-sm text-muted-foreground">
-                Overdue work first, then the next 60 days. Accepted estimates stay here until the
-                shop logs the job complete.
-              </p>
-            </div>
+          <RecordSection
+            title="Upcoming"
+            blurb="Overdue work first, then the next 60 days. Accepted estimates stay here until the shop logs the job complete."
+            photo={CATEGORY_PHOTO.paint}
+            countLabel={`${upcoming.length} in this window`}
+            chips={
+              upcoming.length ? (
+                <ul className="flex flex-wrap gap-1.5">
+                  {upcoming.slice(0, 6).map((item) => (
+                    <li
+                      key={item.id}
+                      className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
+                    >
+                      {item.title}
+                    </li>
+                  ))}
+                </ul>
+              ) : undefined
+            }
+          >
             {upcoming.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nothing in this window.</p>
             ) : (
-              <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+              <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
                 {upcoming.slice(0, 24).map((item) => (
                   <li key={item.id}>
                     <Link
@@ -183,7 +240,7 @@ function ManageDashboard() {
                 ))}
               </ul>
             )}
-          </section>
+          </RecordSection>
         </>
       )}
 

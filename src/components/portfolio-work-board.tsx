@@ -185,14 +185,7 @@ export function PortfolioWorkBoard({
   const selectedHouse = houses.find((h) => h.id === pickedHouse) ?? null;
 
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="font-display text-xl font-medium">Calendar and map</h2>
-        <p className="text-sm text-muted-foreground">
-          Current, overdue, and scheduled work on the month. Pins are the houses — color matches
-          the date.
-        </p>
-      </div>
+    <div className="space-y-3">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-stretch">
         <CalendarPane
           cursor={cursor}
@@ -237,7 +230,7 @@ export function PortfolioWorkBoard({
           empty="Nothing on this date."
         />
       ) : null}
-    </section>
+    </div>
   );
 }
 

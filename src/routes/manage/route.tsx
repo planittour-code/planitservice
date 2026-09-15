@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Navigate, Outlet, useParams, useRouterState } from "@tanstack/react-router";
-import { NamedShopInvite } from "@/components/named-shop-invite";
+import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import { AppNavLink, AuthSlot, PageFooter, PublicHeader, SignedInHeader } from "@/components/site-chrome";
 import { PathSignInForm } from "@/components/path-sign-in";
 import { PaidLanding } from "@/components/paid-landing";
@@ -15,7 +13,6 @@ import {
   MANAGE_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
-import { getPortfolioRecord } from "@/lib/housefile/server";
 import { useAudience } from "@/lib/housefile/use-audience";
 
 export const Route = createFileRoute("/manage")({ component: ManageFrame });
@@ -40,9 +37,9 @@ function ManageFrame() {
             <AppNavLink to="/manage" exact>
               Work
             </AppNavLink>
+            <AppNavLink to="/manage/estimates">Estimates</AppNavLink>
             <AppNavLink to="/manage/add">Add a house</AppNavLink>
             <AppNavLink to="/manage/settings">Office</AppNavLink>
-            <PortfolioInviteNav />
             <Button asChild size="sm">
               <Link to="/manage/add">New record</Link>
             </Button>
@@ -73,34 +70,6 @@ function ManageFrame() {
   }
 
   return <Outlet />;
-}
-
-function PortfolioInviteNav() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const params = useParams({ strict: false }) as { id?: string };
-  const onHouse =
-    pathname.startsWith("/manage/") &&
-    Boolean(params.id) &&
-    params.id !== "add" &&
-    params.id !== "settings" &&
-    params.id !== "open";
-  const q = useQuery({
-    queryKey: ["portfolio-record", params.id],
-    queryFn: () => getPortfolioRecord({ data: params.id as string }),
-    enabled: onHouse,
-  });
-  if (!onHouse || !q.data) return null;
-  return (
-    <NamedShopInvite
-      propertyId={q.data.house.property.id}
-      invites={q.data.workInvites ?? []}
-      estimates={q.data.shopEstimates ?? []}
-      allowed
-      onDone={() => {
-        void q.refetch();
-      }}
-    />
-  );
 }
 
 function ManageMarketing() {
