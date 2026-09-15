@@ -26,7 +26,7 @@ export function HomeownerHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-5">
+      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-1.5 sm:px-5">
         <Link to="/" className="flex items-center gap-2.5">
           <Mark className="size-20" />
           <span className="font-display text-lg font-extrabold uppercase tracking-wide text-white">

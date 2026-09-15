@@ -71,7 +71,7 @@ export function PublicHeader({
       <div
         className={cn(
           "mx-auto flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5",
-          compact ? "max-w-3xl py-3" : "max-w-6xl py-3 sm:py-5",
+          compact ? "max-w-3xl py-1.5" : "max-w-6xl py-1.5 sm:py-2.5",
         )}
       >
         <Wordmark to="/" className="text-secondary-foreground [&_span]:text-white" />
@@ -296,7 +296,7 @@ export function SignedInHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
-      <div className={cn("mx-auto flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5", max)}>
+      <div className={cn("mx-auto flex flex-wrap items-center gap-2 px-4 py-1.5 sm:px-5", max)}>
         <Wordmark to={to} className="text-secondary-foreground [&_span]:text-white" />
         {children}
       </div>
