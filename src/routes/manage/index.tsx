@@ -72,7 +72,7 @@ function ManageDashboard() {
             </Button>
           ) : null}
           <Button asChild variant="outline">
-            <Link to="/manage/add">Add a house</Link>
+            <Link to="/manage/add">Add a Property</Link>
           </Button>
         </div>
       </div>
@@ -86,7 +86,7 @@ function ManageDashboard() {
               record exists. Invite a shop and take measurements from Estimates.
             </p>
             <Button asChild>
-              <Link to="/manage/add">Add a house</Link>
+              <Link to="/manage/add">Add a Property</Link>
             </Button>
           </CardContent>
         </Card>

@@ -69,10 +69,10 @@ function ManageEstimates() {
         {houses.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Add a house first. Then you can invite a shop against that record.
+              Add a property first. Then you can invite a shop against that record.
             </p>
             <Button asChild>
-              <Link to="/manage/add">Add a house</Link>
+              <Link to="/manage/add">Add a Property</Link>
             </Button>
           </div>
         ) : (

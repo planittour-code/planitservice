@@ -9,7 +9,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MaintenanceBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,37 @@ const STATUS_DOT: Record<MaintenanceStatus, string> = {
   current: "bg-muted-foreground/50",
 };
 
-const PIN_FILL: Record<MaintenanceStatus, string> = {
-  overdue: "text-destructive",
-  dueSoon: "text-primary",
-  scheduled: "text-secondary",
-  current: "text-muted-foreground",
+const PIN_BG: Record<MaintenanceStatus, string> = {
+  overdue: "bg-destructive text-destructive-foreground",
+  dueSoon: "bg-primary text-primary-foreground",
+  scheduled: "bg-secondary text-secondary-foreground",
+  current: "bg-muted-foreground text-white",
 };
+
+function calendarHouseNumbers(
+  houses: PortfolioHouse[],
+  calendarItems: PortfolioUpcoming[],
+  month: Date,
+) {
+  const numbers = new Map<string, number>();
+  let n = 1;
+  const monthKey = format(month, "yyyy-MM");
+  const sorted = [...calendarItems].sort((a, b) => {
+    const byDate = eventDate(a).localeCompare(eventDate(b));
+    if (byDate !== 0) return byDate;
+    return a.address_line.localeCompare(b.address_line);
+  });
+  const inMonth = sorted.filter((item) => eventDate(item).startsWith(monthKey));
+  const later = sorted.filter((item) => !eventDate(item).startsWith(monthKey));
+  for (const item of [...inMonth, ...later]) {
+    if (!numbers.has(item.property_id)) numbers.set(item.property_id, n++);
+  }
+  const leftover = [...houses].sort((a, b) => a.address_line.localeCompare(b.address_line));
+  for (const house of leftover) {
+    if (!numbers.has(house.id)) numbers.set(house.id, n++);
+  }
+  return numbers;
+}
 
 function houseLine(h: { address_line: string; city: string; state: string; zip: string }) {
   return formatLine(h.address_line, h.city, h.state, h.zip);
@@ -183,6 +208,10 @@ export function PortfolioWorkBoard({
 
   const selectedItems = pickedDay ? (byDay.get(pickedDay) ?? []) : [];
   const selectedHouse = houses.find((h) => h.id === pickedHouse) ?? null;
+  const houseNumbers = useMemo(
+    () => calendarHouseNumbers(houses, calendarItems, cursor),
+    [houses, calendarItems, cursor],
+  );
 
   return (
     <div className="space-y-3">
@@ -207,6 +236,7 @@ export function PortfolioWorkBoard({
         <MapPane
           houses={houses}
           coords={coords}
+          numbers={houseNumbers}
           pickedHouse={pickedHouse}
           onPickHouse={(id) => {
             setPickedHouse((cur) => (cur === id ? null : id));
@@ -219,15 +249,16 @@ export function PortfolioWorkBoard({
       <StatusKey />
       {selectedHouse ? (
         <DayList
-          heading={selectedHouse.address_line}
+          heading={`${houseNumbers.get(selectedHouse.id) ?? ""}. ${selectedHouse.address_line}`.replace(/^\. /, "")}
           items={calendarItems.filter((item) => item.property_id === selectedHouse.id)}
-          empty="No open dates on this house in the upcoming window."
+          empty="No open dates on this property in the upcoming window."
         />
       ) : pickedDay ? (
         <DayList
           heading={format(new Date(`${pickedDay}T12:00:00`), "EEEE, MMMM d")}
           items={selectedItems}
           empty="Nothing on this date."
+          numbers={houseNumbers}
         />
       ) : null}
     </div>
@@ -325,11 +356,13 @@ function CalendarPane({
 function MapPane({
   houses,
   coords,
+  numbers,
   pickedHouse,
   onPickHouse,
 }: {
   houses: PortfolioHouse[];
   coords: Record<string, GeoPoint>;
+  numbers: Map<string, number>;
   pickedHouse: string | null;
   onPickHouse: (id: string) => void;
 }) {
@@ -380,7 +413,7 @@ function MapPane({
   return (
     <div className="flex min-h-80 flex-col overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
       <div className="flex items-baseline justify-between gap-2 px-4 py-3">
-        <p className="font-display text-lg font-medium tracking-tight">Houses</p>
+        <p className="font-display text-lg font-medium tracking-tight">Properties</p>
         <p className="text-xs text-muted-foreground">
           {pins.length} pinned
           {missing > 0 ? ` · ${missing} locating` : ""}
@@ -401,25 +434,21 @@ function MapPane({
           {pins.map(({ house, point }) => {
             const pos = pointOnMap(point, view.center, view.zoom, size.w, size.h);
             const on = pickedHouse === house.id;
+            const n = numbers.get(house.id);
             return (
               <button
                 key={house.id}
                 type="button"
                 onClick={() => onPickHouse(house.id)}
-                className="absolute -translate-x-1/2 -translate-y-full"
+                className={cn(
+                  "absolute flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-bold tabular-nums shadow-[var(--shadow-border)] outline outline-2 outline-white transition-transform duration-150",
+                  PIN_BG[house.status],
+                  on && "z-10 scale-125",
+                )}
                 style={{ left: pos.left, top: pos.top }}
-                aria-label={house.address_line}
+                aria-label={n ? `${n}. ${house.address_line}` : house.address_line}
               >
-                <MapPin
-                  className={cn(
-                    "size-7 drop-shadow-sm transition-transform duration-150",
-                    PIN_FILL[house.status],
-                    on && "scale-125",
-                  )}
-                  fill="currentColor"
-                  stroke="white"
-                  strokeWidth={1.4}
-                />
+                {n ?? "·"}
               </button>
             );
           })}
@@ -460,10 +489,12 @@ function DayList({
   heading,
   items,
   empty,
+  numbers,
 }: {
   heading: string;
   items: PortfolioUpcoming[];
   empty: string;
+  numbers?: Map<string, number>;
 }) {
   return (
     <div className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
@@ -482,6 +513,7 @@ function DayList({
                 <div>
                   <p className="font-medium">{item.title}</p>
                   <p className="text-sm text-muted-foreground">
+                    {numbers?.get(item.property_id) ? `${numbers.get(item.property_id)}. ` : ""}
                     {item.address_line}
                     {item.scheduled_on
                       ? ` · scheduled ${shortDate(item.scheduled_on)}`

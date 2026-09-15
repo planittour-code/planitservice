@@ -196,7 +196,7 @@ function AddPortfolioHouse() {
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <div>
-        <h1 className="font-display text-3xl font-medium tracking-tight">Add a house</h1>
+        <h1 className="font-display text-3xl font-medium tracking-tight">Add a Property</h1>
         <p className="mt-2 text-muted-foreground">
           Opens a Property Record in this portfolio. The first {MANAGE_INCLUDED} are on the base
           plan.
