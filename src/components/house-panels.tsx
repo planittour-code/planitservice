@@ -71,31 +71,41 @@ export function MissingChips({
       <p className="text-sm text-muted-foreground">Every catalog field for this house is filled.</p>
     );
   }
-  const shown = limit ? missing.slice(0, limit) : missing;
-  const rest = missing.length - shown.length;
+  const groups = FIELD_GROUPS.map((group) => ({
+    group,
+    fields: missing.filter((f) => f.group === group.id),
+  })).filter((row) => row.fields.length);
   const chipClass =
     "inline-flex min-h-8 items-center rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground";
+  let remaining = limit ?? missing.length;
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-sm font-medium">Still needed for future quotes</p>
-      <ul className="flex flex-wrap gap-2">
-        {shown.map((f) => (
-          <li key={f.key}>
-            {href ? (
-              <a href={href} className={chipClass}>
-                {f.label}
-              </a>
-            ) : (
-              <span className={chipClass}>{f.label}</span>
-            )}
-          </li>
-        ))}
-        {rest > 0 && (
-          <li className="inline-flex min-h-8 items-center rounded-full px-3 py-1 text-xs text-muted-foreground">
-            +{rest} more
-          </li>
-        )}
-      </ul>
+      {groups.map(({ group, fields }) => {
+        if (remaining <= 0) return null;
+        const shown = fields.slice(0, remaining);
+        remaining -= shown.length;
+        return (
+          <div key={group.id} className="space-y-1">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              {group.label}
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {shown.map((f) => (
+                <li key={f.key}>
+                  {href ? (
+                    <a href={href} className={chipClass}>
+                      {f.label}
+                    </a>
+                  ) : (
+                    <span className={chipClass}>{f.label}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -298,7 +308,6 @@ export function FactsPanel({
   onChanged: () => void;
 }) {
   const byKey = Object.fromEntries(file.facts.map((f) => [f.field_key, f]));
-  const missing = FIELD_CATALOG.filter((f) => !byKey[f.key]?.value);
 
   const save = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
@@ -319,48 +328,30 @@ export function FactsPanel({
   });
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <div>
         <h2 className="font-display text-lg font-medium">House data</h2>
         <p className="text-sm text-muted-foreground">
-          Keep this current. The next quote starts here instead of a clipboard.
+          Same categories as a quote. Fill what you know. Leave the rest — a contractor can add it
+          on site.
         </p>
       </div>
 
-      {missing.length > 0 && (
-        <Card className="bg-muted/40">
-          <CardContent className="space-y-2">
-            <div>
-              <h3 className="font-medium">Missing for future quotes</h3>
-              <p className="text-sm text-muted-foreground">
-                Fill what you know. Leave the rest — a contractor can add it on site.
+      {FIELD_GROUPS.map((group) => {
+        const fields = FIELD_CATALOG.filter((f) => f.group === group.id);
+        if (!fields.length) return null;
+        const filled = fields.filter((f) => Boolean(byKey[f.key]?.value)).length;
+        return (
+          <div key={group.id} className="space-y-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)] sm:p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div>
+                <h3 className="font-display text-lg font-bold tracking-tight">{group.label}</h3>
+                <p className="text-sm text-muted-foreground">{group.blurb}</p>
+              </div>
+              <p className="text-xs font-semibold tabular-nums text-muted-foreground">
+                {filled} of {fields.length} on file
               </p>
             </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {missing.map((field) => (
-                <FactInput
-                  key={field.key}
-                  label={field.label}
-                  hint={field.hint}
-                  placeholder={field.placeholder}
-                  defaultValue=""
-                  disabled={save.isPending}
-                  onSave={(value) => save.mutate({ key: field.key, value })}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {FIELD_GROUPS.map((group) => {
-        const fields = FIELD_CATALOG.filter((f) => f.group === group.id && byKey[f.key]);
-        if (!fields.length) return null;
-        return (
-          <div key={group.id} className="space-y-1.5">
-            <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              {group.label}
-            </h3>
             <div className="grid gap-2 md:grid-cols-2">
               {fields.map((field) => (
                 <FactInput
@@ -370,6 +361,7 @@ export function FactsPanel({
                   placeholder={field.placeholder}
                   defaultValue={byKey[field.key]?.value ?? ""}
                   source={byKey[field.key]?.source}
+                  empty={!byKey[field.key]?.value}
                   disabled={save.isPending}
                   onSave={(value) => save.mutate({ key: field.key, value })}
                 />
@@ -414,27 +406,39 @@ export function MissingFactsPreview({
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
   if (!missing.length) return null;
+  const groups = FIELD_GROUPS.map((group) => ({
+    group,
+    fields: missing.filter((f) => f.group === group.id),
+  })).filter((row) => row.fields.length);
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <div>
         <h2 className="font-display text-lg font-medium">Missing house data</h2>
         <p className="text-sm text-muted-foreground">
-          These are the blanks that slow the next quote. Fill what you know while you have the draft open.
+          Grouped the same way as a quote. Fill what you know while the draft is open.
         </p>
       </div>
-      <div className="grid gap-2 md:grid-cols-2">
-        {missing.map((field) => (
-          <FactInput
-            key={field.key}
-            label={field.label}
-            hint={field.hint}
-            placeholder={field.placeholder}
-            defaultValue=""
-            disabled={save.isPending}
-            onSave={(value) => save.mutate({ key: field.key, value })}
-          />
-        ))}
-      </div>
+      {groups.map(({ group, fields }) => (
+        <div key={group.id} className="space-y-1.5">
+          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            {group.label}
+          </h3>
+          <div className="grid gap-2 md:grid-cols-2">
+            {fields.map((field) => (
+              <FactInput
+                key={field.key}
+                label={field.label}
+                hint={field.hint}
+                placeholder={field.placeholder}
+                defaultValue=""
+                empty
+                disabled={save.isPending}
+                onSave={(value) => save.mutate({ key: field.key, value })}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }
@@ -445,6 +449,7 @@ function FactInput({
   placeholder,
   defaultValue,
   source,
+  empty,
   disabled,
   onSave,
 }: {
@@ -453,20 +458,28 @@ function FactInput({
   placeholder: string;
   defaultValue: string;
   source?: string;
+  empty?: boolean;
   disabled?: boolean;
   onSave: (value: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
   const dirty = value !== defaultValue;
   return (
-    <div className="space-y-1 rounded-md bg-card px-2.5 py-2 shadow-[var(--shadow-border)]">
+    <div
+      className={cn(
+        "space-y-1 rounded-md px-2.5 py-2 shadow-[var(--shadow-border)]",
+        empty ? "bg-muted/50" : "bg-background",
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <Label>{label}</Label>
-        {source && (
+        {source ? (
           <span className="text-xs text-muted-foreground">
             {source === "homeowner" ? "You" : "Contractor"}
           </span>
-        )}
+        ) : empty ? (
+          <span className="text-xs text-muted-foreground">Not on file</span>
+        ) : null}
       </div>
       <Input
         value={value}
