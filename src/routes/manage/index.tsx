@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { MaintenanceBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/housefile/format";
 import { getPortfolio } from "@/lib/housefile/server";
 import type { MaintenanceStatus } from "@/lib/housefile/maintain";
 import type { PortfolioHouse, PortfolioOwner } from "@/lib/housefile/types";
 import { InviteShopHeaderButton, InviteShopHintCard } from "@/components/invite-shop-cta";
+import { PortfolioLookup } from "@/components/portfolio-lookup";
 import { PortfolioWorkBoard } from "@/components/portfolio-work-board";
 import { cn } from "@/lib/utils";
 
@@ -19,20 +19,13 @@ export const Route = createFileRoute("/manage/")({ component: ManageDashboard })
 type Filter = "all" | MaintenanceStatus;
 
 function ManageDashboard() {
-  const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const portfolio = useQuery({ queryKey: ["portfolio"], queryFn: () => getPortfolio() });
 
   const houses = useMemo(() => {
     const list = portfolio.data?.houses ?? [];
-    const needle = q.trim().toLowerCase();
-    return list.filter((h) => {
-      if (filter !== "all" && h.status !== filter) return false;
-      if (!needle) return true;
-      const hay = `${h.address_line} ${h.city} ${h.state} ${h.zip} ${h.homeowner_name ?? ""}`.toLowerCase();
-      return hay.includes(needle);
-    });
-  }, [portfolio.data?.houses, q, filter]);
+    return list.filter((h) => filter === "all" || h.status === filter);
+  }, [portfolio.data?.houses, filter]);
 
   const owners = useMemo(() => {
     const list = portfolio.data?.owners ?? [];
@@ -47,14 +40,8 @@ function ManageDashboard() {
 
   const upcoming = useMemo(() => {
     const list = portfolio.data?.upcoming ?? [];
-    const needle = q.trim().toLowerCase();
-    return list.filter((item) => {
-      if (filter !== "all" && item.status !== filter) return false;
-      if (!needle) return true;
-      const hay = `${item.address_line} ${item.homeowner_name} ${item.title}`.toLowerCase();
-      return hay.includes(needle);
-    });
-  }, [portfolio.data?.upcoming, filter, q]);
+    return list.filter((item) => filter === "all" || item.status === filter);
+  }, [portfolio.data?.upcoming, filter]);
 
   if (portfolio.isLoading) return <Skeleton className="h-48 w-full" />;
   if (portfolio.error || !portfolio.data) {
@@ -101,41 +88,41 @@ function ManageDashboard() {
         </Card>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ["all", "All", count],
-                ["overdue", "Overdue", counts.overdue],
-                ["dueSoon", "Due soon", counts.dueSoon],
-                ["scheduled", "Scheduled", counts.scheduled],
-                ["current", "Current", counts.current],
-              ] as const
-            ).map(([key, label, n]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFilter(key)}
-                className={cn(
-                  "inline-flex min-h-11 items-center rounded-full px-3 text-sm shadow-[var(--shadow-border)]",
-                  filter === key
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-foreground hover:shadow-[var(--shadow-border-hover)]",
-                )}
-              >
-                {label}
-                <span className={cn("ml-2 tabular-nums", filter === key ? "opacity-80" : "text-muted-foreground")}>
-                  {n}
-                </span>
-              </button>
-            ))}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["all", "All", count],
+                  ["overdue", "Overdue", counts.overdue],
+                  ["dueSoon", "Due soon", counts.dueSoon],
+                  ["scheduled", "Scheduled", counts.scheduled],
+                  ["current", "Current", counts.current],
+                ] as const
+              ).map(([key, label, n]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFilter(key)}
+                  className={cn(
+                    "inline-flex min-h-11 items-center rounded-full px-3 text-sm shadow-[var(--shadow-border)]",
+                    filter === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-foreground hover:shadow-[var(--shadow-border-hover)]",
+                  )}
+                >
+                  {label}
+                  <span className={cn("ml-2 tabular-nums", filter === key ? "opacity-80" : "text-muted-foreground")}>
+                    {n}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <PortfolioLookup
+              houses={portfolio.data.houses}
+              owners={portfolio.data.owners}
+              upcoming={portfolio.data.upcoming}
+            />
           </div>
-
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search address or owner"
-            aria-label="Search houses"
-          />
 
           {houses.length === 0 ? (
             <p className="text-sm text-muted-foreground">No houses match that filter.</p>
