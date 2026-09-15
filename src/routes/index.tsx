@@ -33,8 +33,7 @@ function WelcomeSite() {
               The file for the house. The service with a plan.
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-white/90">
-              Jobs, products, warranties, and the shops that already worked this house — at the
-              address. Request Estimates when you want bids from shops that service this street.
+              Jobs, Products, Warranties & Request Estimates.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">
