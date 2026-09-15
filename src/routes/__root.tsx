@@ -13,11 +13,11 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: APP_NAME },
-      { name: "theme-color", content: "#f3eee4" },
+      { name: "theme-color", content: "#0b3a6a" },
       {
         name: "description",
         content:
-          "The Property Record that belongs to you. Start it yourself. Request bids. Keep the jobs, products, and warranties.",
+          "The file for the house. Jobs, products, warranties, and the shop you call back.",
       },
     ],
     links: [

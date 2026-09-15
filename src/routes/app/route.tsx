@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { Wordmark } from "@/components/logo";
+import { AppNavLink, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -58,39 +57,44 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-3">
-          <Wordmark to="/app" />
-          {!onboardPath && (
-            <nav className="ml-auto hidden items-center gap-1 sm:flex">
-              <NavLink to="/app">Shop</NavLink>
-              <NavLink to="/app/leads">Leads</NavLink>
-              <NavLink to="/app/campaign">Customers</NavLink>
-              <NavLink to="/app/properties">Jobs</NavLink>
-              <NavLink to="/app/book">Materials</NavLink>
-              <NavLink to="/app/settings">Shop settings</NavLink>
+      <SignedInHeader
+        to="/app"
+        mobileNav={
+          onboardPath ? undefined : (
+            <nav className="flex gap-1 overflow-x-auto border-t border-white/10 px-2 py-1 sm:hidden">
+              <AppNavLink to="/app" exact>
+                Shop
+              </AppNavLink>
+              <AppNavLink to="/app/leads">Leads</AppNavLink>
+              <AppNavLink to="/app/campaign">Customers</AppNavLink>
+              <AppNavLink to="/app/properties">Jobs</AppNavLink>
+              <AppNavLink to="/app/book">Materials</AppNavLink>
+              <AppNavLink to="/app/settings">Settings</AppNavLink>
             </nav>
-          )}
-          {!onboardPath && (
-            <Button asChild size="sm" className="ml-auto sm:ml-3">
-              <Link to="/app/new">Start a Quote</Link>
-            </Button>
-          )}
-          <div className={onboardPath ? "ml-auto" : ""}>
-            <UserButton />
-          </div>
-        </div>
+          )
+        }
+      >
         {!onboardPath && (
-        <nav className="flex gap-1 overflow-x-auto border-t border-border px-2 py-1 sm:hidden">
-          <NavLink to="/app">Shop</NavLink>
-          <NavLink to="/app/leads">Leads</NavLink>
-          <NavLink to="/app/campaign">Customers</NavLink>
-          <NavLink to="/app/properties">Jobs</NavLink>
-          <NavLink to="/app/book">Materials</NavLink>
-          <NavLink to="/app/settings">Settings</NavLink>
-        </nav>
+          <nav className="ml-auto hidden items-center gap-1 sm:flex">
+            <AppNavLink to="/app" exact>
+              Shop
+            </AppNavLink>
+            <AppNavLink to="/app/leads">Leads</AppNavLink>
+            <AppNavLink to="/app/campaign">Customers</AppNavLink>
+            <AppNavLink to="/app/properties">Jobs</AppNavLink>
+            <AppNavLink to="/app/book">Materials</AppNavLink>
+            <AppNavLink to="/app/settings">Shop settings</AppNavLink>
+          </nav>
         )}
-      </header>
+        {!onboardPath && (
+          <Button asChild size="sm" className="ml-auto sm:ml-3">
+            <Link to="/app/new">Start a Quote</Link>
+          </Button>
+        )}
+        <div className={onboardPath ? "ml-auto" : ""}>
+          <UserButton tone="dark" />
+        </div>
+      </SignedInHeader>
       <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 sm:py-5">
         <Outlet />
       </div>
@@ -113,14 +117,4 @@ function inviteTokenFromLocation(location: { href?: string; search?: unknown }) 
   return token;
 }
 
-function NavLink({ to, children }: { to: string; children: ReactNode }) {
-  return (
-    <Link
-      to={to}
-      className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
-      activeOptions={{ exact: to === "/app" }}
-    >
-      {children}
-    </Link>
-  );
-}
+

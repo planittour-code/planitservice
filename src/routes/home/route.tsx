@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Navigate, Outlet } from "@tanstack/react-router";
-import { Wordmark } from "@/components/logo";
+import { AppNavLink, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -29,36 +29,19 @@ function HomeLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-5 py-3">
-          <Wordmark to="/home" />
-          <nav className="ml-auto flex items-center gap-1">
-            <Link
-              to="/home"
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
-              activeOptions={{ exact: true }}
-            >
-              Houses
-            </Link>
-            <Link
-              to="/home/add"
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              Add a property
-            </Link>
-            <Link
-              to="/home/settings"
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
-            >
-              Settings
-            </Link>
-            <Button asChild size="sm">
-              <Link to="/home/add">New record</Link>
-            </Button>
-            <UserButton />
-          </nav>
-        </div>
-      </header>
+      <SignedInHeader to="/home" max="max-w-5xl">
+        <nav className="ml-auto flex items-center gap-1">
+          <AppNavLink to="/home" exact>
+            Houses
+          </AppNavLink>
+          <AppNavLink to="/home/add">Add a property</AppNavLink>
+          <AppNavLink to="/home/settings">Settings</AppNavLink>
+          <Button asChild size="sm">
+            <Link to="/home/add">New record</Link>
+          </Button>
+          <UserButton tone="dark" />
+        </nav>
+      </SignedInHeader>
       <div className="mx-auto max-w-5xl px-5 py-5">
         <Outlet />
       </div>

@@ -163,16 +163,16 @@ function Login() {
   return (
     <main className="min-h-screen bg-background">
       <PublicHeader>
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/" className="rounded-sm px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white">
           Back
         </Link>
       </PublicHeader>
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-8 md:grid-cols-2 md:items-center">
         <div className="space-y-4">
-          <p className="text-sm tracking-wide text-muted-foreground uppercase">
+          <p className="text-sm font-bold tracking-[0.16em] text-secondary uppercase">
             {homeowner ? "For the homeowner" : manager ? "For property managers" : "For contractors"}
           </p>
-          <h1 className="font-display text-4xl font-medium tracking-tight md:text-5xl">
+          <h1 className="font-display text-4xl font-extrabold tracking-tight md:text-5xl">
             {homeowner
               ? "Keep the record. Call the shop back."
               : manager

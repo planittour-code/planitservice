@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Wordmark } from "@/components/logo";
+import { SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,19 +56,16 @@ function AccountPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-5 py-3">
-          <Wordmark to={homeTo} />
-          <div className="ml-auto">
-            <UserButton />
-          </div>
+      <SignedInHeader to={homeTo} max="max-w-3xl">
+        <div className="ml-auto">
+          <UserButton tone="dark" />
         </div>
-      </header>
+      </SignedInHeader>
 
       <main className="mx-auto max-w-3xl space-y-8 px-5 py-10">
         <div>
           <p className="text-sm tracking-wide text-muted-foreground uppercase">Account</p>
-          <h1 className="font-display text-3xl font-medium tracking-tight">
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">
             {data?.name ?? user.displayName ?? "You"}
           </h1>
           <p className="mt-1 text-muted-foreground">{data?.email ?? user.primaryEmail}</p>

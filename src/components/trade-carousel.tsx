@@ -25,7 +25,7 @@ export function TradeCarousel() {
     <section className="border-t border-border overflow-x-hidden">
       <div className="mx-auto max-w-6xl px-5 py-12">
         <div className="flex items-end justify-between gap-3">
-          <p className="font-display text-2xl font-medium tracking-tight">Estimating Made Easy</p>
+          <p className="font-display text-2xl font-extrabold tracking-tight">Estimating Made Easy</p>
           <div className="flex gap-1">
             <Button type="button" variant="outline" size="icon" aria-label="Previous trades" onClick={() => scroll(-1)}>
               <ChevronLeft />
@@ -61,7 +61,7 @@ export function TradeCarousel() {
                 )}
               >
                 <Icon className="size-8" aria-hidden />
-                <p className="mt-4 font-display text-2xl font-medium">{work.name}</p>
+                <p className="mt-4 font-display text-2xl font-bold">{work.name}</p>
                 <p className="mt-2 text-sm leading-relaxed text-primary-foreground/80">{work.blurb}</p>
                 <p className="mt-4 text-sm font-medium">Quote {work.name}</p>
               </button>

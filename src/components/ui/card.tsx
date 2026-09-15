@@ -5,7 +5,7 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   return (
     <div
       className={cn(
-        "rounded-xl bg-card text-card-foreground shadow-[var(--shadow-border)]",
+        "rounded-md bg-card text-card-foreground shadow-[var(--shadow-border)]",
         className,
       )}
       {...props}
@@ -18,7 +18,7 @@ export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDiv
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn("font-display text-lg font-medium tracking-tight", className)} {...props} />;
+  return <h3 className={cn("font-display text-lg font-bold tracking-tight", className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {

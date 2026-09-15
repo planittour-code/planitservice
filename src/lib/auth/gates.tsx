@@ -49,15 +49,20 @@ export function RedirectToSignIn({ to = SIGN_IN_PATH }: { to?: string }) {
  * `design-ui` skill). Sign-out is only shown when auth is enabled (the
  * disabled-auth dev user has nothing to sign out of).
  */
-export function UserButton() {
+export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
   const user = useCurrentUser();
   if (!user) return null;
   const label = user.displayName ?? user.primaryEmail ?? "Account";
+  const dark = tone === "dark";
   return (
     <div className="flex items-center gap-2">
       <Link
         to="/account"
-        className="flex min-h-11 items-center gap-2 rounded-md px-1 hover:bg-muted"
+        className={
+          dark
+            ? "flex min-h-11 items-center gap-2 rounded-sm px-1 text-white hover:bg-white/10"
+            : "flex min-h-11 items-center gap-2 rounded-sm px-1 hover:bg-muted"
+        }
         aria-label="Account"
       >
         {user.profileImageUrl ? (
@@ -67,17 +72,27 @@ export function UserButton() {
             className="h-8 w-8 rounded-full object-cover"
           />
         ) : (
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-muted text-sm font-medium">
+          <span
+            className={
+              dark
+                ? "grid h-8 w-8 place-items-center rounded-full bg-white/15 text-sm font-semibold text-white"
+                : "grid h-8 w-8 place-items-center rounded-full bg-muted text-sm font-semibold"
+            }
+          >
             {label.charAt(0).toUpperCase()}
           </span>
         )}
-        <span className="hidden max-w-28 truncate text-sm font-medium sm:inline">{label}</span>
+        <span className="hidden max-w-28 truncate text-sm font-semibold sm:inline">{label}</span>
       </Link>
       {authEnabled && (
         <button
           type="button"
           onClick={() => void signOut()}
-          className="cursor-pointer text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className={
+            dark
+              ? "cursor-pointer text-sm font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline"
+              : "cursor-pointer text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          }
         >
           Sign out
         </button>

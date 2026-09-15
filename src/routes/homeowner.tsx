@@ -74,17 +74,17 @@ function StartHouseRecord() {
       <main>
         <section className="relative isolate overflow-hidden bg-ink text-primary-foreground">
           <img
-            src="/houses/cover-hero.jpg"
-            alt=""
+            src="/houses/homeowner-hero.jpg"
+            alt="Homeowners reviewing house photos on the porch"
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/60" />
+          <div className="absolute inset-0 bg-ink/70" />
           <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-5 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
-              <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
+              <p className="text-sm font-bold tracking-[0.16em] text-primary uppercase">
                 For the homeowner
               </p>
-              <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
+              <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-white md:text-5xl">
                 The house keeps the record. The shops who worked it stay on it.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
@@ -105,7 +105,7 @@ function StartHouseRecord() {
 
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
               <p className="text-sm tracking-wide text-muted-foreground uppercase">Start a Property Record</p>
-              <p className="mt-2 font-display text-3xl font-medium tracking-tight">
+              <p className="mt-2 font-display text-3xl font-extrabold tracking-tight">
                 ${dollars(cadence === "annual" ? annual : monthly)}
                 <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">
                   / {cadence === "annual" ? "year" : "month"}
@@ -253,7 +253,7 @@ function StartHouseRecord() {
               body="Photos, products, warranties, and who did the work. Call that shop back when it is due again."
             />
             <Proof
-              photo="/houses/maple-interior.jpg"
+              photo="/houses/maple-siding.jpg"
               kicker="Request Estimates"
               title="Pro asks shops that can service this street."
               body="One job, one address. Bids come from PlanitService shops that offer that trade in this area — not a dump of every request."
@@ -269,7 +269,7 @@ function StartHouseRecord() {
 
         <section className="border-t border-border bg-card/40">
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 px-4 py-16 text-center sm:px-5">
-            <h2 className="font-display text-3xl font-medium tracking-tight">
+            <h2 className="font-display text-3xl font-extrabold tracking-tight">
               Stop hunting for the last receipt.
             </h2>
             <p className="max-w-xl text-muted-foreground leading-relaxed">
@@ -303,7 +303,7 @@ function Proof({
       <img src={photo} alt="" className="aspect-[16/9] w-full object-cover" />
       <div className="space-y-2 p-5">
         <p className="text-sm tracking-wide text-muted-foreground uppercase">{kicker}</p>
-        <h2 className="font-display text-xl font-medium tracking-tight">{title}</h2>
+        <h2 className="font-display text-xl font-bold tracking-tight">{title}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
       </div>
     </article>

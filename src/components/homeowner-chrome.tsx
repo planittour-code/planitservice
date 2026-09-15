@@ -25,17 +25,17 @@ export function HomeownerHeader({
   company: string;
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-5">
-        <Link to="/" className="flex items-center gap-2.5 text-primary">
+        <Link to="/" className="flex items-center gap-2.5">
           <Mark />
-          <span className="font-display text-lg font-medium tracking-tight text-foreground">
+          <span className="font-display text-lg font-extrabold uppercase tracking-wide text-white">
             PlanitService
           </span>
         </Link>
-        <p className="hidden text-sm text-muted-foreground sm:block">{company}</p>
+        <p className="hidden text-sm font-semibold text-white/80 sm:block">{company}</p>
       </div>
-      <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 pb-2 sm:px-5" aria-label="For the homeowner">
+      <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto border-t border-white/10 px-4 py-1 sm:px-5" aria-label="For the homeowner">
         {estimateToken ? (
           <NavItem to="/p/$token" params={{ token: estimateToken }} label="This estimate" />
         ) : null}
@@ -63,7 +63,7 @@ function NavItem({
       to={to as never}
       params={params as never}
       hash={hash}
-      className="inline-flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
+      className="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white [&.active]:bg-white/15 [&.active]:text-white"
       activeOptions={{ exact: !hash, includeHash: Boolean(hash) }}
     >
       {label}
@@ -84,7 +84,7 @@ export function EstimateGroups({
   return (
     <section id="estimates" className="space-y-3">
       <div>
-        <h2 className="font-display text-xl font-medium">Estimates</h2>
+        <h2 className="font-display text-xl font-bold">Estimates</h2>
         <p className="text-sm text-muted-foreground">Grouped by the job they belong to.</p>
       </div>
       {groups.length === 0 ? (

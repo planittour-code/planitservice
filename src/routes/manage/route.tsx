@@ -1,8 +1,7 @@
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
-import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
+import { AppNavLink, AuthSlot, PageFooter, PublicHeader, SignedInHeader } from "@/components/site-chrome";
 import { PathSignInForm } from "@/components/path-sign-in";
 import { PaidLanding } from "@/components/paid-landing";
-import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -32,36 +31,19 @@ function ManageFrame() {
   if (authReady && audience.hats.manager) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-card/50">
-          <div className="mx-auto flex max-w-5xl items-center gap-3 px-5 py-3">
-            <Wordmark to="/manage" />
-            <nav className="ml-auto flex items-center gap-1">
-              <Link
-                to="/manage"
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
-                activeOptions={{ exact: true }}
-              >
-                Work
-              </Link>
-              <Link
-                to="/manage/add"
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                Add a house
-              </Link>
-              <Link
-                to="/manage/settings"
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
-              >
-                Office
-              </Link>
-              <Button asChild size="sm">
-                <Link to="/manage/add">New record</Link>
-              </Button>
-              <UserButton />
-            </nav>
-          </div>
-        </header>
+        <SignedInHeader to="/manage" max="max-w-5xl">
+          <nav className="ml-auto flex items-center gap-1">
+            <AppNavLink to="/manage" exact>
+              Work
+            </AppNavLink>
+            <AppNavLink to="/manage/add">Add a house</AppNavLink>
+            <AppNavLink to="/manage/settings">Office</AppNavLink>
+            <Button asChild size="sm">
+              <Link to="/manage/add">New record</Link>
+            </Button>
+            <UserButton tone="dark" />
+          </nav>
+        </SignedInHeader>
         <div className="mx-auto max-w-5xl px-5 py-5">
           <Outlet />
         </div>
@@ -99,17 +81,17 @@ function ManageMarketing() {
       <main>
         <section className="relative isolate overflow-hidden bg-ink text-primary-foreground">
           <img
-            src="/houses/cover-hero.jpg"
-            alt=""
+            src="/houses/manage-hero.jpg"
+            alt="A property manager checking houses on a clipboard"
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/60" />
+          <div className="absolute inset-0 bg-ink/70" />
           <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-5 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
-              <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
+              <p className="text-sm font-bold tracking-[0.16em] text-primary uppercase">
                 For property managers
               </p>
-              <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
+              <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-white md:text-5xl">
                 Records, a calendar, and Request Estimates.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
@@ -161,7 +143,7 @@ function ManageMarketing() {
         <section id="pricing" className="border-t border-border bg-card/40">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-[1fr_1fr] md:items-center">
             <div className="space-y-4">
-              <h2 className="font-display text-3xl font-medium tracking-tight">
+              <h2 className="font-display text-3xl font-extrabold tracking-tight">
                 A portfolio, not ten homeowner plans.
               </h2>
               <p className="text-muted-foreground">
@@ -177,7 +159,7 @@ function ManageMarketing() {
             </div>
             <div className="rounded-xl bg-primary p-6 text-primary-foreground shadow-[var(--shadow-border)] sm:p-8">
               <p className="text-sm tracking-wide uppercase opacity-80">The portfolio</p>
-              <p className="mt-3 font-display text-5xl font-medium tracking-tight">
+              <p className="mt-3 font-display text-5xl font-extrabold tracking-tight">
                 ${dollars(MANAGE_MONTHLY)}
                 <span className="ml-2 text-lg font-sans font-normal opacity-80">/ month</span>
               </p>
@@ -232,7 +214,7 @@ function SignedInOpenPortfolio() {
   return (
     <div className="space-y-3">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>
-      <p className="font-display text-2xl font-medium tracking-tight">Open a portfolio on this login</p>
+      <p className="font-display text-2xl font-extrabold tracking-tight">Open a portfolio on this login</p>
       <p className="text-sm text-muted-foreground">
         Pay for the office, then add the houses you manage. Card details stay on Stripe.
       </p>
@@ -249,7 +231,7 @@ function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (
     <div className="space-y-2">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Step {n}</p>
-      <h2 className="font-display text-xl font-medium tracking-tight">{title}</h2>
+      <h2 className="font-display text-xl font-bold tracking-tight">{title}</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
     </div>
   );

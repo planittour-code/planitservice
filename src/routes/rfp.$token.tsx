@@ -65,10 +65,10 @@ function RfpPage() {
       {houseToken ? (
         <HomeownerHeader houseToken={houseToken} company={rfp.homeowner_name} />
       ) : (
-        <header className="border-b border-border">
-          <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
-            <Wordmark to="/home" />
-            <Button asChild variant="ghost" size="sm">
+        <header className="bg-secondary text-secondary-foreground">
+          <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
+            <Wordmark to="/home" className="text-secondary-foreground [&_span]:text-white" />
+            <Button asChild size="sm">
               <Link to="/app">Shop</Link>
             </Button>
           </div>

@@ -21,10 +21,10 @@ export function AuthSlot({
   const { user, isPending } = useCurrentUserState();
   if (isPending) return <div className="h-11 w-24 animate-pulse rounded-md bg-muted" />;
   if (user) {
-    return <UserButton />;
+    return <UserButton tone="dark" />;
   }
   return (
-    <Button asChild variant="outline">
+    <Button asChild>
       <Link from="/" to="/login" search={signInSearch(signedInTo)}>
         Sign in
       </Link>
@@ -67,26 +67,20 @@ export function PublicHeader({
   const { user } = useCurrentUserState();
   const lane = path ?? (home === "/shop" ? "contractor" : "choose");
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
       <div
         className={cn(
           "mx-auto flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5",
           compact ? "max-w-3xl py-3" : "max-w-6xl py-3 sm:py-5",
         )}
       >
-        <Wordmark to="/" />
+        <Wordmark to="/" className="text-secondary-foreground [&_span]:text-white" />
         <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2">
           {lane === "choose" && (
             <>
-              <Button asChild variant="outline" className="min-h-11">
-                <Link to="/homeowner">Homeowner</Link>
-              </Button>
-              <Button asChild variant="outline" className="min-h-11">
-                <Link to="/shop">Contractor</Link>
-              </Button>
-              <Button asChild variant="outline" className="min-h-11">
-                <Link to="/manage">Property manager</Link>
-              </Button>
+              <HeaderLink to="/homeowner">Homeowner</HeaderLink>
+              <HeaderLink to="/shop">Contractor</HeaderLink>
+              <HeaderLink to="/manage">Property manager</HeaderLink>
             </>
           )}
           {lane === "homeowner" && (
@@ -169,7 +163,7 @@ function HeaderLink({
       search={search as never}
       hash={hash}
       className={cn(
-        "rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",
+        "rounded-sm px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white",
         hideOnMobile && "hidden sm:inline-flex",
       )}
     >
@@ -284,6 +278,48 @@ export function WizardSteps({
   );
 }
 
+export function SignedInHeader({
+  to,
+  max = "max-w-6xl",
+  children,
+  mobileNav,
+}: {
+  to: string;
+  max?: string;
+  children?: ReactNode;
+  mobileNav?: ReactNode;
+}) {
+  return (
+    <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
+      <div className={cn("mx-auto flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5", max)}>
+        <Wordmark to={to} className="text-secondary-foreground [&_span]:text-white" />
+        {children}
+      </div>
+      {mobileNav}
+    </header>
+  );
+}
+
+export function AppNavLink({
+  to,
+  children,
+  exact,
+}: {
+  to: string;
+  children: ReactNode;
+  exact?: boolean;
+}) {
+  return (
+    <Link
+      to={to as never}
+      className="inline-flex min-h-11 shrink-0 items-center rounded-sm px-3 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white [&.active]:bg-white/15 [&.active]:text-white"
+      activeOptions={{ exact }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function FileNav({ homeowner = false }: { homeowner?: boolean }) {
   const links = homeowner
     ? [
@@ -370,7 +406,7 @@ export function HouseCard({
       </div>
       <div className="space-y-3 p-5">
         <div>
-          <h2 className="font-display text-xl font-medium">{address}</h2>
+          <h2 className="font-display text-xl font-bold">{address}</h2>
           <p className="text-sm text-muted-foreground">
             {city}, {state} {zip}
             {name ? ` · ${name}` : ""}

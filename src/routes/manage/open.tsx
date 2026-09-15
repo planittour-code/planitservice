@@ -89,15 +89,15 @@ function OpenPortfolio() {
       <main>
         <section className="relative isolate overflow-hidden bg-ink text-primary-foreground">
           <img
-            src="/houses/cover-hero.jpg"
+            src="/houses/manage-hero.jpg"
             alt=""
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/60" />
+          <div className="absolute inset-0 bg-ink/70" />
           <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-5 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
-              <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">For property managers</p>
-              <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
+              <p className="text-sm font-bold tracking-[0.16em] text-primary uppercase">For property managers</p>
+              <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-white md:text-5xl">
                 Records, a calendar, and Request Estimates.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">

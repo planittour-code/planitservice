@@ -24,31 +24,38 @@ function WelcomeSite() {
             alt=""
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/60" />
+          <div className="absolute inset-0 bg-ink/70" />
           <div className="relative mx-auto max-w-3xl space-y-6 px-4 py-16 text-center sm:px-5 md:py-24">
-            <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
+            <p className="text-sm font-bold tracking-[0.18em] text-primary uppercase">
               PlanitService
             </p>
-            <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-6xl">
-              The house keeps the record. The shops who already worked it are on it.
+            <h1 className="font-display text-5xl font-extrabold tracking-tight text-balance text-white md:text-7xl">
+              The file for the house. The shop you call back.
             </h1>
-            <p className="mx-auto max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-              One Property Record at the address — jobs, products, warranties, and maintenance.
-              Homeowners call back the shop they already used. When they need bids, Request
-              Estimates goes to shops that can do that work at that address.
+            <p className="mx-auto max-w-xl text-lg leading-relaxed text-white/90">
+              Jobs, products, warranties, and the shops that already worked this house — at the
+              address. Request Estimates when you want bids from shops that service this street.
             </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button asChild size="lg">
+                <Link to="/homeowner">I’m a homeowner</Link>
+              </Button>
+              <Button asChild size="lg" variant="secondary">
+                <Link to="/shop">I’m a contractor</Link>
+              </Button>
+            </div>
           </div>
         </section>
 
         <section className="border-t border-border">
           <div className="mx-auto max-w-5xl px-4 py-14 sm:px-5">
-            <p className="text-center text-sm tracking-wide text-muted-foreground uppercase">
+            <p className="text-center text-sm font-bold tracking-[0.16em] text-secondary uppercase">
               Choose how you use it
             </p>
             <div className="mt-8 grid gap-6 md:grid-cols-3">
               <PathCard
                 kicker="Homeowners"
-                title="Keep the file. Call the shop back."
+                title="The file for the house."
                 body="Photos, jobs, warranties, and maintenance at the address — plus the shops that already worked the house. Pro adds Request Estimates when you want bids from shops that service this street."
                 price={`From $${dollars(PROPERTY_MONTHLY)} / month per property`}
                 to="/homeowner"
@@ -128,7 +135,7 @@ function PathCard({
       <p className={`text-sm tracking-wide uppercase ${emphasis ? "opacity-80" : "text-muted-foreground"}`}>
         {kicker}
       </p>
-      <h2 className="mt-3 font-display text-3xl font-medium tracking-tight">{title}</h2>
+      <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight">{title}</h2>
       <p className={`mt-4 flex-1 leading-relaxed ${emphasis ? "opacity-90" : "text-muted-foreground"}`}>
         {body}
       </p>
@@ -151,7 +158,7 @@ function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (
     <div className="space-y-2">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Step {n}</p>
-      <h2 className="font-display text-xl font-medium">{title}</h2>
+      <h2 className="font-display text-xl font-bold">{title}</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
     </div>
   );

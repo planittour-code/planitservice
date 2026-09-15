@@ -76,12 +76,12 @@ function InvitePage() {
         {isPending ? (
           <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
         ) : user ? (
-          <UserButton />
+          <UserButton tone="dark" />
         ) : (
           <Link
             to="/login"
             search={{ invite: token, email: p.homeowner_email }}
-            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            className="rounded-sm px-3 py-2 text-sm font-semibold text-white hover:bg-white/10"
           >
             Keep this file
           </Link>
