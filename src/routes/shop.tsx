@@ -86,7 +86,7 @@ function HomePage() {
         <section className="border-t border-border bg-card/40">
           <div className="mx-auto max-w-xl space-y-8 px-5 py-16">
             <h2 className="text-center font-display text-3xl font-extrabold tracking-tight text-balance md:text-4xl">
-              A little homework can generate a lot of home work.
+              A little homework can remove a lot of guesswork.
             </h2>
             <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
               <img
