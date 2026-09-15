@@ -73,6 +73,7 @@ import type {
   PropertyPlan,
   PropertyTransfer,
   FileWorkInvite,
+  KnownProvider,
   Rfp,
   RfpQuote,
   ShopRole,
@@ -3002,6 +3003,67 @@ async function canWriteFile(sql: Sql, userId: string, propertyId: string): Promi
   return staff[0] ?? null;
 }
 
+function shopCoversAddress(
+  shop: { city: string | null; state: string | null; zip: string | null },
+  job: { city: string; state: string; zip: string },
+) {
+  const shopZip = (shop.zip ?? "").trim().slice(0, 5);
+  const jobZip = job.zip.trim().slice(0, 5);
+  if (shopZip && jobZip && shopZip === jobZip) return true;
+  const shopCity = (shop.city ?? "").trim().toLowerCase();
+  const jobCity = job.city.trim().toLowerCase();
+  const shopState = (shop.state ?? "").trim().toLowerCase();
+  const jobState = job.state.trim().toLowerCase();
+  if (shopCity && jobCity && shopCity === jobCity && (!shopState || !jobState || shopState === jobState)) {
+    return true;
+  }
+  return Boolean(shopZip.length === 5 && jobZip.length === 5 && shopZip.slice(0, 3) === jobZip.slice(0, 3));
+}
+
+async function knownProvidersForProperty(sql: Sql, property: Property): Promise<KnownProvider[]> {
+  const jobs = await sql<{ company_id: string; title: string; completed_at: string }>`
+    select company_id, title, completed_at from jobs where property_id = ${property.id}
+  `;
+  const estimates = await shopEstimatesAtAddress(sql, property);
+  const by = new Map<string, { lastWork: string; lastAt: string }>();
+  for (const job of jobs) {
+    const prev = by.get(job.company_id);
+    if (!prev || job.completed_at > prev.lastAt) {
+      by.set(job.company_id, { lastWork: job.title, lastAt: job.completed_at });
+    }
+  }
+  for (const pr of estimates) {
+    if (pr.status === "draft" || pr.status === "pending") continue;
+    const at = pr.accepted_at || pr.sent_at || pr.created_at;
+    const prev = by.get(pr.company_id);
+    if (!prev || at > prev.lastAt) {
+      by.set(pr.company_id, { lastWork: pr.title, lastAt: at });
+    }
+  }
+  const ids = [...by.keys()].filter((id) => id && id !== HOUSEHOLD_COMPANY);
+  if (!ids.length) return [];
+  const shops: Company[] = [];
+  for (const id of ids) {
+    const rows = await sql<Company>`select * from companies where id = ${id} limit 1`;
+    if (rows[0]) shops.push(rows[0]);
+  }
+  return shops
+    .map((shop) => {
+      const hit = by.get(shop.id);
+      if (!hit) return null;
+      return {
+        companyId: shop.id,
+        name: shop.name,
+        phone: shop.phone,
+        email: shop.email,
+        lastWork: hit.lastWork,
+        lastAt: hit.lastAt,
+      } satisfies KnownProvider;
+    })
+    .filter((row): row is KnownProvider => Boolean(row))
+    .sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+}
+
 async function shopEstimatesAtAddress(sql: Sql, property: Property): Promise<ProposalListRow[]> {
   const zip5 = property.zip.trim().slice(0, 5);
   const rows = await sql<ProposalListRow & { shop_zip: string }>`
@@ -3077,6 +3139,31 @@ export const createRfp = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
+    if (!WORK_BY_ID[data.workId]) throw new Error("Pick a trade.");
+    const title = data.title.trim();
+    const body = data.body.trim();
+    if (title.length < 4) throw new Error("Name the job in a sentence.");
+    if (body.length < 12) throw new Error("Tell the shops what you need.");
+
+    let property: Property | null = null;
+    if (data.houseToken) {
+      const found = await sql<Property>`
+        select * from properties where share_token = ${data.houseToken} or invite_token = ${data.houseToken} limit 1
+      `;
+      property = found[0] ?? null;
+    }
+    const onFile = property ? await canWriteFile(sql, context.userId, property.id) : null;
+    if (property && !onFile && property.homeowner_user_id && property.homeowner_user_id !== context.userId) {
+      throw new Error("This Property Record belongs to another household.");
+    }
+    if (property && !property.homeowner_user_id && !onFile) {
+      await sql`
+        update properties set homeowner_user_id = ${context.userId}, invite_status = ${"claimed"}
+        where id = ${property.id}
+      `;
+      property.homeowner_user_id = context.userId;
+    }
+
     let profile = (
       await sql<HomeownerProfile>`select * from homeowner_profiles where user_id = ${context.userId} limit 1`
     )[0];
@@ -3090,31 +3177,32 @@ export const createRfp = createServerFn({ method: "POST" })
         await sql<HomeownerProfile>`select * from homeowner_profiles where user_id = ${context.userId} limit 1`
       )[0]!;
     }
-    if (profile.plan === "basic") {
-      throw new Error("RFPs are a Pro feature. Upgrade to put work on the market.");
-    }
-    if (!WORK_BY_ID[data.workId]) throw new Error("Pick a trade.");
-    const title = data.title.trim();
-    const body = data.body.trim();
-    if (title.length < 4) throw new Error("Name the job in a sentence.");
-    if (body.length < 12) throw new Error("Tell the shops what you need.");
-
-    let property: Property | null = null;
-    if (data.houseToken) {
-      const found = await sql<Property>`
-        select * from properties where share_token = ${data.houseToken} or invite_token = ${data.houseToken} limit 1
-      `;
-      property = found[0] ?? null;
-      if (property && property.homeowner_user_id && property.homeowner_user_id !== context.userId) {
-        throw new Error("This Property Record belongs to another household.");
-      }
-      if (property && !property.homeowner_user_id) {
-        await sql`
-          update properties set homeowner_user_id = ${context.userId}, invite_status = ${"claimed"}
-          where id = ${property.id}
-        `;
-        property.homeowner_user_id = context.userId;
-      }
+    const propertyPro = property
+      ? Boolean(
+          (
+            await sql<PropertyPlan>`
+              select * from property_plans where property_id = ${property.id} and tier = ${"pro"} limit 1
+            `
+          )[0],
+        )
+      : false;
+    const isPro = profile.plan === "plus" || propertyPro;
+    const office = property
+      ? await sql<{ ok: number }>`
+          select 1 as ok
+          from portfolio_properties pp
+          join portfolios pf on pf.id = pp.portfolio_id
+          left join portfolio_members m
+            on m.portfolio_id = pf.id and m.user_id = ${context.userId}
+          where pp.property_id = ${property.id}
+            and pf.paid_at is not null
+            and (pf.user_id = ${context.userId} or m.user_id = ${context.userId})
+          limit 1
+        `
+      : [];
+    const asOffice = Boolean(office[0]);
+    if (!isPro && !asOffice) {
+      throw new Error("Request Estimates is a Pro feature, or included with a Portfolio.");
     }
 
     const address = (property?.address_line || data.addressLine || "").trim();
@@ -3155,10 +3243,13 @@ export const listMarketRfps = createServerFn({ method: "GET" })
       .map((s) => s.trim())
       .filter(Boolean);
     const rows = await sql<Rfp>`
-      select * from rfps where status = ${"open"} order by created_at desc limit 50
+      select * from rfps where status = ${"open"} order by created_at desc limit 80
     `;
-    const matched = trades.length ? rows.filter((r) => trades.includes(r.work_id)) : rows;
-    return { rfps: matched.length ? matched : rows, trades };
+    const byTrade = trades.length ? rows.filter((r) => trades.includes(r.work_id)) : rows;
+    const matched = byTrade.filter((r) =>
+      shopCoversAddress(company, { city: r.city, state: r.state, zip: r.zip }),
+    );
+    return { rfps: matched, trades, area: { city: company.city, zip: company.zip } };
   });
 
 export const getRfpByToken = createServerFn({ method: "GET" })
@@ -3389,7 +3480,8 @@ export const getHomeRecord = createServerFn({ method: "GET" })
     )[0] ?? null;
     const workInvites = await workInvitesForProperty(sql, id);
     const shopEstimates = await shopEstimatesAtAddress(sql, rows[0]);
-    return { house, plan, tasks, transfer, workInvites, shopEstimates };
+    const knownProviders = await knownProvidersForProperty(sql, rows[0]);
+    return { house, plan, tasks, transfer, workInvites, shopEstimates, knownProviders };
   });
 
 export const completeMaintenance = createServerFn({ method: "POST" })
@@ -4200,12 +4292,14 @@ export const getPortfolioRecord = createServerFn({ method: "GET" })
     const acceptedEstimates = await acceptedEstimatesForPortfolio(sql, portfolio.id, id);
     const workInvites = await workInvitesForProperty(sql, id);
     const shopEstimates = await shopEstimatesAtAddress(sql, rows[0]);
+    const knownProviders = await knownProvidersForProperty(sql, rows[0]);
     return {
       house,
       tasks,
       acceptedEstimates,
       workInvites,
       shopEstimates,
+      knownProviders,
       portfolioName: portfolio.name,
       claimed: Boolean(rows[0].homeowner_user_id),
     };

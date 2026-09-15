@@ -174,17 +174,17 @@ function Login() {
           </p>
           <h1 className="font-display text-4xl font-medium tracking-tight md:text-5xl">
             {homeowner
-              ? "Keep the record for every house you own."
+              ? "Keep the record. Call the shop back."
               : manager
                 ? "Sign in to the houses you manage."
-                : "Sign in and quote the job."}
+                : "Sign in. Quote the next visit."}
           </h1>
           <p className="max-w-md text-muted-foreground">
             {homeowner
-              ? "Jobs, warranties, and maintenance at the address. Add another property when you need to. Pro hands the Property Record to the next owner."
+              ? "Jobs, warranties, known shops, and maintenance at the address. Pro is Request Estimates from shops that service this street."
               : manager
-                ? "Photos, jobs, warranties, and issued estimates at each address. Add a house from the portfolio."
-                : "Pick the template. Enter while you talk. Price from materials. Send the estimate before you leave. The Property Record is how they call you back."}
+                ? "Records, a maintenance calendar, and Request Estimates when a house needs bids. Add a house from the portfolio."
+                : "Quote onto the File so you are the known shop. Catch Request Estimates in your trades and service area."}
           </p>
         </div>
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">

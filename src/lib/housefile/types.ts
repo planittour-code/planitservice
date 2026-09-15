@@ -249,6 +249,15 @@ export type HouseCompany = {
   payment_link: string | null;
 };
 
+export type KnownProvider = {
+  companyId: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  lastWork: string;
+  lastAt: string;
+};
+
 export type HouseFile = {
   property: Property;
   company: HouseCompany;

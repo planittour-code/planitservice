@@ -30,12 +30,12 @@ function WelcomeSite() {
               PlanitService
             </p>
             <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-6xl">
-              The house keeps a record. The shop quotes from it.
+              The house keeps the record. The shops who already worked it are on it.
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-              One Property Record at the address. Homeowners keep the jobs, products, warranties,
-              and maintenance. Contractors search the address, quote from what is already known,
-              and send a number before the other shop is still driving over.
+              One Property Record at the address — jobs, products, warranties, and maintenance.
+              Homeowners call back the shop they already used. When they need bids, Request
+              Estimates goes to shops that can do that work at that address.
             </p>
           </div>
         </section>
@@ -48,16 +48,16 @@ function WelcomeSite() {
             <div className="mt-8 grid gap-6 md:grid-cols-3">
               <PathCard
                 kicker="Homeowners"
-                title="Own the Property Record."
-                body="Put in what you already know. Photos, paint, roof year, equipment. Share it with a buyer, a shop, or a property manager. When a PlanitService contractor works the house, the job writes onto the same record."
+                title="Keep the file. Call the shop back."
+                body="Photos, jobs, warranties, and maintenance at the address — plus the shops that already worked the house. Pro adds Request Estimates when you want bids from shops that service this street."
                 price={`From $${dollars(PROPERTY_MONTHLY)} / month per property`}
                 to="/homeowner"
                 cta="I’m a homeowner"
               />
               <PathCard
                 kicker="Contractors"
-                title="Quote from the last job."
-                body="Look up the address. If a record is there, you know the walk before you talk. Templates, materials, and a quote you can send before you leave the yard. The File you open is theirs — they keep it."
+                title="Turn one job into the next visit."
+                body="Quote onto the File so you are the known shop for repeat work. Upsell the other trades you offer. Catch Request Estimates from homeowners and offices in your service area."
                 price={`Shop from $${dollars(SHOP_MONTHLY)} / month`}
                 to="/shop"
                 cta="I’m a contractor"
@@ -65,8 +65,8 @@ function WelcomeSite() {
               />
               <PathCard
                 kicker="Property managers"
-                title="One file for every house you manage."
-                body="A portfolio of Property Records — photos, jobs, warranties, and issued estimates at the address. Shops still quote in their shop. The homeowner can claim the file later."
+                title="Records, a calendar, and bids."
+                body="A portfolio of Property Records with a maintenance calendar. Known shops first. Request Estimates when a house needs work and you want numbers from shops that cover the address."
                 price={`Portfolio from $${dollars(MANAGE_MONTHLY)} / month for 10 houses`}
                 to="/manage"
                 cta="I’m a property manager"
@@ -89,8 +89,8 @@ function WelcomeSite() {
             />
             <Step
               n="3"
-              title="The next visit is faster."
-              body="The next trade does not guess. The homeowner does not hunt a receipt. The shop that already knows the house gets called back."
+              title="The shop that knows the house gets called back."
+              body="Known providers stay on the file. Request Estimates is for new work, or when you want competing numbers from shops that service the address."
             />
           </div>
         </section>

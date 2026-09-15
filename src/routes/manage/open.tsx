@@ -98,11 +98,11 @@ function OpenPortfolio() {
             <div className="space-y-5">
               <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">For property managers</p>
               <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
-                One record for every house you manage.
+                Records, a calendar, and Request Estimates.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                Start a {MANAGE_TRIAL_DAYS}-day trial, map your addresses, then shops quote from the
-                file. Photos, jobs, warranties, and estimates stay at the address.
+                Start a {MANAGE_TRIAL_DAYS}-day trial, map your addresses, then run maintenance from
+                the calendar. Request Estimates when a house needs bids from shops that cover it.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
                 <li>{MANAGE_TRIAL_DAYS}-day trial — map houses before you pay.</li>

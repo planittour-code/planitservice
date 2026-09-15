@@ -17,7 +17,7 @@ export const Route = createFileRoute("/app/onboard")({ component: Onboard });
 
 const STEPS = [
   { n: 1, label: "Services" },
-  { n: 2, label: "Stand out" },
+  { n: 2, label: "Service area" },
   { n: 3, label: "Materials" },
   { n: 4, label: "Branding" },
 ];
@@ -99,7 +99,8 @@ function Onboard() {
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Shop setup</p>
         <h1 className="font-display text-3xl font-medium tracking-tight">Open the shop.</h1>
         <p className="text-muted-foreground">
-          Services, how you stand out, materials, then your name on the estimate.
+          Services and service area first — that is how Request Estimates find you. Then materials
+          and your name on the estimate.
         </p>
         <WizardSteps step={step} items={STEPS} />
       </div>
@@ -162,8 +163,12 @@ function Onboard() {
               setAddingWork(false);
             }}
           />
-          <Button type="button" disabled={trades.length === 0} onClick={() => setStep(2)}>
-            Next — stand out
+          <Button
+            type="button"
+            disabled={trades.length === 0}
+            onClick={() => setStep(2)}
+          >
+            Next — service area
           </Button>
         </div>
       )}
@@ -171,8 +176,8 @@ function Onboard() {
       {step === 2 && (
         <div className="space-y-3">
           <p className="text-muted-foreground">
-            Homeowners pick a shop they can place. Address, years, associations, and reviews you
-            already earned elsewhere.
+            City and ZIP are the service area. Request Estimates only show jobs you can cover.
+            Years, associations, and reviews help the homeowner place the shop.
           </p>
           <div className="space-y-1">
             <Label htmlFor="st">Shop address</Label>
@@ -284,7 +289,11 @@ function Onboard() {
             <Button type="button" variant="ghost" onClick={() => setStep(1)}>
               Back
             </Button>
-            <Button type="button" onClick={() => setStep(3)}>
+            <Button
+              type="button"
+              disabled={!city.trim() || !zip.trim()}
+              onClick={() => setStep(3)}
+            >
               Next — materials
             </Button>
           </div>

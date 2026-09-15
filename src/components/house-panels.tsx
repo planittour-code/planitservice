@@ -482,6 +482,45 @@ function FactInput({
   );
 }
 
+export function KnownProviders({
+  providers,
+}: {
+  providers: { companyId: string; name: string; phone: string | null; email: string | null; lastWork: string; lastAt: string }[];
+}) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2 className="font-display text-lg font-medium">Known shops</h2>
+        <p className="text-sm text-muted-foreground">
+          Shops that already worked this address. Call them back for repeat work. Request Estimates
+          when you want other bids.
+        </p>
+      </div>
+      {providers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No shops on file yet. Accepted estimates and completed jobs land here.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+          {providers.map((shop) => (
+            <li key={shop.companyId} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">{shop.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {shop.lastWork} · {shortDate(shop.lastAt)}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {[shop.phone, shop.email].filter(Boolean).join(" · ") || "On the File"}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function JobTimeline({ file }: { file: HouseFile }) {
   if (!file.jobs.length) {
     return (

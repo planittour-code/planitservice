@@ -49,11 +49,12 @@ function HomePage() {
                   For general contractors
                 </p>
                 <h1 className="font-display text-4xl font-medium tracking-tight text-balance sm:text-5xl md:text-6xl">
-                  If you could know before you go…
+                  Turn one job into the next visit.
                 </h1>
                 <p className="max-w-xl text-lg leading-relaxed text-pretty text-primary-foreground/80">
-                  Save drive time with a quick search. Know what you are walking before you start
-                  talking. Jump the line with fast, accurate quotes based on the last job.
+                  Quote onto the File so you are the known shop for repeat work. Upsell the other
+                  trades you offer. Catch Request Estimates from homeowners and offices in your
+                  service area.
                 </p>
                 <div className="rounded-xl bg-card p-2 text-left text-foreground shadow-[var(--shadow-border)]">
                   <AddressLookup onTease={setTease} />
@@ -147,10 +148,10 @@ function HomePage() {
                 or ${dollars(SHOP_ANNUAL)} a year. Extra seats ${dollars(SEAT_MONTHLY)}/month.
               </p>
               <ul className="mt-6 space-y-2 text-sm">
-                <li>Search the address before you roll</li>
-                <li>Quote from the last job on the Property Record</li>
-                <li>Jump the line — send it while you talk</li>
-                <li>The next trade is already yours</li>
+                <li>Quote onto the File — you become the known shop</li>
+                <li>Repeat and upsell from jobs already at the address</li>
+                <li>Request Estimates leads in your trades and area</li>
+                <li>The next visit is already yours</li>
               </ul>
               <div className="mt-8">
                 <Button

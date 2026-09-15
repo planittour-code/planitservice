@@ -36,8 +36,8 @@ function HomeDashboard() {
                 : "Houses on this account."}
           </h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            Open a card to add photos, products, warranties, and maintenance. Add another address only
-            if you own a second property — one address is one record.
+            Open a card for photos, jobs, known shops, and maintenance. Request Estimates is on Pro
+            when you need bids. Add another address only if you own a second property.
           </p>
         </div>
         <Button asChild variant="outline">

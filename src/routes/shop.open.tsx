@@ -91,16 +91,16 @@ function OpenShop() {
             <div className="space-y-5">
               <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">For contractors</p>
               <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
-                The first clean number wins the job.
+                Repeat work, then Request Estimates leads.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                Look up the house. Quote from what is already on the Property Record. Send the estimate while
-                you are still talking — or before anyone else leaves the shop.
+                Quote onto the File so the homeowner calls you back. Offer the other categories you
+                do. Catch Request Estimates from houses in your service area.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
-                <li>Search the address before you roll the truck.</li>
-                <li>Price from your materials — suppliers, a spreadsheet, or numbers you type.</li>
-                <li>Every quote starts the Property Record. The next trade at that address is already yours.</li>
+                <li>You become the known shop on every File you quote.</li>
+                <li>Materials stay in the shop. The File stays with the house.</li>
+                <li>Leads match your services and the area you work.</li>
               </ul>
             </div>
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">

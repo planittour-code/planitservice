@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   FactsPanel,
   JobTimeline,
+  KnownProviders,
   PhotoGrid,
   SectionRule,
   WarrantyList,
@@ -17,6 +18,7 @@ import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { MaintenanceBadge } from "@/components/status-badge";
 import { NamedShopInvite } from "@/components/named-shop-invite";
+import { RfpForm, RfpList } from "@/components/rfp-panel";
 import {
   completeMaintenance,
   getHomeRecord,
@@ -68,7 +70,7 @@ function HomeRecord() {
           {p.city}, {p.state} {p.zip}
         </p>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Add photos first. Then fill house data and the jobs at this address.
+          Photos first. Then house data, jobs, and the shops that already worked here.
         </p>
       </header>
 
@@ -77,6 +79,8 @@ function HomeRecord() {
       <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       <SectionRule />
       <JobTimeline file={house} />
+      <SectionRule />
+      <KnownProviders providers={q.data.knownProviders ?? []} />
       <SectionRule />
       <WarrantyList file={house} />
       <SectionRule />
@@ -129,15 +133,34 @@ function HomeRecord() {
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
       </section>
 
-      {plan?.tier === "pro" ? (
-        <p className="text-sm text-muted-foreground">
-          Invited pool (several shops on one job) stays on Pro. Named contractor above is Standard.
-        </p>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Invited pool — several shops on one job — is Pro. Named contractor on this File is Standard.
-        </p>
-      )}
+      <SectionRule />
+      <section id="request-estimates" className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-medium">Request Estimates</h2>
+          <p className="text-sm text-muted-foreground">
+            {plan?.tier === "pro"
+              ? "Ask shops that offer this trade and service this address. Named shop above is Standard."
+              : "Named shop you already know is Standard. Request Estimates — bids from shops that service this street — is Pro."}
+          </p>
+        </div>
+        {plan?.tier === "pro" ? (
+          <>
+            <RfpList houseToken={p.share_token} />
+            <RfpForm
+              houseToken={p.share_token}
+              addressLine={p.address_line}
+              city={p.city}
+              state={p.state}
+              zip={p.zip}
+              homeownerName={p.homeowner_name}
+            />
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Upgrade this property to Pro to request estimates from shops in the area.
+          </p>
+        )}
+      </section>
     </div>
   );
 }

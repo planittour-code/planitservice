@@ -77,7 +77,7 @@ function RfpPage() {
       <main className="mx-auto max-w-3xl space-y-8 px-5 py-8">
         <header className="space-y-3">
           <p className="text-sm tracking-wide text-muted-foreground uppercase">
-            {workLabel(rfp.work_id)} request · {rfp.status}
+            {workLabel(rfp.work_id)} Request Estimate · {rfp.status}
           </p>
           <h1 className="font-display text-3xl font-medium tracking-tight">{rfp.title}</h1>
           <p className="text-muted-foreground">

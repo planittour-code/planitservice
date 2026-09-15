@@ -71,7 +71,8 @@ function AddProperty() {
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Add a property</h1>
         <p className="mt-2 text-muted-foreground">
-          One Property Record per address. ${dollars(price)} {cadence === "annual" ? "this year" : "per month"}.
+          One Property Record per address. Standard keeps the file and known shops. Pro adds
+          Request Estimates. ${dollars(price)} {cadence === "annual" ? "this year" : "per month"}.
         </p>
       </div>
       <form
@@ -102,8 +103,18 @@ function AddProperty() {
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Plan</legend>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Choice on={tier === "standard"} title="Standard" body="Property Record, share link, transfer" onClick={() => setTier("standard")} />
-            <Choice on={tier === "pro"} title="Pro" body="RFPs and property manager access" onClick={() => setTier("pro")} />
+            <Choice
+              on={tier === "standard"}
+              title="Standard"
+              body="File, known shops, maintenance"
+              onClick={() => setTier("standard")}
+            />
+            <Choice
+              on={tier === "pro"}
+              title="Pro"
+              body="Request Estimates from shops that service this address"
+              onClick={() => setTier("pro")}
+            />
           </div>
         </fieldset>
         <fieldset className="space-y-2">

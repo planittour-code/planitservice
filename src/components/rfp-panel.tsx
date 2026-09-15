@@ -61,7 +61,7 @@ export function RfpForm({
         },
       }),
     onSuccess: (rfp) => {
-      toast.success("Request is on the market");
+      toast.success("Request Estimates sent to shops that service this address");
       onCreated?.(rfp);
       void navigate({ to: "/rfp/$token", params: { token: rfp.share_token } });
     },
@@ -74,7 +74,7 @@ export function RfpForm({
         <Link to="/login" search={{ next: "/home", role: "homeowner" }} className="underline">
           Sign in
         </Link>{" "}
-        to post an invited pool (Pro). Named contractor work is on the Property Record.
+        to Request Estimates (Pro). Named shops you already know stay on the Property Record.
       </p>
     );
   }
@@ -153,7 +153,7 @@ export function RfpForm({
         </div>
       )}
       <Button type="submit" disabled={save.isPending}>
-        {save.isPending ? "Posting…" : "Put it on the market"}
+        {save.isPending ? "Sending…" : "Request Estimates"}
       </Button>
     </form>
   );
@@ -177,7 +177,7 @@ export function RfpList({ houseToken }: { houseToken?: string }) {
   if (!user) return null;
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading requests…</p>;
   if (rfps.length === 0) {
-    return <p className="text-sm text-muted-foreground">No requests on the market yet.</p>;
+    return <p className="text-sm text-muted-foreground">No Request Estimates yet.</p>;
   }
 
   return (

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   FactsPanel,
   JobTimeline,
+  KnownProviders,
   PhotoGrid,
   SectionRule,
   WarrantyList,
@@ -19,6 +20,7 @@ import { shortDate } from "@/lib/housefile/format";
 import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
 import { NamedShopInvite } from "@/components/named-shop-invite";
 import { QuoteFromHistoryStub } from "@/components/invite-shop-cta";
+import { RfpForm, RfpList } from "@/components/rfp-panel";
 import {
   completePortfolioMaintenance,
   getPortfolioRecord,
@@ -116,6 +118,8 @@ function ManageRecord() {
       <JobTimeline file={house} />
       <QuoteFromHistoryStub />
       <SectionRule />
+      <KnownProviders providers={q.data.knownProviders ?? []} />
+      <SectionRule />
       <WarrantyList file={house} />
       <SectionRule />
 
@@ -125,6 +129,25 @@ function ManageRecord() {
         estimates={issued}
         onDone={() => q.refetch()}
       />
+      <SectionRule />
+      <section id="request-estimates" className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-medium">Request Estimates</h2>
+          <p className="text-sm text-muted-foreground">
+            Known shop first. When you want bids, this goes to shops that offer the trade and
+            service this address.
+          </p>
+        </div>
+        <RfpList houseToken={p.share_token} />
+        <RfpForm
+          houseToken={p.share_token}
+          addressLine={p.address_line}
+          city={p.city}
+          state={p.state}
+          zip={p.zip}
+          homeownerName={p.homeowner_name}
+        />
+      </section>
       <SectionRule />
 
       {agreed.length > 0 ? (

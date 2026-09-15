@@ -55,9 +55,14 @@ function ShopHome() {
             Address and the ask first. Photos, measurements, then line items from Materials.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/app/new">Start a Quote</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/app/new">Start a Quote</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/app/leads">Request Estimates leads</Link>
+          </Button>
+        </div>
       </section>
 
       {namedInvites.length > 0 && (

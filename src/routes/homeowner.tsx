@@ -82,20 +82,20 @@ function StartHouseRecord() {
           <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-5 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
               <p className="text-sm tracking-wide text-primary-foreground/70 uppercase">
-                Use the same software as your contractor
+                For the homeowner
               </p>
               <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
-                The house should remember what you already paid for.
+                The house keeps the record. The shops who worked it stay on it.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                You do not wait on a shop to start the Property Record. Write the roof year, the paint color,
-                the filter size. When a contractor quotes through PlanitService, that work lands on
-                the same record. Share it. Hand it on.
+                Photos, jobs, warranties, and maintenance at this address — and who already did the
+                work, so you call them back. You do not wait on a shop to start the file. Pro adds
+                Request Estimates when you want bids from shops that service this street.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
-                <li>You own the Property Record from day one — no contractor has to invite you first.</li>
-                <li>Jobs, products, warranties, and maintenance live at the address.</li>
-                <li>Pro puts the next job in front of shops, or a property manager.</li>
+                <li>Standard: the Property Record, known shops, and maintenance due dates.</li>
+                <li>Pro: Request Estimates — one job, shops that can do that work at this address.</li>
+                <li>A named shop you already know stays on Standard. The market is Pro.</li>
               </ul>
               <SignInCta
                 signedInTo="/home"
@@ -161,14 +161,14 @@ function StartHouseRecord() {
                 {tier === "pro" ? (
                   <>
                     <li>Everything in Standard</li>
-                    <li>Request bids and put the job on the market</li>
-                    <li>Let a property manager see the Property Record and the bids</li>
+                    <li>Request Estimates from shops that service this address</li>
+                    <li>Named shop you already know stays available on Standard</li>
                   </>
                 ) : (
                   <>
-                    <li>Build the Property Record — jobs, photos, products, warranties</li>
-                    <li>Share a link with buyers or contractors</li>
-                    <li>Transfer the record at sale or when the house passes on</li>
+                    <li>Property Record — photos, jobs, products, warranties</li>
+                    <li>Known shops who already worked the house</li>
+                    <li>Maintenance due dates, share, and transfer</li>
                   </>
                 )}
               </ul>
@@ -248,21 +248,21 @@ function StartHouseRecord() {
           <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-5 md:grid-cols-3">
             <Proof
               photo="/houses/maple-front.jpg"
-              kicker="Start it yourself"
-              title="You own the Property Record from day one."
-              body="Add the house. Write what you already know. No shop has to invite you first."
+              kicker="Keep the file"
+              title="The house remembers the last job."
+              body="Photos, products, warranties, and who did the work. Call that shop back when it is due again."
             />
             <Proof
               photo="/houses/maple-interior.jpg"
-              kicker="Ask for bids"
-              title="Put the work in front of shops."
-              body="Pro lets you write a request and send it to the market against the house you already documented."
+              kicker="Request Estimates"
+              title="Pro asks shops that can service this street."
+              body="One job, one address. Bids come from PlanitService shops that offer that trade in this area — not a dump of every request."
             />
             <Proof
               photo="/houses/maple-roof.jpg"
               kicker="Hand it on"
               title="The next owner starts with history."
-              body="Share a link. Transfer the record at sale or when the house passes on. The Property Record stays with the address."
+              body="Share a link. Transfer the record at sale. The Property Record stays with the address."
             />
           </div>
         </section>
@@ -273,7 +273,8 @@ function StartHouseRecord() {
               Stop hunting for the last receipt.
             </h2>
             <p className="max-w-xl text-muted-foreground leading-relaxed">
-              The next buyer will ask what is on the roof. That answer should live at the address.
+              Who did the gutters, when the roof is due, what paint is on the trim — that lives at
+              the address. Request Estimates when you need new bids.
             </p>
             <Button asChild size="lg" className="min-h-12">
               <a href="#signup">Create the account</a>

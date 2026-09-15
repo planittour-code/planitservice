@@ -106,10 +106,10 @@ function HousePage() {
         <SectionRule />
         <section id="rfps" className="space-y-3">
           <div>
-            <h2 className="font-display text-xl font-medium">Invited pool</h2>
+            <h2 className="font-display text-xl font-medium">Request Estimates</h2>
             <p className="text-sm text-muted-foreground">
-              Several shops on one job is Pro. Named contractor work is posted from the Property
-              Record on Standard.
+              Pro asks shops that offer this trade and service this address. Named shops you
+              already know stay on Standard.
             </p>
           </div>
           <RfpList houseToken={p.share_token} />

@@ -110,16 +110,17 @@ function ManageMarketing() {
                 For property managers
               </p>
               <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-5xl">
-                One record for every house you manage.
+                Records, a calendar, and Request Estimates.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                Photos, jobs, warranties, and issued estimates at the address. You keep the file.
-                Shops still quote in their shop. The homeowner can claim it later.
+                One file per house — photos, jobs, warranties, known shops. A maintenance calendar
+                for the office. Request Estimates when a house needs bids from shops that cover
+                the address.
               </p>
               <ul className="space-y-3 text-sm text-primary-foreground/80">
                 <li>{MANAGE_INCLUDED} Property Records on the base plan.</li>
-                <li>Extra houses ${dollars(MANAGE_EXTRA_MONTHLY)} / month each.</li>
-                <li>No catalog. No quoting. The file is the product.</li>
+                <li>Maintenance calendar included. Request Estimates included.</li>
+                <li>Shops still quote in their shop. The homeowner can claim the file later.</li>
               </ul>
             </div>
             <div className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
@@ -146,13 +147,13 @@ function ManageMarketing() {
             />
             <Step
               n="2"
-              title="The work stays on the house."
-              body="Photos, products, warranties, and maintenance live at the address. Issued estimates from shops show up when they send them."
+              title="The calendar is the daily surface."
+              body="Current, due, overdue, scheduled. Known shops first. Request Estimates when you want competing numbers."
             />
             <Step
               n="3"
               title="You are not a shop."
-              body="No catalog. No quoting. The file is the product. Ten houses on the base, then a bulk rate for the rest."
+              body="No catalog. No quoting. The file and the calendar are the product. Ten houses on the base, then a bulk rate."
             />
           </div>
         </section>
