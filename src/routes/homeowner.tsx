@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { TermsAgree } from "@/components/legal-doc";
+import { PaidLanding } from "@/components/paid-landing";
 import { PageFooter, PublicHeader, AuthSlot, SignInCta } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ function StartHouseRecord() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (user) {
-      void navigate({ to: "/home/add", search: { tier } });
+      void navigate({ to: "/home" });
       return;
     }
     setError(null);
@@ -68,6 +69,7 @@ function StartHouseRecord() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PaidLanding prefer="homeowner" />
       <PublicHeader path="homeowner">
         <AuthSlot signedInTo="/home" />
       </PublicHeader>

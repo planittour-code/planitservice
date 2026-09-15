@@ -125,7 +125,6 @@ function Login() {
       return <Navigate to="/manage" />;
     }
     if (audience.hats.homeowner) {
-      if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
       return <Navigate to="/home" />;
     }
     if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;

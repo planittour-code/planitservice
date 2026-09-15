@@ -1,12 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createHomeProperty } from "@/lib/housefile/server";
+import { createHomeProperty, getHousehold } from "@/lib/housefile/server";
 import { startCheckout } from "@/lib/housefile/stripe-billing";
 import {
   PROPERTY_ANNUAL,
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/home/add")({
 
 function AddProperty() {
   const search = Route.useSearch();
+  const houses = useQuery({ queryKey: ["household"], queryFn: () => getHousehold() });
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("GA");
@@ -43,6 +44,10 @@ function AddProperty() {
       : cadence === "annual"
         ? PROPERTY_ANNUAL
         : PROPERTY_MONTHLY;
+
+  if ((houses.data?.houses.length ?? 0) > 0 && search.tier) {
+    return <Navigate to="/home" />;
+  }
 
   const save = useMutation({
     mutationFn: async () => {
