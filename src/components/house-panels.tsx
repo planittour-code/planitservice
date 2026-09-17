@@ -7,7 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CATEGORY_PHOTO, FIELD_CATALOG, FIELD_GROUPS, PHOTO_CATEGORIES } from "@/lib/housefile/fields";
+import {
+  CATEGORY_PHOTO,
+  FIELD_CATALOG,
+  FIELD_GROUPS,
+  HOUSE_QUOTE_KEYS,
+  HOUSE_ROOM_EDITOR_KEYS,
+  HOUSE_ROOMS_JSON_KEY,
+  PHOTO_CATEGORIES,
+} from "@/lib/housefile/fields";
+import { HouseRoomsEditor } from "@/components/house-rooms";
 import { shortDate } from "@/lib/housefile/format";
 import { compressImage } from "@/lib/housefile/image";
 import { invitationLetter, invitationSubject } from "@/lib/housefile/invite";
@@ -32,6 +41,7 @@ export function RecordSection({
   chips,
   children,
   id,
+  defaultOpen,
 }: {
   title: string;
   blurb: string;
@@ -40,10 +50,14 @@ export function RecordSection({
   chips?: ReactNode;
   children: ReactNode;
   id?: string;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(Boolean(defaultOpen));
   return (
     <details
       id={id}
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
       className="group overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]"
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 p-3 sm:p-4 [&::-webkit-details-marker]:hidden">
@@ -98,7 +112,7 @@ export function Completeness({ filled, total }: { filled: number; total: number 
 
 export function missingFieldLabels(file: HouseFile) {
   const byKey = Object.fromEntries(file.facts.map((f) => [f.field_key, f]));
-  return FIELD_CATALOG.filter((f) => !byKey[f.key]?.value);
+  return FIELD_CATALOG.filter((f) => f.key !== HOUSE_ROOMS_JSON_KEY && !byKey[f.key]?.value);
 }
 
 export function MissingChips({
@@ -383,20 +397,25 @@ export function FactsPanel({
         });
       }
     },
-    onSuccess: () => {
-      toast.success("Property Record updated");
-      onChanged();
+    onSuccess: (_data, vars) => {
+      const roomKey = (HOUSE_ROOM_EDITOR_KEYS as readonly string[]).includes(vars.key);
+      if (!roomKey) toast.success("Property Record updated");
+      if (vars.key !== HOUSE_ROOMS_JSON_KEY) onChanged();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
 
   const filledGroups = FIELD_GROUPS.filter((group) =>
-    FIELD_CATALOG.some((f) => f.group === group.id && byKey[f.key]?.value),
+    FIELD_CATALOG.some(
+      (f) => f.group === group.id && f.key !== HOUSE_ROOMS_JSON_KEY && byKey[f.key]?.value,
+    ),
   );
+  const [houseOpen, setHouseOpen] = useState(mode === "homeowner");
   return (
     <RecordSection
       title="House data"
       blurb="Same categories as a quote. Fill what you know. Leave the rest — a contractor can add it on site."
+      defaultOpen={mode === "homeowner"}
       photo={CATEGORY_PHOTO.house}
       countLabel={`${file.filledCount} of ${file.totalCount} on file`}
       chips={
@@ -418,11 +437,32 @@ export function FactsPanel({
       {FIELD_GROUPS.map((group) => {
         const fields = FIELD_CATALOG.filter((f) => f.group === group.id);
         if (!fields.length) return null;
-        const filled = fields.filter((f) => Boolean(byKey[f.key]?.value)).length;
+        const gridFields =
+          group.id === "house"
+            ? fields.filter((f) => !(HOUSE_ROOM_EDITOR_KEYS as readonly string[]).includes(f.key))
+            : fields;
+        const quoteGrid = gridFields.filter((f) =>
+          (HOUSE_QUOTE_KEYS as readonly string[]).includes(f.key),
+        );
+        const restGrid = gridFields.filter(
+          (f) => !(HOUSE_QUOTE_KEYS as readonly string[]).includes(f.key),
+        );
+        const countable = fields.filter((f) => f.key !== HOUSE_ROOMS_JSON_KEY);
+        const filled = countable.filter((f) => Boolean(byKey[f.key]?.value)).length;
+        const quoteFields =
+          group.id === "house"
+            ? fields.filter((f) => (HOUSE_QUOTE_KEYS as readonly string[]).includes(f.key))
+            : [];
         return (
           <details
             key={group.id}
-            className="group overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]"
+            open={group.id === "house" ? houseOpen : undefined}
+            onToggle={
+              group.id === "house"
+                ? (e) => setHouseOpen(e.currentTarget.open)
+                : undefined
+            }
+            className="group/fact overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]"
           >
             <summary className="flex cursor-pointer list-none items-center gap-3 p-3 sm:p-4 [&::-webkit-details-marker]:hidden">
               <img
@@ -430,31 +470,74 @@ export function FactsPanel({
                 alt=""
                 className="size-14 shrink-0 rounded-md object-cover sm:size-16"
               />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="font-display text-lg font-bold tracking-tight">{group.label}</h3>
                   <p className="text-xs font-semibold tabular-nums text-muted-foreground">
-                    {filled} of {fields.length} on file
+                    {filled} of {countable.length} on file
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground">{group.blurb}</p>
+                {quoteFields.length ? (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {quoteFields.map((field) => (
+                      <li
+                        key={field.key}
+                        className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
+                      >
+                        {field.label}
+                      </li>
+                    ))}
+                    {group.id === "house" ? (
+                      <li className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+                        Rooms
+                      </li>
+                    ) : null}
+                  </ul>
+                ) : null}
               </div>
-              <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+              <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open/fact:rotate-180" aria-hidden />
             </summary>
-            <div className="grid gap-2 border-t border-border p-3 md:grid-cols-2 sm:p-4">
-              {fields.map((field) => (
-                <FactInput
-                  key={`${field.key}-${byKey[field.key]?.value ?? ""}`}
-                  label={field.label}
-                  hint={field.hint}
-                  placeholder={field.placeholder}
-                  defaultValue={byKey[field.key]?.value ?? ""}
-                  source={byKey[field.key]?.source}
-                  empty={!byKey[field.key]?.value}
-                  disabled={save.isPending}
-                  onSave={(value) => save.mutate({ key: field.key, value })}
-                />
-              ))}
+            <div className="space-y-3 border-t border-border p-3 sm:p-4">
+              <div className="grid gap-2 md:grid-cols-2">
+                {(group.id === "house" ? quoteGrid : gridFields).map((field) => (
+                  <FactInput
+                    key={`${field.key}-${byKey[field.key]?.value ?? ""}`}
+                    id={field.key}
+                    label={field.label}
+                    hint={field.hint}
+                    placeholder={field.placeholder}
+                    defaultValue={byKey[field.key]?.value ?? ""}
+                    source={byKey[field.key]?.source}
+                    empty={!byKey[field.key]?.value}
+                    disabled={save.isPending}
+                    onSave={(value) => save.mutate({ key: field.key, value })}
+                  />
+                ))}
+                {group.id === "house" ? (
+                  <HouseRoomsEditor
+                    facts={byKey}
+                    disabled={save.isPending}
+                    onSave={(key, value) => save.mutateAsync({ key, value })}
+                  />
+                ) : null}
+                {group.id === "house"
+                  ? restGrid.map((field) => (
+                      <FactInput
+                        key={`${field.key}-${byKey[field.key]?.value ?? ""}`}
+                        id={field.key}
+                        label={field.label}
+                        hint={field.hint}
+                        placeholder={field.placeholder}
+                        defaultValue={byKey[field.key]?.value ?? ""}
+                        source={byKey[field.key]?.source}
+                        empty={!byKey[field.key]?.value}
+                        disabled={save.isPending}
+                        onSave={(value) => save.mutate({ key: field.key, value })}
+                      />
+                    ))
+                  : null}
+              </div>
             </div>
           </details>
         );
@@ -516,6 +599,7 @@ export function MissingFactsPreview({
             {fields.map((field) => (
               <FactInput
                 key={field.key}
+                id={field.key}
                 label={field.label}
                 hint={field.hint}
                 placeholder={field.placeholder}
@@ -533,6 +617,7 @@ export function MissingFactsPreview({
 }
 
 function FactInput({
+  id,
   label,
   hint,
   placeholder,
@@ -542,6 +627,7 @@ function FactInput({
   disabled,
   onSave,
 }: {
+  id?: string;
   label: string;
   hint: string;
   placeholder: string;
@@ -553,6 +639,7 @@ function FactInput({
 }) {
   const [value, setValue] = useState(defaultValue);
   const dirty = value !== defaultValue;
+  const inputId = id ? `fact-${id}` : undefined;
   return (
     <div
       className={cn(
@@ -561,7 +648,7 @@ function FactInput({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>
+        <Label htmlFor={inputId}>{label}</Label>
         {source ? (
           <span className="text-xs text-muted-foreground">
             {source === "homeowner" ? "You" : "Contractor"}
@@ -571,6 +658,7 @@ function FactInput({
         ) : null}
       </div>
       <Input
+        id={inputId}
         value={value}
         placeholder={placeholder}
         disabled={disabled}

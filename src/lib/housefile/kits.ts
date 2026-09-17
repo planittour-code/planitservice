@@ -248,6 +248,36 @@ const DECK_KIT_SEED: KitSeed[] = [
   },
 ];
 
+const FLOORING_KIT_SEED: KitSeed[] = [
+  {
+    name: "Hardwood install",
+    lines: [
+      ls("Move furniture and protect", "Clear the rooms."),
+      { name: "Pull existing flooring", description: "Demo what is on the floor now.", unit: "sf" },
+      { name: "Install hardwood", description: "The product that stays with the house.", unit: "sf", slot: "flooring" },
+      ls("Base and shoe", "New base in the rooms."),
+    ],
+  },
+  {
+    name: "Carpet / berber",
+    lines: [
+      ls("Move furniture", "Clear the rooms."),
+      { name: "Pull existing carpet", description: "Pad and carpet out.", unit: "sf" },
+      { name: "Install carpet", description: "Berber or cut pile, named color.", unit: "sf", slot: "flooring" },
+      ls("Transitions", "Bars at the doorways."),
+    ],
+  },
+  {
+    name: "Luxury vinyl",
+    lines: [
+      ls("Move furniture and protect", "Clear the rooms."),
+      { name: "Level as needed", description: "Patch high and low spots.", unit: "sf" },
+      { name: "Install luxury vinyl", description: "The plank that stays with the house.", unit: "sf", slot: "flooring" },
+      ls("Base and shoe", "New base in the rooms."),
+    ],
+  },
+];
+
 const PORCH_KIT_SEED: KitSeed[] = [
   {
     name: "Open porch",
@@ -285,6 +315,7 @@ export const KIT_SEEDS: Record<string, KitSeed[]> = {
   siding: SIDING_KIT_SEED,
   deck: DECK_KIT_SEED,
   porch: PORCH_KIT_SEED,
+  flooring: FLOORING_KIT_SEED,
 };
 
 export function hasKitSeed(workId: string) {
@@ -298,6 +329,8 @@ const WORK_ALIASES: Record<string, string> = {
   painting: "paint",
   decks: "deck",
   porches: "porch",
+  floors: "flooring",
+  floor: "flooring",
 };
 
 export function workIdFromLabel(raw: string) {

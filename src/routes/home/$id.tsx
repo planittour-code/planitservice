@@ -1,7 +1,8 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   FactsPanel,
   JobTimeline,
@@ -20,20 +21,54 @@ import { shortDate } from "@/lib/housefile/format";
 import { MaintenanceBadge } from "@/components/status-badge";
 import { MeasureGuidePanel } from "@/components/measure-guide";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
+import { UpgradeToPro } from "@/components/upgrade-to-pro";
 import {
   completeMaintenance,
   getHomeRecord,
   startPropertyTransfer,
 } from "@/lib/housefile/server";
+import { confirmHomeownerCheckout } from "@/lib/housefile/stripe-billing";
 
-export const Route = createFileRoute("/home/$id")({ component: HomeRecord });
+const searchSchema = z.object({
+  session_id: z.string().optional(),
+});
+
+export const Route = createFileRoute("/home/$id")({
+  validateSearch: (s) => searchSchema.parse(s),
+  component: HomeRecord,
+});
 
 function HomeRecord() {
   const { id } = Route.useParams();
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const q = useQuery({
     queryKey: ["home-record", id],
     queryFn: () => getHomeRecord({ data: id }),
   });
+
+  useEffect(() => {
+    if (!search.session_id) return;
+    let cancelled = false;
+    void confirmHomeownerCheckout({ data: search.session_id })
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.ok && res.pro) {
+          toast.success("Pro is on. Photos, jobs, and shops on this record stayed.");
+          await queryClient.invalidateQueries({ queryKey: ["home-record", id] });
+          await queryClient.invalidateQueries({ queryKey: ["household"] });
+        }
+        void navigate({ to: "/home/$id", params: { id }, search: {}, replace: true });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        toast.error(err instanceof Error ? err.message : "Could not confirm Pro checkout");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [search.session_id, id, navigate, queryClient]);
   const done = useMutation({
     mutationFn: (taskId: string) => completeMaintenance({ data: { taskId } }),
     onSuccess: () => {
@@ -141,6 +176,7 @@ function HomeRecord() {
       <RecordSection
         id="request-estimates"
         title="Request Estimates"
+        defaultOpen={plan?.tier !== "pro"}
         blurb={
           plan?.tier === "pro"
             ? "Ask shops that offer this trade and service this address. Put measurements on the record first."
@@ -149,7 +185,7 @@ function HomeRecord() {
         photo={CATEGORY_PHOTO.paint}
         chips={
           <ul className="flex flex-wrap gap-1.5">
-            {["Paint", "Roof", "Windows", "Gutters"].map((label) => (
+            {["Paint", "Roof", "Windows", "Gutters", "Flooring"].map((label) => (
               <li key={label} className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
                 {label}
               </li>
@@ -170,9 +206,11 @@ function HomeRecord() {
             />
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Upgrade this property to Pro to request estimates from shops in the area.
-          </p>
+          <UpgradeToPro
+            propertyId={p.id}
+            cadence={plan?.cadence === "annual" ? "annual" : "monthly"}
+            onUpgraded={() => void q.refetch()}
+          />
         )}
       </RecordSection>
     </div>

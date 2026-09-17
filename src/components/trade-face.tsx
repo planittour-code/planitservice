@@ -5,6 +5,7 @@ import {
   Droplets,
   Fence,
   House,
+  LayoutGrid,
   Layers,
   PaintRoller,
   Plus,
@@ -24,6 +25,7 @@ export const TRADE_FACE: Record<string, { icon: LucideIcon; surface: string }> =
   siding: { icon: Layers, surface: "bg-trade-siding text-primary-foreground" },
   deck: { icon: Fence, surface: "bg-trade-deck text-primary-foreground" },
   porch: { icon: Columns2, surface: "bg-trade-porch text-primary-foreground" },
+  flooring: { icon: LayoutGrid, surface: "bg-trade-deck text-primary-foreground" },
 };
 
 const CUSTOM_FACE = { icon: Wrench, surface: "bg-ink text-primary-foreground" };

@@ -267,6 +267,34 @@ export const WORK_TYPES: WorkType[] = [
       f("exterior_trim_paint", "Trim / ceiling color", "text", "Beadboard and posts."),
     ],
   },
+  {
+    id: "flooring",
+    templateId: "tmpl_flooring",
+    trade: "flooring",
+    name: "Flooring",
+    blurb: "Rooms, product, and the color or stain that stays with the house.",
+    fields: [
+      f("square_feet", "Floor square feet", "number", "Rooms in this quote.", {
+        unit: "sf",
+        required: true,
+      }),
+      f("room_count", "Rooms", "number", "How many rooms to take off.", { unit: "ea", required: true }),
+      f("flooring_main", "Existing flooring", "text", "What is on the floor now."),
+      f("flooring_new", "New flooring", "select", "The product that stays with the house.", {
+        options: [
+          { value: "Hardwood", label: "Hardwood" },
+          { value: "Berber carpet", label: "Berber carpet" },
+          { value: "Carpet", label: "Carpet" },
+          { value: "Luxury vinyl", label: "Luxury vinyl" },
+          { value: "Tile", label: "Tile" },
+        ],
+      }),
+      f("flooring_color", "Color / stain", "text", "Berber color or hardwood stain.", {
+        placeholder: "Sandstone berber, Early American stain",
+      }),
+      f("include_base", "New baseboards", "toggle", "Shoe and base in the rooms."),
+    ],
+  },
 ];
 
 export const WORK_BY_ID = Object.fromEntries(WORK_TYPES.map((w) => [w.id, w]));
@@ -444,6 +472,7 @@ export function defaultsFor(work: WorkType, facts: Record<string, string> = {}):
   }
   if (work.id === "siding" && !out.include_wrap) out.include_wrap = "yes";
   if (work.id === "porch" && !out.include_rail) out.include_rail = "yes";
+  if (work.id === "flooring" && !out.include_base) out.include_base = "yes";
   if (work.id === "gutters" && !out.downspout_count) out.downspout_count = "4";
   if (work.id === "roof" && !out.roof_layers) out.roof_layers = "1";
   if (work.id === "roof" && !out.roof_pitch) out.roof_pitch = "6/12";
@@ -466,6 +495,8 @@ export function buildQuote(workId: string, inputs: Record<string, string>): Quot
       return quoteDeck(inputs);
     case "porch":
       return quotePorch(inputs);
+    case "flooring":
+      return quoteFlooring(inputs);
     default:
       return [];
   }
@@ -1025,6 +1056,61 @@ function quoteDeck(inputs: Record<string, string>): QuoteLine[] {
       manufacturer: "Ready Seal",
       product_name: "Ready Seal",
       color,
+    }),
+  ].filter((l) => l.qty > 0);
+}
+
+function quoteFlooring(inputs: Record<string, string>): QuoteLine[] {
+  const sf = nInput(inputs, "square_feet");
+  const rooms = Math.max(1, nInput(inputs, "room_count", 4));
+  const existing = inputs.flooring_main || "Existing flooring";
+  const next = inputs.flooring_new || "Hardwood";
+  const color = inputs.flooring_color || "";
+  const carpet = /carpet|berber/i.test(next);
+  const vinyl = /vinyl|lvp/i.test(next);
+  const tile = /tile/i.test(next);
+  const rate = carpet ? 4.2 : vinyl ? 6.4 : tile ? 9.2 : 8.5;
+  const maker = carpet ? "Shaw" : vinyl ? "Coretec" : tile ? "Daltile" : "Bruce";
+  const base = onInput(inputs, "include_base", true);
+  return [
+    line({
+      name: "Move furniture and protect",
+      description: "Clear the rooms and protect adjacent floors.",
+      qty: 1,
+      unit: "ls",
+      unit_price: Math.max(180, rooms * 45),
+      category: "prep",
+    }),
+    line({
+      name: "Pull existing flooring",
+      description: `${existing} out of the rooms.`,
+      qty: sf,
+      unit: "sf",
+      unit_price: carpet ? 0.85 : 1.35,
+      category: "demo",
+    }),
+    line({
+      name: next,
+      description: color ? `${next} · ${color}` : `${next} in the rooms on this quote.`,
+      qty: sf,
+      unit: "sf",
+      unit_price: rate,
+      category: "flooring",
+      manufacturer: maker,
+      product_name: next,
+      color: color || null,
+      warranty_years: carpet ? 10 : 25,
+      warranty_terms: carpet ? "10-year wear warranty." : "25-year finish / wear warranty.",
+    }),
+    line({
+      name: "Base and shoe",
+      description: "New base and shoe in the rooms.",
+      qty: rooms,
+      unit: "room",
+      unit_price: 85,
+      optional: true,
+      included: base,
+      category: "trim",
     }),
   ].filter((l) => l.qty > 0);
 }

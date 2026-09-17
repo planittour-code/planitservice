@@ -52,11 +52,30 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               typeof session.subscription === "string" ? session.subscription : null;
             if (propertyId) {
               const sql = await getSql();
-              await sql`
-                update property_plans
-                set status = ${"active"}
-                where property_id = ${propertyId}
-              `;
+              const pro = kind === "pro_monthly" || kind === "pro_annual";
+              const cadence = kind.endsWith("_annual") ? "annual" : "monthly";
+              if (pro || kind === "standard_monthly" || kind === "standard_annual") {
+                await sql`
+                  update property_plans
+                  set status = ${"active"},
+                      tier = ${pro ? "pro" : "standard"},
+                      cadence = ${cadence}
+                  where property_id = ${propertyId}
+                `;
+                if (pro && userId) {
+                  await sql`
+                    insert into homeowner_profiles (user_id, plan, status)
+                    values (${userId}, ${"plus"}, ${"active"})
+                    on conflict (user_id) do update set plan = ${"plus"}, status = ${"active"}
+                  `;
+                }
+              } else {
+                await sql`
+                  update property_plans
+                  set status = ${"active"}
+                  where property_id = ${propertyId}
+                `;
+              }
             }
             if (userId && (kind === "shop_monthly" || kind === "shop_annual")) {
               const { markShopPaid } = await import("@/lib/housefile/stripe-shop.server");

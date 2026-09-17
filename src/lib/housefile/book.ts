@@ -12,7 +12,8 @@ export type BookSlotId =
   | "gutter"
   | "gutter_guard"
   | "siding"
-  | "stain";
+  | "stain"
+  | "flooring";
 
 export type BookSlot = {
   id: BookSlotId;
@@ -34,6 +35,7 @@ export const BOOK_SLOTS: BookSlot[] = [
   { id: "gutter_guard", trade: "gutters", label: "Leaf guards", unit: "lf", mode: "replace" },
   { id: "siding", trade: "siding", label: "Siding", unit: "sf", mode: "replace" },
   { id: "stain", trade: "decks", label: "Deck / porch stain", unit: "sf", mode: "replace" },
+  { id: "flooring", trade: "flooring", label: "Flooring", unit: "sf", mode: "replace" },
 ];
 
 export const SLOT_BY_ID = Object.fromEntries(BOOK_SLOTS.map((s) => [s.id, s])) as Record<
@@ -82,6 +84,8 @@ export function slotsForWork(workId: string, inputs: Record<string, string>): Bo
     case "deck":
     case "porch":
       return BOOK_SLOTS.filter((s) => s.id === "stain");
+    case "flooring":
+      return BOOK_SLOTS.filter((s) => s.id === "flooring");
     default:
       return [];
   }
@@ -146,6 +150,7 @@ const COST_RANGE: Record<BookSlotId, { min: number; max: number; unit: string }>
   gutter_guard: { min: 0.5, max: 30, unit: "lf" },
   siding: { min: 0.8, max: 12, unit: "sf" },
   stain: { min: 0.15, max: 8, unit: "sf" },
+  flooring: { min: 0.5, max: 20, unit: "sf" },
 };
 
 export function parseMoney(raw: string) {
@@ -239,6 +244,8 @@ function lineMatchesSlot(line: QuoteLine, slot: BookSlotId) {
       return line.category === "siding";
     case "stain":
       return line.category === "stain" || line.category === "floor";
+    case "flooring":
+      return line.category === "flooring";
     default:
       return false;
   }
@@ -390,6 +397,8 @@ export const STARTER_BOOK: Omit<PriceBookItem, "id" | "company_id" | "active">[]
   { trade: "gutters", slot: "gutter_guard", manufacturer: "LeafFilter", product_name: "Micromesh", sku: null, color: null, unit: "lf", cost: 7.5, sell: 18, warranty_years: null, warranty_terms: "Limited lifetime clog-free warranty." },
   { trade: "siding", slot: "siding", manufacturer: "James Hardie", product_name: "HardiePlank", sku: null, color: "Arctic White", unit: "sf", cost: 3.4, sell: 9.4, warranty_years: 30, warranty_terms: "30-year substrate. Color Plus 15-year finish." },
   { trade: "decks", slot: "stain", manufacturer: "Ready Seal", product_name: "Ready Seal", sku: "Dark Walnut", color: "Dark Walnut", unit: "sf", cost: 0.85, sell: 3.4, warranty_years: 3, warranty_terms: "3-year maintenance coat recommended." },
+  { trade: "flooring", slot: "flooring", manufacturer: "Bruce", product_name: "Site-finished oak", sku: "Early American", color: "Early American", unit: "sf", cost: 3.8, sell: 8.5, warranty_years: 25, warranty_terms: "25-year finish warranty." },
+  { trade: "flooring", slot: "flooring", manufacturer: "Shaw", product_name: "Berber carpet", sku: "Sandstone", color: "Sandstone", unit: "sf", cost: 1.6, sell: 4.2, warranty_years: 10, warranty_terms: "10-year wear warranty." },
 ];
 
 type CatalogRow = Omit<PriceBookItem, "id" | "company_id" | "active">;
@@ -406,6 +415,7 @@ export const HOME_DEPOT_BOOK: CatalogRow[] = [
   { trade: "gutters", slot: "gutter_guard", manufacturer: "GutterStuff", product_name: "Foam insert", sku: null, color: null, unit: "lf", cost: 2.1, sell: 8, warranty_years: 10, warranty_terms: "10-year clog-free claim on the insert." },
   { trade: "siding", slot: "siding", manufacturer: "James Hardie", product_name: "HardiePlank", sku: null, color: "Arctic White", unit: "sf", cost: 3.4, sell: 9.4, warranty_years: 30, warranty_terms: "30-year substrate. Color Plus 15-year finish." },
   { trade: "decks", slot: "stain", manufacturer: "Olympic", product_name: "Maximum Stain + Sealant", sku: "Dark Walnut", color: "Dark Walnut", unit: "sf", cost: 0.72, sell: 3.1, warranty_years: 4, warranty_terms: "4-year coating warranty on the can." },
+  { trade: "flooring", slot: "flooring", manufacturer: "Lifeproof", product_name: "Luxury vinyl plank", sku: "Natural Oak", color: "Natural Oak", unit: "sf", cost: 2.4, sell: 6.4, warranty_years: 25, warranty_terms: "25-year residential wear warranty." },
 ];
 
 export const LOWES_BOOK: CatalogRow[] = [
@@ -420,6 +430,7 @@ export const LOWES_BOOK: CatalogRow[] = [
   { trade: "gutters", slot: "gutter_guard", manufacturer: "LeafFilter", product_name: "Micromesh", sku: null, color: null, unit: "lf", cost: 7.5, sell: 18, warranty_years: null, warranty_terms: "Limited lifetime clog-free warranty." },
   { trade: "siding", slot: "siding", manufacturer: "LP", product_name: "SmartSide", sku: null, color: "Cedar", unit: "sf", cost: 2.9, sell: 8.2, warranty_years: 50, warranty_terms: "50-year substrate warranty." },
   { trade: "decks", slot: "stain", manufacturer: "Olympic", product_name: "Rescue It!", sku: "Chocolate", color: "Chocolate", unit: "sf", cost: 0.9, sell: 3.5, warranty_years: 3, warranty_terms: "3-year coating warranty on the can." },
+  { trade: "flooring", slot: "flooring", manufacturer: "Pergo", product_name: "Laminate plank", sku: "Weathered Oak", color: "Weathered Oak", unit: "sf", cost: 1.9, sell: 5.2, warranty_years: 20, warranty_terms: "20-year residential wear warranty." },
 ];
 
 export function catalogFor(source: "homedepot" | "lowes" | "starter") {

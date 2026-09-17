@@ -74,6 +74,12 @@ const PORCH: Starter[] = [
   { item: "Porch floor finish", description: "Floor coat from materials.", slot: "stain", qty: "" },
 ];
 
+const FLOORING: Starter[] = [
+  { item: "Move furniture and protect", description: "Clear the rooms.", qty: "1" },
+  { item: "Pull existing flooring", description: "Demo what is on the floor now.", qty: "" },
+  { item: "New flooring", description: "Product from materials.", slot: "flooring", qty: "" },
+];
+
 export function startersFor(workId: string, paintScope?: string): Starter[] {
   switch (workId) {
     case "paint":
@@ -90,6 +96,8 @@ export function startersFor(workId: string, paintScope?: string): Starter[] {
       return DECK;
     case "porch":
       return PORCH;
+    case "flooring":
+      return FLOORING;
     default:
       return [
         { item: "Scope of work", description: "Describe the work at this address.", qty: "1" },
@@ -293,12 +301,28 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
       },
     ];
   }
+  if (workId === "flooring") {
+    return [
+      {
+        id: "base",
+        label: "New baseboards",
+        hint: "Shoe and base in the rooms.",
+        lines: [{ item: "Base and shoe", description: "New base in the rooms.", qty: "" }],
+      },
+      {
+        id: "stairs",
+        label: "Stairs",
+        hint: "Treads and risers in the same product.",
+        lines: [{ item: "Stair treads and risers", description: "Match the rooms.", qty: "" }],
+      },
+    ];
+  }
   return [];
 }
 
 export function optionLabel(id: string, fallback?: string): string {
   if (id === CUSTOM_OPTION_ID) return fallback?.trim() || "Optional work";
-  for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "porch"]) {
+  for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "porch", "flooring"]) {
     for (const scope of ["interior", "exterior"]) {
       const hit = optionsFor(workId, scope).find((o) => o.id === id);
       if (hit) return hit.label;

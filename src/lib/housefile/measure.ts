@@ -178,6 +178,29 @@ export const MEASURE_GUIDES: MeasureGuide[] = [
     ],
     tip: "A second-story porch is a different staging job — put stories on the record.",
   },
+  {
+    id: "flooring",
+    name: "Flooring",
+    photo: CATEGORY_PHOTO.house,
+    chip: "Floor of each room",
+    what: "Flooring shops price from room floor area, room count, and the product and color on the record.",
+    tools: "Tape measure, a photo of the existing floor in each room, and the color or stain you want.",
+    steps: [
+      {
+        title: "Floor area",
+        body: "Length × width of each room in this job. Add the rooms. Closets and halls count if they get the same product.",
+      },
+      {
+        title: "What is on it now",
+        body: "Note hardwood, berber, vinyl, or tile. Photo the color. A stain or berber swatch belongs on the room card.",
+      },
+      {
+        title: "What goes down",
+        body: "Write the new product and color or stain. Say if baseboards are in the job.",
+      },
+    ],
+    tip: "Room photos of the existing floor are enough for a first number. The shop still measures each room before order.",
+  },
 ];
 
 export function measureGuideFor(workId: string) {

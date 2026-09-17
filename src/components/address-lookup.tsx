@@ -13,9 +13,10 @@ import { captureQuoteLead, peekHouseByAddress, suggestAddresses } from "@/lib/ho
 import type { AddressTease } from "@/lib/housefile/types";
 
 const GHOST_FACTS = [
-  { key: "year_built", label: "Year built", value: "—" },
-  { key: "square_feet", label: "Finished square feet", value: "—" },
   { key: "stories", label: "Stories", value: "—" },
+  { key: "year_built", label: "Year", value: "—" },
+  { key: "lot_size", label: "Lot size", value: "—" },
+  { key: "square_feet", label: "Square footage", value: "—" },
 ];
 
 export function AddressLookup({ onTease }: { onTease?: (tease: AddressTease) => void }) {

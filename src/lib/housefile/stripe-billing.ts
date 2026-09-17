@@ -105,6 +105,14 @@ export const confirmShopCheckout = createServerFn({ method: "POST" })
     return confirmPaidShopSession({ sessionId, userId: context.userId });
   });
 
+export const confirmHomeownerCheckout = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((sessionId: string) => sessionId)
+  .handler(async ({ context, data: sessionId }) => {
+    const { confirmPaidHomeownerSession } = await import("@/lib/housefile/stripe.server");
+    return confirmPaidHomeownerSession({ sessionId, userId: context.userId });
+  });
+
 export const startBillingPortal = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { returnPath: string }) => input)

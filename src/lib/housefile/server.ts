@@ -3543,6 +3543,57 @@ export const createHomeProperty = createServerFn({ method: "POST" })
     return { propertyId: id };
   });
 
+/** Standard → Pro on an existing Property Record. Photos, jobs, and shops stay. */
+export const upgradeHomePropertyToPro = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const property = (
+      await sql<Property>`
+        select * from properties
+        where id = ${data.propertyId} and homeowner_user_id = ${context.userId}
+        limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    const plan = (
+      await sql<PropertyPlan>`
+        select * from property_plans where property_id = ${property.id} limit 1
+      `
+    )[0];
+    const cadence: "monthly" | "annual" = plan?.cadence === "annual" ? "annual" : "monthly";
+    if (plan?.tier === "pro") {
+      return { propertyId: property.id, cadence, alreadyPro: true as const };
+    }
+    const addressKey = property.address_line.trim().toLowerCase();
+    await sql`
+      update property_plans pp
+      set tier = ${"pro"}, status = ${"active"}
+      from properties p
+      where pp.property_id = p.id
+        and p.homeowner_user_id = ${context.userId}
+        and lower(trim(p.address_line)) = ${addressKey}
+    `;
+    const stillMissing = (
+      await sql<PropertyPlan>`
+        select * from property_plans where property_id = ${property.id} limit 1
+      `
+    )[0];
+    if (!stillMissing) {
+      await sql`
+        insert into property_plans (property_id, cadence, tier, status, renews_on)
+        values (${property.id}, ${cadence}, ${"pro"}, ${"active"}, ${renewsOn(cadence)})
+      `;
+    }
+    await sql`
+      insert into homeowner_profiles (user_id, plan, status)
+      values (${context.userId}, ${"plus"}, ${"active"})
+      on conflict (user_id) do update set plan = ${"plus"}, status = ${"active"}
+    `;
+    return { propertyId: property.id, cadence, alreadyPro: false as const };
+  });
+
 export const getHomeRecord = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator((id: string) => id)

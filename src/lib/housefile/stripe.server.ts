@@ -176,6 +176,57 @@ function shopEmailFromSession(session: {
   return (session.customer_details?.email ?? session.customer_email ?? "").trim().toLowerCase();
 }
 
+function isHomeownerKind(kind: string) {
+  return (
+    kind === "standard_monthly" ||
+    kind === "standard_annual" ||
+    kind === "pro_monthly" ||
+    kind === "pro_annual"
+  );
+}
+
+export async function confirmPaidHomeownerSession(input: { sessionId: string; userId: string }) {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(input.sessionId);
+  const kind = session.metadata?.kind ?? "";
+  const paid =
+    session.payment_status === "paid" ||
+    session.payment_status === "no_payment_required" ||
+    session.status === "complete";
+  if (!paid || !isHomeownerKind(kind)) return { ok: false as const };
+  const ownerId = session.metadata?.userId?.trim() || "";
+  if (ownerId && ownerId !== input.userId) {
+    throw new Error("That checkout belongs to another account.");
+  }
+  const propertyId = session.metadata?.propertyId?.trim() || "";
+  if (!propertyId) return { ok: false as const };
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const owned = await sql<{ id: string }>`
+    select id from properties
+    where id = ${propertyId} and homeowner_user_id = ${input.userId}
+    limit 1
+  `;
+  if (!owned[0]) throw new Error("That checkout is for another property.");
+  const pro = kind === "pro_monthly" || kind === "pro_annual";
+  const cadence = kind.endsWith("_annual") ? "annual" : "monthly";
+  await sql`
+    update property_plans
+    set status = ${"active"},
+        tier = ${pro ? "pro" : "standard"},
+        cadence = ${cadence}
+    where property_id = ${propertyId}
+  `;
+  if (pro) {
+    await sql`
+      insert into homeowner_profiles (user_id, plan, status)
+      values (${input.userId}, ${"plus"}, ${"active"})
+      on conflict (user_id) do update set plan = ${"plus"}, status = ${"active"}
+    `;
+  }
+  return { ok: true as const, propertyId, pro };
+}
+
 export async function readPaidManageSession(sessionId: string) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId);

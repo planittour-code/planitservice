@@ -14,6 +14,7 @@ import {
   PROPERTY_MONTHLY,
   PRO_ANNUAL,
   PRO_MONTHLY,
+  PRO_UPGRADE_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
 import { cn } from "@/lib/utils";
@@ -172,9 +173,28 @@ function StartHouseRecord() {
                     <li>Property Record — photos, jobs, products, warranties</li>
                     <li>Known shops who already worked the house</li>
                     <li>Maintenance due dates, share, and transfer</li>
+                    <li>Request Estimates is Pro — ${dollars(PRO_UPGRADE_MONTHLY)} extra a month</li>
                   </>
                 )}
               </ul>
+              {tier === "standard" ? (
+                <div className="mt-3 space-y-2 rounded-lg bg-muted/70 p-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Request Estimates is Pro — ${dollars(PRO_UPGRADE_MONTHLY)} extra a month
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    ${dollars(PROPERTY_MONTHLY)} Standard becomes ${dollars(PRO_MONTHLY)} Pro. The
+                    account you create keeps the Property Record either way.
+                  </p>
+                  <button
+                    type="button"
+                    className="min-h-11 w-full rounded-md bg-go px-3 text-sm font-semibold text-go-foreground hover:opacity-90"
+                    onClick={() => setTier("pro")}
+                  >
+                    Upgrade to Pro · Accept +${dollars(PRO_UPGRADE_MONTHLY)}/month
+                  </button>
+                </div>
+              ) : null}
 
               <form className="mt-4 space-y-2" onSubmit={(e) => void onSubmit(e)}>
                 {!user && (

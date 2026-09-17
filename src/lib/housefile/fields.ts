@@ -21,7 +21,7 @@ export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo
   {
     id: "house",
     label: "The house",
-    blurb: "Size, stories, and site rules every quote uses.",
+    blurb: "Stories, year, lot size, square footage, and rooms. This helps quote.",
     photo: "/houses/cat-house.jpg",
   },
   {
@@ -86,30 +86,201 @@ export const CATEGORY_PHOTO: Record<string, string> = {
   deck: "/houses/cat-decks.jpg",
   porches: "/houses/cat-porches.jpg",
   porch: "/houses/cat-porches.jpg",
+  flooring: "/houses/cat-house.jpg",
   systems: "/houses/cat-systems.jpg",
 };
 
+/** Homeowner “The house” quote helpers — shown first, and this helps quote. */
+export const HOUSE_QUOTE_KEYS = ["stories", "year_built", "lot_size", "square_feet"] as const;
+
+export const HOUSE_ROOMS_JSON_KEY = "house_rooms";
+
+export const HOUSE_ROOM_COUNT_FIELDS = [
+  { key: "room_count", label: "Rooms", placeholder: "6" },
+  { key: "toilets", label: "Toilets", placeholder: "2" },
+  { key: "sinks", label: "Sinks", placeholder: "3" },
+  { key: "closets", label: "Closets", placeholder: "4" },
+  { key: "foyer", label: "Foyer", placeholder: "1" },
+  { key: "mud_room", label: "Mud room", placeholder: "1" },
+] as const;
+
+export const HOUSE_YESNO_FIELDS = [
+  { key: "basement", label: "Basement" },
+  { key: "attic", label: "Attic" },
+] as const;
+
+export const HOUSE_ROOM_EDITOR_KEYS = [
+  ...HOUSE_ROOM_COUNT_FIELDS.map((f) => f.key),
+  ...HOUSE_YESNO_FIELDS.map((f) => f.key),
+  HOUSE_ROOMS_JSON_KEY,
+] as const;
+
+export type HouseRoomKind = "room" | "foyer" | "mud_room" | "basement" | "attic";
+
+export type HouseRoomFloor = {
+  id: string;
+  kind: HouseRoomKind;
+  name: string;
+  flooring: string;
+  stain: string;
+  photo: string;
+};
+
+export type HouseRoomsPayload = { items: HouseRoomFloor[] };
+
+export function emptyHouseRoom(kind: HouseRoomKind, name: string, id: string): HouseRoomFloor {
+  return { id, kind, name, flooring: "", stain: "", photo: "" };
+}
+
+export function parseHouseRooms(raw: string | undefined | null): HouseRoomFloor[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as HouseRoomsPayload | HouseRoomFloor[];
+    const items = Array.isArray(parsed) ? parsed : parsed.items;
+    if (!Array.isArray(items)) return [];
+    return items
+      .filter((row) => row && typeof row === "object")
+      .map((row, i) => ({
+        id: String(row.id || `room-${i + 1}`),
+        kind: (row.kind as HouseRoomKind) || "room",
+        name: String(row.name || `Room ${i + 1}`),
+        flooring: String(row.flooring || ""),
+        stain: String(row.stain || ""),
+        photo: String(row.photo || ""),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function countFromFact(value: string | undefined, fallback = 0) {
+  const n = Number.parseInt(String(value ?? "").trim(), 10);
+  if (!Number.isFinite(n) || n < 0) return fallback;
+  return Math.min(20, n);
+}
+
+export function roomsFromCounts(input: {
+  rooms: string | undefined;
+  foyer: string | undefined;
+  mudRoom: string | undefined;
+  basement: string | undefined;
+  attic: string | undefined;
+  existing: HouseRoomFloor[];
+}): HouseRoomFloor[] {
+  const byKind = new Map<HouseRoomKind, HouseRoomFloor[]>();
+  for (const row of input.existing) {
+    const list = byKind.get(row.kind) ?? [];
+    list.push(row);
+    byKind.set(row.kind, list);
+  }
+  const take = (kind: HouseRoomKind, count: number, nameFor: (i: number) => string) => {
+    const prior = byKind.get(kind) ?? [];
+    return Array.from({ length: count }, (_, i) => {
+      const prev = prior[i];
+      const name = nameFor(i);
+      return prev ? { ...prev, name: prev.name.trim() || name } : emptyHouseRoom(kind, name, `${kind}-${i + 1}`);
+    });
+  };
+  return [
+    ...take("room", countFromFact(input.rooms, 0), (i) => `Room ${i + 1}`),
+    ...take("foyer", countFromFact(input.foyer), (i) => (i === 0 ? "Foyer" : `Foyer ${i + 1}`)),
+    ...take("mud_room", countFromFact(input.mudRoom), (i) => (i === 0 ? "Mud room" : `Mud room ${i + 1}`)),
+    ...take("basement", input.basement === "yes" ? 1 : 0, () => "Basement"),
+    ...take("attic", input.attic === "yes" ? 1 : 0, () => "Attic"),
+  ];
+}
+
 export const FIELD_CATALOG: FieldDef[] = [
-  {
-    key: "year_built",
-    label: "Year built",
-    group: "house",
-    hint: "Ages labor and material estimates.",
-    placeholder: "1924",
-  },
-  {
-    key: "square_feet",
-    label: "Finished square feet",
-    group: "house",
-    hint: "Drives paint, flooring, roof footprint, and HVAC sizing.",
-    placeholder: "1840",
-  },
   {
     key: "stories",
     label: "Stories",
     group: "house",
-    hint: "Affects access, staging, and fall protection.",
+    hint: "This helps quote — access, staging, and fall protection.",
     placeholder: "1.5",
+  },
+  {
+    key: "year_built",
+    label: "Year",
+    group: "house",
+    hint: "This helps quote — ages labor and material.",
+    placeholder: "1924",
+  },
+  {
+    key: "lot_size",
+    label: "Lot size",
+    group: "house",
+    hint: "This helps quote — access, dumpsters, and landscaping.",
+    placeholder: "0.28 acre",
+  },
+  {
+    key: "square_feet",
+    label: "Square footage",
+    group: "house",
+    hint: "This helps quote — paint, flooring, roof footprint, and HVAC.",
+    placeholder: "1840",
+  },
+  {
+    key: "room_count",
+    label: "Rooms",
+    group: "house",
+    hint: "How many rooms to take off. This helps quote.",
+    placeholder: "6",
+  },
+  {
+    key: "toilets",
+    label: "Toilets",
+    group: "house",
+    hint: "Count of toilets on the property.",
+    placeholder: "2",
+  },
+  {
+    key: "sinks",
+    label: "Sinks",
+    group: "house",
+    hint: "Kitchen, bath, and utility sinks.",
+    placeholder: "3",
+  },
+  {
+    key: "closets",
+    label: "Closets",
+    group: "house",
+    hint: "Count of closets.",
+    placeholder: "4",
+  },
+  {
+    key: "foyer",
+    label: "Foyer",
+    group: "house",
+    hint: "How many foyers. Leave blank if none.",
+    placeholder: "1",
+  },
+  {
+    key: "mud_room",
+    label: "Mud room",
+    group: "house",
+    hint: "How many mud rooms. Leave blank if none.",
+    placeholder: "1",
+  },
+  {
+    key: "basement",
+    label: "Basement",
+    group: "house",
+    hint: "Yes or no. This helps quote access and flooring.",
+    placeholder: "yes",
+  },
+  {
+    key: "attic",
+    label: "Attic",
+    group: "house",
+    hint: "Yes or no. This helps quote access and flooring.",
+    placeholder: "yes",
+  },
+  {
+    key: "house_rooms",
+    label: "Room flooring",
+    group: "house",
+    hint: "Flooring, stain, and a photo of the color in each room.",
+    placeholder: "",
   },
   {
     key: "foundation_type",
@@ -124,13 +295,6 @@ export const FIELD_CATALOG: FieldDef[] = [
     group: "house",
     hint: "Lived-in homes need dust control and timing.",
     placeholder: "Primary residence",
-  },
-  {
-    key: "lot_size",
-    label: "Lot size",
-    group: "house",
-    hint: "Access, dumpsters, and landscaping.",
-    placeholder: "0.28 acre",
   },
   {
     key: "driveway_type",
@@ -164,17 +328,24 @@ export const FIELD_CATALOG: FieldDef[] = [
     key: "flooring_main",
     label: "Main flooring",
     group: "house",
-    hint: "Species, finish, or product.",
+    hint: "Species, finish, or product. This helps quote.",
     placeholder: "White oak, site-finished",
   },
-
   {
-    key: "room_count",
-    label: "Rooms",
-    group: "paint",
-    hint: "How many rooms the last interior takeoff used.",
-    placeholder: "6",
+    key: "flooring_new",
+    label: "New flooring",
+    group: "house",
+    hint: "The product a flooring shop would put down.",
+    placeholder: "Hardwood",
   },
+  {
+    key: "flooring_color",
+    label: "Floor color / stain",
+    group: "house",
+    hint: "Berber color or hardwood stain.",
+    placeholder: "Sandstone berber, Early American stain",
+  },
+
   {
     key: "ceiling_height",
     label: "Ceiling height",
@@ -421,6 +592,7 @@ export const PHOTO_CATEGORIES = [
   { id: "exterior", label: "Exterior" },
   { id: "roof", label: "Roof" },
   { id: "interior", label: "Interior" },
+  { id: "flooring", label: "Flooring / color" },
   { id: "product", label: "Product / color" },
   { id: "damage", label: "Damage" },
   { id: "general", label: "General" },

@@ -14,6 +14,9 @@ export const PROPERTY_MONTHLY = 7.99;
 export const PROPERTY_ANNUAL = 79.99;
 export const PRO_MONTHLY = 9.99;
 export const PRO_ANNUAL = 99;
+/** Extra charged to move a Standard property to Pro (same cadence). */
+export const PRO_UPGRADE_MONTHLY = Math.round((PRO_MONTHLY - PROPERTY_MONTHLY) * 100) / 100;
+export const PRO_UPGRADE_ANNUAL = Math.round((PRO_ANNUAL - PROPERTY_ANNUAL) * 100) / 100;
 
 /** Property manager portfolio. Base includes 10 houses. Extra houses are billed. */
 export const MANAGE_TRIAL_DAYS = 14;
