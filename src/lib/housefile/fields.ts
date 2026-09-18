@@ -26,8 +26,8 @@ export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo
   },
   {
     id: "paint",
-    label: "Paint",
-    blurb: "Interior rooms and exterior colors that stay with the house.",
+    label: "Exterior Paint",
+    blurb: "Body, trim, and front door colors that stay with the house.",
     photo: "/houses/cat-paint.jpg",
   },
   {
@@ -69,7 +69,7 @@ export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo
   {
     id: "systems",
     label: "Systems",
-    blurb: "HVAC, water heater, electrical, and attic — not a takeoff, but the next shop asks.",
+    blurb: "HVAC, water heater, electrical, attic, and appliances — washer and dryer, dishwasher, refrigerator, oven, ice maker.",
     photo: "/houses/cat-systems.jpg",
   },
 ];
@@ -96,26 +96,201 @@ export const HOUSE_QUOTE_KEYS = ["stories", "year_built", "lot_size", "square_fe
 export const HOUSE_ROOMS_JSON_KEY = "house_rooms";
 
 export const HOUSE_ROOM_COUNT_FIELDS = [
-  { key: "room_count", label: "Rooms", placeholder: "6" },
+  { key: "room_count", label: "Rooms (Value changes below)", placeholder: "6" },
   { key: "toilets", label: "Toilets", placeholder: "2" },
   { key: "sinks", label: "Sinks", placeholder: "3" },
   { key: "closets", label: "Closets", placeholder: "4" },
   { key: "foyer", label: "Foyer", placeholder: "1" },
   { key: "mud_room", label: "Mud room", placeholder: "1" },
+  { key: "basement", label: "Basement", placeholder: "1" },
+  { key: "attic", label: "Attic", placeholder: "1" },
+  { key: "interior_doors", label: "Interior doors", placeholder: "8" },
+  { key: "exterior_doors", label: "Exterior doors", placeholder: "2" },
 ] as const;
 
-export const HOUSE_YESNO_FIELDS = [
-  { key: "basement", label: "Basement" },
-  { key: "attic", label: "Attic" },
+export const HOUSE_YESNO_FIELDS = [{ key: "addition", label: "Addition" }] as const;
+
+export const HOUSE_BASEMENT_DETAIL_FIELDS = [
+  { key: "basement_finished", label: "Finished", placeholder: "1" },
+  { key: "basement_unfinished", label: "Unfinished", placeholder: "1" },
+  { key: "basement_stairs", label: "Stairs", placeholder: "1" },
+  { key: "basement_doors", label: "Basement doors", placeholder: "1" },
+] as const;
+
+export const HOUSE_DRAINAGE_OPTIONS = [
+  { value: "exterior", label: "Exterior" },
+  { value: "underground", label: "Underground" },
+  { value: "above_ground", label: "Above ground" },
+  { value: "mix", label: "Mix" },
+] as const;
+
+export const HOUSE_ROOM_SHARED_FIELDS = [
+  { key: "ceiling_height", label: "Ceiling height", placeholder: "9 ft" },
+  { key: "interior_trim_paint", label: "Interior trim", placeholder: "SW Extra White, satin" },
 ] as const;
 
 export const HOUSE_ROOM_EDITOR_KEYS = [
   ...HOUSE_ROOM_COUNT_FIELDS.map((f) => f.key),
   ...HOUSE_YESNO_FIELDS.map((f) => f.key),
+  ...HOUSE_BASEMENT_DETAIL_FIELDS.map((f) => f.key),
+  ...HOUSE_ROOM_SHARED_FIELDS.map((f) => f.key),
+  "drainage",
+  "interior_paint_main",
   HOUSE_ROOMS_JSON_KEY,
 ] as const;
 
-export type HouseRoomKind = "room" | "foyer" | "mud_room" | "basement" | "attic";
+export const HOUSE_APPLIANCES_JSON_KEY = "house_appliances";
+export const WASHER_DRYER_SETS_KEY = "washer_dryer_sets";
+export const WASHER_DRYER_LOCATION_KEY = "washer_dryer_location";
+
+export const HOUSE_APPLIANCE_COUNT_FIELDS = [
+  { key: "dishwasher_count", label: "Dishwasher", placeholder: "1", kind: "dishwasher" as const },
+  { key: "refrigerator_count", label: "Refrigerator", placeholder: "1", kind: "refrigerator" as const },
+  { key: "oven_count", label: "Oven", placeholder: "1", kind: "oven" as const },
+  { key: "ice_maker_count", label: "Ice maker", placeholder: "1", kind: "ice_maker" as const },
+] as const;
+
+export const HOUSE_APPLIANCE_EDITOR_KEYS = [
+  WASHER_DRYER_SETS_KEY,
+  WASHER_DRYER_LOCATION_KEY,
+  ...HOUSE_APPLIANCE_COUNT_FIELDS.map((f) => f.key),
+  HOUSE_APPLIANCES_JSON_KEY,
+] as const;
+
+export type HouseApplianceKind =
+  | "washer_dryer"
+  | "dishwasher"
+  | "refrigerator"
+  | "oven"
+  | "ice_maker";
+
+export type HouseAppliance = {
+  id: string;
+  kind: HouseApplianceKind;
+  name: string;
+  location: string;
+  make: string;
+  model: string;
+  photo: string;
+  washerMake: string;
+  washerModel: string;
+  dryerMake: string;
+  dryerModel: string;
+};
+
+export type HouseAppliancesPayload = { items: HouseAppliance[] };
+
+export function emptyHouseAppliance(
+  kind: HouseApplianceKind,
+  name: string,
+  id: string,
+  location = "",
+): HouseAppliance {
+  return {
+    id,
+    kind,
+    name,
+    location,
+    make: "",
+    model: "",
+    photo: "",
+    washerMake: "",
+    washerModel: "",
+    dryerMake: "",
+    dryerModel: "",
+  };
+}
+
+export function parseHouseAppliances(raw: string | undefined | null): HouseAppliance[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as HouseAppliancesPayload | HouseAppliance[];
+    const items = Array.isArray(parsed) ? parsed : parsed.items;
+    if (!Array.isArray(items)) return [];
+    return items
+      .filter((row) => row && typeof row === "object")
+      .map((row, i) => ({
+        id: String(row.id || `appliance-${i + 1}`),
+        kind: (row.kind as HouseApplianceKind) || "dishwasher",
+        name: String(row.name || `Appliance ${i + 1}`),
+        location: String(row.location || ""),
+        make: String(row.make || ""),
+        model: String(row.model || ""),
+        photo: String(row.photo || ""),
+        washerMake: String(row.washerMake || ""),
+        washerModel: String(row.washerModel || ""),
+        dryerMake: String(row.dryerMake || ""),
+        dryerModel: String(row.dryerModel || ""),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function applianceCount(value: string | undefined, max = 4) {
+  const n = Number.parseInt(String(value ?? "").trim(), 10);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(max, n);
+}
+
+export function appliancesFromCounts(input: {
+  washerDryerSets: string | undefined;
+  dishwasher: string | undefined;
+  refrigerator: string | undefined;
+  oven: string | undefined;
+  iceMaker: string | undefined;
+  location: string | undefined;
+  existing: HouseAppliance[];
+}): HouseAppliance[] {
+  const byKind = new Map<HouseApplianceKind, HouseAppliance[]>();
+  for (const row of input.existing) {
+    const list = byKind.get(row.kind) ?? [];
+    list.push(row);
+    byKind.set(row.kind, list);
+  }
+  const loc = (input.location ?? "").trim();
+  const take = (
+    kind: HouseApplianceKind,
+    count: number,
+    nameFor: (i: number) => string,
+    withLocation = false,
+  ) => {
+    const prior = byKind.get(kind) ?? [];
+    return Array.from({ length: count }, (_, i) => {
+      const prev = prior[i];
+      const name = nameFor(i);
+      if (prev) {
+        return {
+          ...prev,
+          name: prev.name.trim() || name,
+          location: prev.location.trim() || (withLocation ? loc : prev.location),
+        };
+      }
+      return emptyHouseAppliance(kind, name, `${kind}-${i + 1}`, withLocation ? loc : "");
+    });
+  };
+  const sets = applianceCount(input.washerDryerSets, 2);
+  return [
+    ...take(
+      "washer_dryer",
+      sets,
+      (i) => (i === 0 ? "Washer and dryer" : `Washer and dryer ${i + 1}`),
+      true,
+    ),
+    ...take("dishwasher", applianceCount(input.dishwasher), (i) =>
+      i === 0 ? "Dishwasher" : `Dishwasher ${i + 1}`,
+    ),
+    ...take("refrigerator", applianceCount(input.refrigerator), (i) =>
+      i === 0 ? "Refrigerator" : `Refrigerator ${i + 1}`,
+    ),
+    ...take("oven", applianceCount(input.oven), (i) => (i === 0 ? "Oven" : `Oven ${i + 1}`)),
+    ...take("ice_maker", applianceCount(input.iceMaker), (i) =>
+      i === 0 ? "Ice maker" : `Ice maker ${i + 1}`,
+    ),
+  ];
+}
+
+export type HouseRoomKind = "room" | "foyer" | "mud_room" | "basement" | "attic" | "addition";
 
 export type HouseRoomFloor = {
   id: string;
@@ -123,13 +298,14 @@ export type HouseRoomFloor = {
   name: string;
   flooring: string;
   stain: string;
+  paint: string;
   photo: string;
 };
 
 export type HouseRoomsPayload = { items: HouseRoomFloor[] };
 
 export function emptyHouseRoom(kind: HouseRoomKind, name: string, id: string): HouseRoomFloor {
-  return { id, kind, name, flooring: "", stain: "", photo: "" };
+  return { id, kind, name, flooring: "", stain: "", paint: "", photo: "" };
 }
 
 export function parseHouseRooms(raw: string | undefined | null): HouseRoomFloor[] {
@@ -146,6 +322,7 @@ export function parseHouseRooms(raw: string | undefined | null): HouseRoomFloor[
         name: String(row.name || `Room ${i + 1}`),
         flooring: String(row.flooring || ""),
         stain: String(row.stain || ""),
+        paint: String(row.paint || ""),
         photo: String(row.photo || ""),
       }));
   } catch {
@@ -154,7 +331,10 @@ export function parseHouseRooms(raw: string | undefined | null): HouseRoomFloor[
 }
 
 function countFromFact(value: string | undefined, fallback = 0) {
-  const n = Number.parseInt(String(value ?? "").trim(), 10);
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "yes") return 1;
+  if (raw === "no") return fallback;
+  const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n) || n < 0) return fallback;
   return Math.min(20, n);
 }
@@ -165,6 +345,7 @@ export function roomsFromCounts(input: {
   mudRoom: string | undefined;
   basement: string | undefined;
   attic: string | undefined;
+  addition: string | undefined;
   existing: HouseRoomFloor[];
 }): HouseRoomFloor[] {
   const byKind = new Map<HouseRoomKind, HouseRoomFloor[]>();
@@ -185,8 +366,9 @@ export function roomsFromCounts(input: {
     ...take("room", countFromFact(input.rooms, 0), (i) => `Room ${i + 1}`),
     ...take("foyer", countFromFact(input.foyer), (i) => (i === 0 ? "Foyer" : `Foyer ${i + 1}`)),
     ...take("mud_room", countFromFact(input.mudRoom), (i) => (i === 0 ? "Mud room" : `Mud room ${i + 1}`)),
-    ...take("basement", input.basement === "yes" ? 1 : 0, () => "Basement"),
-    ...take("attic", input.attic === "yes" ? 1 : 0, () => "Attic"),
+    ...take("basement", countFromFact(input.basement), (i) => (i === 0 ? "Basement" : `Basement ${i + 1}`)),
+    ...take("attic", countFromFact(input.attic), (i) => (i === 0 ? "Attic" : `Attic ${i + 1}`)),
+    ...take("addition", input.addition === "yes" ? 1 : 0, () => "Addition"),
   ];
 }
 
@@ -262,18 +444,74 @@ export const FIELD_CATALOG: FieldDef[] = [
     placeholder: "1",
   },
   {
+    key: "interior_doors",
+    label: "Interior doors",
+    group: "house",
+    hint: "Count of interior doors. This helps quote paint, trim, and hardware.",
+    placeholder: "8",
+  },
+  {
+    key: "exterior_doors",
+    label: "Exterior doors",
+    group: "house",
+    hint: "Count of exterior doors, including the front door.",
+    placeholder: "2",
+  },
+  {
     key: "basement",
     label: "Basement",
     group: "house",
-    hint: "Yes or no. This helps quote access and flooring.",
-    placeholder: "yes",
+    hint: "How many basements. Finished, unfinished, stairs, and doors come next.",
+    placeholder: "1",
   },
   {
     key: "attic",
     label: "Attic",
     group: "house",
-    hint: "Yes or no. This helps quote access and flooring.",
+    hint: "How many attics. Leave blank if none.",
+    placeholder: "1",
+  },
+  {
+    key: "addition",
+    label: "Addition",
+    group: "house",
+    hint: "Check if the house has an addition. This adds a room card below.",
     placeholder: "yes",
+  },
+  {
+    key: "basement_finished",
+    label: "Finished",
+    group: "house",
+    hint: "How much of the basement is finished.",
+    placeholder: "1",
+  },
+  {
+    key: "basement_unfinished",
+    label: "Unfinished",
+    group: "house",
+    hint: "How much of the basement is unfinished.",
+    placeholder: "1",
+  },
+  {
+    key: "basement_stairs",
+    label: "Stairs",
+    group: "house",
+    hint: "Basement stair runs.",
+    placeholder: "1",
+  },
+  {
+    key: "basement_doors",
+    label: "Basement doors",
+    group: "house",
+    hint: "Walk-out, bulkhead, or interior basement doors.",
+    placeholder: "1",
+  },
+  {
+    key: "drainage",
+    label: "Drainage",
+    group: "house",
+    hint: "Exterior, underground, above ground, or mix.",
+    placeholder: "underground",
   },
   {
     key: "house_rooms",
@@ -324,47 +562,26 @@ export const FIELD_CATALOG: FieldDef[] = [
     hint: "Approved colors, notice windows.",
     placeholder: "Earth tones only; 14-day notice",
   },
-  {
-    key: "flooring_main",
-    label: "Main flooring",
-    group: "house",
-    hint: "Species, finish, or product. This helps quote.",
-    placeholder: "White oak, site-finished",
-  },
-  {
-    key: "flooring_new",
-    label: "New flooring",
-    group: "house",
-    hint: "The product a flooring shop would put down.",
-    placeholder: "Hardwood",
-  },
-  {
-    key: "flooring_color",
-    label: "Floor color / stain",
-    group: "house",
-    hint: "Berber color or hardwood stain.",
-    placeholder: "Sandstone berber, Early American stain",
-  },
 
   {
     key: "ceiling_height",
     label: "Ceiling height",
-    group: "paint",
-    hint: "Changes scaffold and paint yield.",
+    group: "house",
+    hint: "Changes scaffold and paint yield. Lives with the rooms.",
     placeholder: "9 ft",
   },
   {
     key: "interior_paint_main",
     label: "Wall color",
-    group: "paint",
-    hint: "Product and color, written down.",
+    group: "house",
+    hint: "House-wide wall color. Each room can set its own paint color.",
     placeholder: "SW 7029 Agreeable Gray",
   },
   {
     key: "interior_trim_paint",
     label: "Interior trim",
-    group: "paint",
-    hint: "Enamel formula and sheen.",
+    group: "house",
+    hint: "Enamel formula and sheen. Lives with the rooms.",
     placeholder: "SW Extra White, satin",
   },
   {
@@ -583,6 +800,55 @@ export const FIELD_CATALOG: FieldDef[] = [
     group: "systems",
     hint: "R-value and type.",
     placeholder: "R-30 cellulose",
+  },
+  {
+    key: "washer_dryer_sets",
+    label: "Washer and dryer",
+    group: "systems",
+    hint: "1 or 2 sets. This helps quote laundry hookups and haul-away.",
+    placeholder: "1",
+  },
+  {
+    key: "washer_dryer_location",
+    label: "Washer and dryer location",
+    group: "systems",
+    hint: "Laundry room, basement, garage, or mud room.",
+    placeholder: "Laundry room",
+  },
+  {
+    key: "dishwasher_count",
+    label: "Dishwasher",
+    group: "systems",
+    hint: "How many dishwashers stay with the house.",
+    placeholder: "1",
+  },
+  {
+    key: "refrigerator_count",
+    label: "Refrigerator",
+    group: "systems",
+    hint: "How many refrigerators stay with the house.",
+    placeholder: "1",
+  },
+  {
+    key: "oven_count",
+    label: "Oven",
+    group: "systems",
+    hint: "Wall oven, range, or both.",
+    placeholder: "1",
+  },
+  {
+    key: "ice_maker_count",
+    label: "Ice maker",
+    group: "systems",
+    hint: "Stand-alone or in the freezer. Leave blank if none.",
+    placeholder: "1",
+  },
+  {
+    key: "house_appliances",
+    label: "Appliance make and model",
+    group: "systems",
+    hint: "Make, model, and a photo for each appliance.",
+    placeholder: "",
   },
 ];
 

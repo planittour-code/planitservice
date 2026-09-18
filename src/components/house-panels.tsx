@@ -11,11 +11,14 @@ import {
   CATEGORY_PHOTO,
   FIELD_CATALOG,
   FIELD_GROUPS,
+  HOUSE_APPLIANCE_EDITOR_KEYS,
+  HOUSE_APPLIANCES_JSON_KEY,
   HOUSE_QUOTE_KEYS,
   HOUSE_ROOM_EDITOR_KEYS,
   HOUSE_ROOMS_JSON_KEY,
   PHOTO_CATEGORIES,
 } from "@/lib/housefile/fields";
+import { HouseAppliancesEditor } from "@/components/house-appliances";
 import { HouseRoomsEditor } from "@/components/house-rooms";
 import { shortDate } from "@/lib/housefile/format";
 import { compressImage } from "@/lib/housefile/image";
@@ -112,7 +115,12 @@ export function Completeness({ filled, total }: { filled: number; total: number 
 
 export function missingFieldLabels(file: HouseFile) {
   const byKey = Object.fromEntries(file.facts.map((f) => [f.field_key, f]));
-  return FIELD_CATALOG.filter((f) => f.key !== HOUSE_ROOMS_JSON_KEY && !byKey[f.key]?.value);
+  return FIELD_CATALOG.filter(
+    (f) =>
+      f.key !== HOUSE_ROOMS_JSON_KEY &&
+      f.key !== HOUSE_APPLIANCES_JSON_KEY &&
+      !byKey[f.key]?.value,
+  );
 }
 
 export function MissingChips({
@@ -399,15 +407,20 @@ export function FactsPanel({
     },
     onSuccess: (_data, vars) => {
       const roomKey = (HOUSE_ROOM_EDITOR_KEYS as readonly string[]).includes(vars.key);
-      if (!roomKey) toast.success("Property Record updated");
-      if (vars.key !== HOUSE_ROOMS_JSON_KEY) onChanged();
+      const applianceKey = (HOUSE_APPLIANCE_EDITOR_KEYS as readonly string[]).includes(vars.key);
+      if (!roomKey && !applianceKey) toast.success("Property Record updated");
+      if (vars.key !== HOUSE_ROOMS_JSON_KEY && vars.key !== HOUSE_APPLIANCES_JSON_KEY) onChanged();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
 
   const filledGroups = FIELD_GROUPS.filter((group) =>
     FIELD_CATALOG.some(
-      (f) => f.group === group.id && f.key !== HOUSE_ROOMS_JSON_KEY && byKey[f.key]?.value,
+      (f) =>
+        f.group === group.id &&
+        f.key !== HOUSE_ROOMS_JSON_KEY &&
+        f.key !== HOUSE_APPLIANCES_JSON_KEY &&
+        byKey[f.key]?.value,
     ),
   );
   const [houseOpen, setHouseOpen] = useState(mode === "homeowner");
@@ -440,14 +453,18 @@ export function FactsPanel({
         const gridFields =
           group.id === "house"
             ? fields.filter((f) => !(HOUSE_ROOM_EDITOR_KEYS as readonly string[]).includes(f.key))
-            : fields;
+            : group.id === "systems"
+              ? fields.filter((f) => !(HOUSE_APPLIANCE_EDITOR_KEYS as readonly string[]).includes(f.key))
+              : fields;
         const quoteGrid = gridFields.filter((f) =>
           (HOUSE_QUOTE_KEYS as readonly string[]).includes(f.key),
         );
         const restGrid = gridFields.filter(
           (f) => !(HOUSE_QUOTE_KEYS as readonly string[]).includes(f.key),
         );
-        const countable = fields.filter((f) => f.key !== HOUSE_ROOMS_JSON_KEY);
+        const countable = fields.filter(
+          (f) => f.key !== HOUSE_ROOMS_JSON_KEY && f.key !== HOUSE_APPLIANCES_JSON_KEY,
+        );
         const filled = countable.filter((f) => Boolean(byKey[f.key]?.value)).length;
         const quoteFields =
           group.id === "house"
@@ -516,6 +533,13 @@ export function FactsPanel({
                 ))}
                 {group.id === "house" ? (
                   <HouseRoomsEditor
+                    facts={byKey}
+                    disabled={save.isPending}
+                    onSave={(key, value) => save.mutateAsync({ key, value })}
+                  />
+                ) : null}
+                {group.id === "systems" ? (
+                  <HouseAppliancesEditor
                     facts={byKey}
                     disabled={save.isPending}
                     onSave={(key, value) => save.mutateAsync({ key, value })}
