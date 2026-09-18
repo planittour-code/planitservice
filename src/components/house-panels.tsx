@@ -61,7 +61,7 @@ export function RecordSection({
       id={id}
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
-      className="group overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]"
+      className="group scroll-mt-20 overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]"
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 p-3 sm:p-4 [&::-webkit-details-marker]:hidden">
         {photo ? (

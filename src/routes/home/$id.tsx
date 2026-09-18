@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { MaintenanceBadge } from "@/components/status-badge";
+import { HomeownerSectionNav } from "@/components/homeowner-section-nav";
 import { MeasureGuidePanel } from "@/components/measure-guide";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import { UpgradeToPro } from "@/components/upgrade-to-pro";
@@ -88,7 +89,8 @@ function HomeRecord() {
   const hero = house.photos.find((ph) => ph.category === "exterior") ?? house.photos[0];
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6 pr-14 sm:pr-16">
+      <HomeownerSectionNav />
       {hero && (
         <img
           src={hero.src}
@@ -110,13 +112,24 @@ function HomeRecord() {
         </p>
       </header>
 
-      <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <JobTimeline file={house} />
-      <KnownProviders providers={q.data.knownProviders ?? []} />
-      <WarrantyList file={house} />
+      <div id="photos" className="scroll-mt-20">
+        <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
+      </div>
+      <div id="house-data" className="scroll-mt-20">
+        <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
+      </div>
+      <div id="jobs" className="scroll-mt-20">
+        <JobTimeline file={house} />
+      </div>
+      <div id="shops" className="scroll-mt-20">
+        <KnownProviders providers={q.data.knownProviders ?? []} />
+      </div>
+      <div id="warranties" className="scroll-mt-20">
+        <WarrantyList file={house} />
+      </div>
 
       <RecordSection
+        id="maintenance"
         title="Maintenance"
         blurb={`${due.length} due in the next two weeks. Log the work so the next season is not a guess.`}
         photo={CATEGORY_PHOTO.systems}
@@ -164,6 +177,7 @@ function HomeRecord() {
       </RecordSection>
 
       <RecordSection
+        id="transfer"
         title="Transfer this Property Record"
         blurb="The Property Record moves with the house."
         photo={CATEGORY_PHOTO.house}
@@ -171,7 +185,9 @@ function HomeRecord() {
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
       </RecordSection>
 
-      <MeasureGuidePanel audience="homeowner" />
+      <div id="measure" className="scroll-mt-20">
+        <MeasureGuidePanel audience="homeowner" />
+      </div>
 
       <RecordSection
         id="request-estimates"
