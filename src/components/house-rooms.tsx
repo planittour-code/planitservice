@@ -213,6 +213,7 @@ export function HouseRoomsEditor({
                 <Button
                   type="button"
                   size="sm"
+                  className="bg-go text-go-foreground hover:opacity-90"
                   disabled={disabled || !roomsDirty}
                   onClick={() => applyRoomCount()}
                 >

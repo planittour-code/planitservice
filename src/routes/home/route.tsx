@@ -38,11 +38,10 @@ function HomeLayout() {
           <AppNavLink to="/home" exact>
             Houses
           </AppNavLink>
-          <AppNavLink to="/home/add">Add a property</AppNavLink>
           <AppNavLink to="/home/settings">Settings</AppNavLink>
           <HouseInviteNav />
           <Button asChild size="sm">
-            <Link to="/home/add">New record</Link>
+            <Link to="/home/add">Add a property</Link>
           </Button>
           <UserButton tone="dark" />
         </nav>

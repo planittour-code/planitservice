@@ -8,6 +8,7 @@ import {
   PhotoGrid,
   WarrantyList,
 } from "@/components/house-panels";
+import { FileSectionNav, CONTRACTOR_SECTIONS } from "@/components/file-section-nav";
 import { QuoteTypePicker } from "@/components/quote-type";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -28,8 +29,13 @@ function PropertyPage() {
   const file = q.data;
   const p = file.property;
 
+  const sections = file.proposals.length
+    ? CONTRACTOR_SECTIONS
+    : CONTRACTOR_SECTIONS.filter((s) => s.id !== "quotes");
+
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6 pr-14 sm:pr-16">
+      <FileSectionNav sections={sections} />
       <header className="space-y-2">
         <p className="text-sm text-muted-foreground">
           <Link to="/app/properties" className="underline-offset-4 hover:underline">
@@ -69,7 +75,7 @@ function PropertyPage() {
       </header>
 
       {file.proposals.length > 0 && (
-        <section className="space-y-3">
+        <section id="quotes" className="scroll-mt-20 space-y-3">
           <h2 className="font-display text-xl font-medium">Quotes at this house</h2>
           <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
             {file.proposals.map((pr) => (
@@ -88,16 +94,16 @@ function PropertyPage() {
         </section>
       )}
 
-      <div id="photos">
+      <div id="photos" className="scroll-mt-20">
         <PhotoGrid file={file} mode="contractor" onChanged={() => q.refetch()} />
       </div>
-      <div id="jobs">
+      <div id="jobs" className="scroll-mt-20">
         <JobTimeline file={file} />
       </div>
-      <div id="warranties">
+      <div id="warranties" className="scroll-mt-20">
         <WarrantyList file={file} />
       </div>
-      <div id="house-data">
+      <div id="house-data" className="scroll-mt-20">
         <FactsPanel file={file} mode="contractor" onChanged={() => q.refetch()} />
       </div>
     </div>

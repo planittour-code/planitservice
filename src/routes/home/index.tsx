@@ -40,8 +40,8 @@ function HomeDashboard() {
             when you need bids. Add another address only if you own a second property.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/home/add">Add another property</Link>
+        <Button asChild>
+          <Link to="/home/add">Add a property</Link>
         </Button>
       </div>
 

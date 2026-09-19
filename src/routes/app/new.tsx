@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EstimateSheet } from "@/components/estimate-sheet";
+import { InvoiceDoc } from "@/components/invoice-doc";
 import { applyPriceBook, linesNeedingBookCost, proposedCostKey, STARTER_BOOK } from "@/lib/housefile/book";
 import { GUTTER_KIT_SEED, type WorkKit } from "@/lib/housefile/kits";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ import {
   toQuoteLines,
 } from "@/lib/housefile/estimate-lines";
 import { money } from "@/lib/housefile/format";
+import { isDrainageInvoice, type InvoiceView } from "@/lib/housefile/invoice";
 import {
   buildQuote,
   customWorkId,
@@ -324,6 +326,77 @@ function NewQuote() {
     [work?.id, takeoff, book],
   );
   const total = estimateReady(estimate) ? estimateTotal(estimate) : quoteTotal(lines);
+  const quoteTitle =
+    work?.name && takeoff.__kit_name
+      ? `${work.name} — ${takeoff.__kit_name}`
+      : work?.name || inviteQ.data?.invite.title || "Estimate";
+  const invoicePreview = useMemo((): InvoiceView | null => {
+    if (!isDrainageInvoice(quoteTitle)) return null;
+    const billed = (estimateReady(estimate) ? toQuoteLines(estimate, book) : lines).filter((line) => line.included);
+    const shop = dash.data?.company;
+    return {
+      proposal: {
+        id: "preview00000invoice",
+        sent_at: null,
+        accepted_at: null,
+        created_at: new Date().toISOString(),
+      },
+      items: billed.map((line, i) => ({
+        id: `preview-${i}`,
+        name: line.name,
+        description: line.description,
+        qty: line.qty,
+        unit: line.unit,
+        unit_price: line.unit_price,
+        included: true,
+        option_id: line.optionId ?? null,
+      })),
+      property: {
+        homeowner_name: existing?.homeowner_name || homeownerName || "Homeowner",
+        homeowner_email: existing?.homeowner_email || homeownerEmail,
+        homeowner_phone: homeownerPhone || existing?.homeowner_phone || null,
+        address_line: existing?.address_line || addressLine || "Job address",
+        city: existing?.city || city,
+        state: existing?.state || state,
+        zip: existing?.zip || zip,
+      },
+      company: {
+        id: shop?.id ?? "preview-shop",
+        name: shop?.name || "Your shop",
+        trade: shop?.trade || "gutters",
+        phone: shop?.phone ?? null,
+        email: shop?.email ?? null,
+        website: shop?.website ?? null,
+        street: shop?.street ?? null,
+        city: shop?.city ?? null,
+        state: shop?.state ?? null,
+        zip: shop?.zip ?? null,
+        logo_src: null,
+        agreement: shop?.agreement ?? null,
+        terms: shop?.terms ?? null,
+        payment_terms: shop?.payment_terms ?? null,
+        payment_link: shop?.payment_link ?? null,
+      },
+      salesRep: user
+        ? { name: user.displayName || "Sales", email: user.primaryEmail ?? "" }
+        : null,
+    };
+  }, [
+    quoteTitle,
+    estimate,
+    book,
+    lines,
+    dash.data?.company,
+    existing,
+    homeownerName,
+    homeownerEmail,
+    homeownerPhone,
+    addressLine,
+    city,
+    state,
+    zip,
+    user,
+  ]);
   const missingBookCost = linesNeedingBookCost(lines, book);
   const proposedReady = missingBookCost.every((l) =>
     String(takeoff[`cost_${l.bookId}`] ?? "").trim(),
@@ -342,10 +415,7 @@ function NewQuote() {
           state: existing?.state || state,
           zip: existing?.zip || zip,
           templateId: templateId || undefined,
-          title:
-            work?.name && takeoff.__kit_name
-              ? `${work.name} — ${takeoff.__kit_name}`
-              : work?.name || inviteQ.data?.invite.title,
+          title: quoteTitle === "Estimate" ? undefined : quoteTitle,
           takeoff,
           coverPhoto: housePhotos[0],
           housePhotos,
@@ -665,6 +735,7 @@ function NewQuote() {
             workId={work?.id}
             paintScope={takeoff.paint_scope}
           />
+          {invoicePreview ? <InvoiceDoc bundle={invoicePreview} /> : null}
           {lines.length > 0 && !estimateReady(estimate) && (
             <QuotePreview lines={lines} total={total} showCost />
           )}

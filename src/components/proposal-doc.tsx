@@ -13,9 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StreetView } from "@/components/street-view";
+import { InvoiceDoc } from "@/components/invoice-doc";
 import { Mark } from "@/components/logo";
 import { optionLabel } from "@/lib/housefile/estimate-lines";
 import { money, shortDate } from "@/lib/housefile/format";
+import { isDrainageInvoice } from "@/lib/housefile/invoice";
 import { normalizePaymentLink, paymentSchedule, paymentTermLabel } from "@/lib/housefile/payment";
 import {
   acceptProposalPublic,
@@ -73,6 +75,67 @@ export function ProposalDoc({
   const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   const openLines = items.filter((i) => i.included && !lineSettled(i));
   const readyToStart = openLines.length === 0 && items.some((i) => i.included);
+  const showInvoice = isDrainageInvoice(proposal.title);
+
+  if (showInvoice) {
+    return (
+      <article className="space-y-8">
+        {mode === "contractor" && !locked ? <ContractorMeta bundle={bundle} onChanged={onChanged} /> : null}
+        <InvoiceDoc bundle={bundle} />
+        {mode === "homeowner" && !locked ? (
+          <div className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-sm tracking-wide text-muted-foreground uppercase">Agreement</p>
+                <p className="text-sm text-muted-foreground">Accept this invoice to start work.</p>
+              </div>
+              <p className="font-display text-2xl font-medium tabular-nums">{money(includedTotal)}</p>
+            </div>
+            <Button
+              className="min-h-12 w-full"
+              data-preview-ok
+              onClick={async () => {
+                try {
+                  for (const item of openLines) {
+                    await reviseProposalPublic({
+                      data: { token: proposal.share_token, itemId: item.id, reviewStatus: "accepted" },
+                    });
+                  }
+                  if (proposal.status !== "accepted" && proposal.status !== "completed") {
+                    await acceptProposalPublic({ data: { token: proposal.share_token } });
+                  }
+                } catch {
+                  /* sample or already accepted */
+                }
+                void navigate({
+                  to: "/p/$token/accepted",
+                  params: { token: proposal.share_token },
+                });
+              }}
+            >
+              Start Work
+            </Button>
+          </div>
+        ) : null}
+        {mode === "contractor" && proposal.status !== "completed" && proposal.status !== "pending" ? (
+          <div className="flex flex-col gap-3 rounded-xl bg-muted px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              When the work is done, mark it complete. Colors, products, and warranties copy into the property record.
+            </p>
+            <Button
+              onClick={async () => {
+                await completeProposal({ data: { proposalId: proposal.id } });
+                toast.success("Job written into the property record");
+                onChanged();
+              }}
+            >
+              Mark job complete
+            </Button>
+          </div>
+        ) : null}
+      </article>
+    );
+  }
 
   return (
     <article className="space-y-8">

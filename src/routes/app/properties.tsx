@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { z } from "zod";
 import { HouseCard } from "@/components/site-chrome";
@@ -29,8 +29,14 @@ type ShopView = "jobs" | "clients" | "houses";
 
 export const Route = createFileRoute("/app/properties")({
   validateSearch: (s) => searchSchema.parse(s),
-  component: PropertiesPage,
+  component: PropertiesLayout,
 });
+
+function PropertiesLayout() {
+  const { id } = useParams({ strict: false }) as { id?: string };
+  if (id) return <Outlet />;
+  return <PropertiesPage />;
+}
 
 function PropertiesPage() {
   const search = Route.useSearch();

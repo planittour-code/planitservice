@@ -245,11 +245,21 @@ export type HouseCompany = {
   trade: string;
   phone: string | null;
   email: string | null;
+  website: string | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   logo_src: string | null;
   agreement: string | null;
   terms: string | null;
   payment_terms: string | null;
   payment_link: string | null;
+};
+
+export type InvoiceSalesRep = {
+  name: string;
+  email: string;
 };
 
 export type KnownProvider = {
@@ -280,6 +290,7 @@ export type ProposalBundle = {
   property: Property;
   company: HouseCompany;
   house: HouseFile;
+  salesRep: InvoiceSalesRep | null;
 };
 
 export type HomeownerHouse = PropertyListRow & {

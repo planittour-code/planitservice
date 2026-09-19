@@ -86,11 +86,41 @@ const ls = (name: string, description: string): SeedLine => ({
   qty: "1",
 });
 
+export const GUTTERS_PLUS_DRAINAGE_KIT = "Gutters Plus Drainage";
+
 export const GUTTER_KIT_SEED: KitSeed[] = [
   { name: "5-Inch New Install", lines: gutterNew("5-Inch") },
   { name: "5-Inch Replacement", lines: gutterReplace("5-Inch") },
   { name: "6-Inch New Install", lines: gutterNew("6-Inch") },
   { name: "6-Inch Replacement", lines: gutterReplace("6-Inch") },
+  {
+    name: GUTTERS_PLUS_DRAINAGE_KIT,
+    lines: [
+      {
+        name: "Exterior drainage",
+        description: "Grade, splash, and surface runoff at the downspouts.",
+        unit: "ls",
+        qty: "1",
+      },
+      {
+        name: "Underground drain",
+        description: "Leaders into buried pipe away from the foundation.",
+        unit: "lf",
+      },
+      {
+        name: "Above-ground drain",
+        description: "Above-grade extensions and splash away from the house.",
+        unit: "ea",
+      },
+      {
+        name: "Mix — underground and above ground",
+        description: "Tie some leaders below grade and leave others above grade.",
+        unit: "ls",
+        qty: "1",
+      },
+      ls("Site protection and haul-off", "Beds, walks, and debris from the drainage run."),
+    ],
+  },
 ];
 
 const PAINT_KIT_SEED: KitSeed[] = [
@@ -322,6 +352,13 @@ export function hasKitSeed(workId: string) {
   return Boolean(KIT_SEEDS[workId]?.length);
 }
 
+export function missingSeedKitNames(workId: string, existingNames: string[]) {
+  const seed = KIT_SEEDS[workId];
+  if (!seed?.length) return [];
+  const have = new Set(existingNames.map((name) => name.trim().toLowerCase()));
+  return seed.filter((kit) => !have.has(kit.name.trim().toLowerCase())).map((kit) => kit.name);
+}
+
 const WORK_ALIASES: Record<string, string> = {
   gutter: "gutters",
   roofing: "roof",
@@ -474,6 +511,11 @@ export function shopCsvTemplate() {
     "gutters,6-Inch Replacement,Hidden hangers,Hangers on the new run,,lf,,,,,,,,",
     "gutters,6-Inch Replacement,End caps outlets and miters,Fits and corners,1,ls,,,,,,,,",
     "gutters,6-Inch Replacement,Seal joints and splash blocks,Close the run,1,ls,,,,,,,,",
+    `gutters,${GUTTERS_PLUS_DRAINAGE_KIT},Exterior drainage,Grade splash and surface runoff at the downspouts,1,ls,,,,,,,,`,
+    `gutters,${GUTTERS_PLUS_DRAINAGE_KIT},Underground drain,Leaders into buried pipe away from the foundation,,lf,,,,,,,,`,
+    `gutters,${GUTTERS_PLUS_DRAINAGE_KIT},Above-ground drain,Above-grade extensions and splash away from the house,,ea,,,,,,,,`,
+    `gutters,${GUTTERS_PLUS_DRAINAGE_KIT},Mix — underground and above ground,Tie some leaders below grade and leave others above grade,1,ls,,,,,,,,`,
+    `gutters,${GUTTERS_PLUS_DRAINAGE_KIT},Site protection and haul-off,Beds walks and debris from the drainage run,1,ls,,,,,,,,`,
   ].join("\n");
 }
 

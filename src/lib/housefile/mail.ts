@@ -85,6 +85,7 @@ export async function deliverAcceptedEstimateEmail(input: {
   proposal: Proposal;
   company: Company;
   items: ProposalItem[];
+  salesRep?: { name: string; email: string } | null;
 }) {
   const { sendAcceptedEstimateEmail } = await import("@/lib/auth/mail.server");
   const pdf = await acceptedEstimatePdf({
@@ -92,6 +93,7 @@ export async function deliverAcceptedEstimateEmail(input: {
     property: input.property,
     proposal: input.proposal,
     items: input.items,
+    salesRep: input.salesRep ?? null,
   });
   const total = input.items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   await sendAcceptedEstimateEmail({

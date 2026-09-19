@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { createHomeProperty, getHousehold } from "@/lib/housefile/server";
 import { startCheckout } from "@/lib/housefile/stripe-billing";
 import {
@@ -29,11 +30,15 @@ export const Route = createFileRoute("/home/add")({
 
 function AddProperty() {
   const search = Route.useSearch();
+  const { user } = useCurrentUserState();
   const houses = useQuery({ queryKey: ["household"], queryFn: () => getHousehold() });
+  const accountEmail = user?.primaryEmail?.trim() || houses.data?.profile?.email?.trim() || "";
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("GA");
   const [zip, setZip] = useState("");
+  const [useAccountEmail, setUseAccountEmail] = useState(true);
+  const [email, setEmail] = useState("");
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [tier, setTier] = useState<"standard" | "pro">(search.tier ?? "standard");
   const price =
@@ -52,7 +57,16 @@ function AddProperty() {
   const save = useMutation({
     mutationFn: async () => {
       const created = await createHomeProperty({
-        data: { addressLine: address, city, state, zip, cadence, tier },
+        data: {
+          addressLine: address,
+          city,
+          state,
+          zip,
+          cadence,
+          tier,
+          useAccountEmail,
+          email: useAccountEmail ? accountEmail : email,
+        },
       });
       const checkout = await startCheckout({
         data: {
@@ -76,8 +90,9 @@ function AddProperty() {
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Add a property</h1>
         <p className="mt-2 text-muted-foreground">
-          One Property Record per address. Standard keeps the file and known shops. Pro adds
-          Request Estimates. ${dollars(price)} {cadence === "annual" ? "this year" : "per month"}.
+          One Property Record per address. Use the email you signed up with, or a different one for
+          this house. Standard keeps the file and known shops. Pro adds Request Estimates. $
+          {dollars(price)} {cadence === "annual" ? "this year" : "per month"}.
         </p>
       </div>
       <form
@@ -105,6 +120,35 @@ function AddProperty() {
             <Input id="zp" value={zip} onChange={(e) => setZip(e.target.value)} />
           </div>
         </div>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">Email for this Property Record</legend>
+          <label className="flex min-h-11 items-start gap-2 rounded-lg bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
+            <input
+              type="checkbox"
+              className="mt-1 size-4"
+              checked={useAccountEmail}
+              onChange={(e) => setUseAccountEmail(e.target.checked)}
+            />
+            <span>
+              Use the email I signed up with
+              {accountEmail ? (
+                <span className="mt-0.5 block text-muted-foreground">{accountEmail}</span>
+              ) : null}
+            </span>
+          </label>
+          {!useAccountEmail ? (
+            <div className="space-y-1">
+              <Label htmlFor="em">Different email</Label>
+              <Input
+                id="em"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          ) : null}
+        </fieldset>
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Plan</legend>
           <div className="grid gap-2 sm:grid-cols-2">

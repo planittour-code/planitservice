@@ -50,6 +50,7 @@ import type {
   CompanyMember,
   HouseCompany,
   HouseFile,
+  InvoiceSalesRep,
   Job,
   JobSpec,
   JobWithSpecs,
@@ -148,12 +149,36 @@ function publicCompany(c: Company): HouseCompany {
     trade: c.trade,
     phone: c.phone,
     email: c.email,
+    website: c.website ?? null,
+    street: c.street ?? null,
+    city: c.city ?? null,
+    state: c.state ?? null,
+    zip: c.zip ?? null,
     logo_src: c.logo_src ?? null,
     agreement: c.agreement ?? null,
     terms: c.terms ?? null,
     payment_terms: c.payment_terms ?? null,
     payment_link: c.payment_link ?? null,
   };
+}
+
+async function salesRepForProposal(sql: Sql, proposal: Proposal): Promise<InvoiceSalesRep | null> {
+  const userId = proposal.created_by;
+  if (!userId) return null;
+  const user = await sql<{ name: string | null; email: string | null }>`
+    select name, email from "user" where id = ${userId} limit 1
+  `;
+  const profile = await sql<{ display_name: string | null }>`
+    select display_name from user_profiles where user_id = ${userId} limit 1
+  `;
+  const member = await sql<{ email: string }>`
+    select email from company_members where company_id = ${proposal.company_id} and user_id = ${userId} limit 1
+  `;
+  const email = (user[0]?.email || member[0]?.email || "").trim();
+  const name =
+    profile[0]?.display_name?.trim() || user[0]?.name?.trim() || (email.includes("@") ? email.split("@")[0]! : "");
+  if (!name && !email) return null;
+  return { name: name || email, email };
 }
 
 function hydrateItem<T extends { qty: number; unit_price: number; warranty_years: number | null }>(
@@ -775,6 +800,7 @@ async function loadProposal(sql: Sql, proposal: Proposal): Promise<ProposalBundl
     property,
     company: publicCompany(asCompany(company)),
     house,
+    salesRep: await salesRepForProposal(sql, proposal),
   };
 }
 
@@ -2355,6 +2381,7 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
           items: items.map((i) =>
             hydrateItem({ ...i, included: Boolean(i.included), optional: Boolean(i.optional) }),
           ),
+          salesRep: await salesRepForProposal(sql, proposal),
         });
         emailed = true;
       } catch (err) {
@@ -2658,7 +2685,11 @@ async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[]) 
     const existing = await sql<{ c: number }>`
       select count(*)::int as c from work_kits where company_id = ${companyId} and work_id = ${workId}
     `;
-    if ((existing[0]?.c ?? 0) > 0) continue;
+    const already = existing[0]?.c ?? 0;
+    if (already > 0) {
+      await seedMissingKits(sql, companyId, workId, seed);
+      continue;
+    }
     let order = 0;
     for (const kit of seed) {
       const kitId = crypto.randomUUID();
@@ -2678,6 +2709,39 @@ async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[]) 
         `;
         lineOrder += 1;
       }
+    }
+  }
+}
+
+async function seedMissingKits(sql: Sql, companyId: string, workId: string, seed: (typeof KIT_SEEDS)[string]) {
+  if (!seed?.length) return;
+  const names = await sql<{ name: string }>`
+    select name from work_kits where company_id = ${companyId} and work_id = ${workId}
+  `;
+  const have = new Set(names.map((row) => row.name.trim().toLowerCase()));
+  const missing = seed.filter((kit) => !have.has(kit.name.trim().toLowerCase()));
+  if (!missing.length) return;
+  const max = await sql<{ n: number }>`
+    select coalesce(max(sort_order), -1)::int as n from work_kits where company_id = ${companyId} and work_id = ${workId}
+  `;
+  let order = (max[0]?.n ?? -1) + 1;
+  for (const kit of missing) {
+    const kitId = crypto.randomUUID();
+    await sql`
+      insert into work_kits (id, company_id, work_id, name, sort_order)
+      values (${kitId}, ${companyId}, ${workId}, ${kit.name}, ${order})
+    `;
+    order += 1;
+    let lineOrder = 0;
+    for (const line of kit.lines) {
+      await sql`
+        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+        values (
+          ${crypto.randomUUID()}, ${kitId}, ${lineOrder}, ${line.name}, ${line.description},
+          ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}
+        )
+      `;
+      lineOrder += 1;
     }
   }
 }
@@ -3498,6 +3562,8 @@ export const createHomeProperty = createServerFn({ method: "POST" })
       cadence: "monthly" | "annual";
       tier: "standard" | "pro";
       name?: string;
+      email?: string;
+      useAccountEmail?: boolean;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -3525,6 +3591,13 @@ export const createHomeProperty = createServerFn({ method: "POST" })
     }
     const id = crypto.randomUUID();
     const name = data.name?.trim() || session?.email?.split("@")[0] || "Homeowner";
+    const accountEmail = session?.email?.trim().toLowerCase() ?? "";
+    const typedEmail = data.email?.trim().toLowerCase() ?? "";
+    const email =
+      data.useAccountEmail !== false
+        ? accountEmail || typedEmail
+        : typedEmail || accountEmail;
+    if (!email.includes("@")) throw new Error("Need an email for this Property Record.");
     await sql`
       insert into properties (
         id, company_id, share_token, invite_token, invite_status,
@@ -3532,7 +3605,7 @@ export const createHomeProperty = createServerFn({ method: "POST" })
       ) values (
         ${id}, ${HOUSEHOLD_COMPANY}, ${slugToken()}, ${slugToken()}, ${"claimed"},
         ${address}, ${data.city.trim() || "—"}, ${data.state.trim() || "GA"}, ${data.zip.trim() || "—"},
-        ${name}, ${session?.email ?? ""}, ${context.userId}
+        ${name}, ${email}, ${context.userId}
       )
     `;
     await sql`

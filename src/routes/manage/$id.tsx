@@ -18,6 +18,7 @@ import { MaintenanceBadge } from "@/components/status-badge";
 import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
+import { FileSectionNav, MANAGER_SECTIONS } from "@/components/file-section-nav";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import {
@@ -69,8 +70,13 @@ function ManageRecord() {
   const hero = house.photos.find((ph) => ph.category === "exterior") ?? house.photos[0];
   const agreed = acceptedEstimates ?? [];
 
+  const sections = agreed.length
+    ? MANAGER_SECTIONS
+    : MANAGER_SECTIONS.filter((s) => s.id !== "agreed-work");
+
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6 pr-14 sm:pr-16">
+      <FileSectionNav sections={sections} />
       {hero && (
         <img
           src={hero.src}
@@ -97,6 +103,7 @@ function ManageRecord() {
       </header>
 
       <RecordSection
+        id="invite-owner"
         title="Invite the owner"
         blurb={
           claimed
@@ -126,11 +133,21 @@ function ManageRecord() {
           onDone={() => q.refetch()}
         />
       </RecordSection>
-      <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
-      <JobTimeline file={house} />
-      <KnownProviders providers={q.data.knownProviders ?? []} />
-      <WarrantyList file={house} />
+      <div id="photos" className="scroll-mt-20">
+        <PhotoGrid file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
+      </div>
+      <div id="house-data" className="scroll-mt-20">
+        <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
+      </div>
+      <div id="jobs" className="scroll-mt-20">
+        <JobTimeline file={house} />
+      </div>
+      <div id="shops" className="scroll-mt-20">
+        <KnownProviders providers={q.data.knownProviders ?? []} />
+      </div>
+      <div id="warranties" className="scroll-mt-20">
+        <WarrantyList file={house} />
+      </div>
       <RecordSection
         id="request-estimates"
         title="Request Estimates"
@@ -167,6 +184,7 @@ function ManageRecord() {
 
       {agreed.length > 0 ? (
         <RecordSection
+          id="agreed-work"
           title="Agreed work"
           blurb="Estimates the owner has already accepted. They count as scheduled until the shop logs the job complete."
           photo={CATEGORY_PHOTO.house}
@@ -198,6 +216,7 @@ function ManageRecord() {
       ) : null}
 
       <RecordSection
+        id="maintenance"
         title="Maintenance"
         blurb={`${due.length} due in the next two weeks. Set a date when the work is agreed, then log it when it is done.`}
         photo={CATEGORY_PHOTO.systems}

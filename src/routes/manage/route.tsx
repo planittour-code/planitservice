@@ -38,10 +38,9 @@ function ManageFrame() {
               Work
             </AppNavLink>
             <AppNavLink to="/manage/estimates">Estimates</AppNavLink>
-            <AppNavLink to="/manage/add">Add a Property</AppNavLink>
             <AppNavLink to="/manage/settings">Office</AppNavLink>
             <Button asChild size="sm">
-              <Link to="/manage/add">New record</Link>
+              <Link to="/manage/add">Add a property</Link>
             </Button>
             <UserButton tone="dark" />
           </nav>

@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { slotsForOfferedWork, type BookSlot } from "@/lib/housefile/book";
 import { compressImage } from "@/lib/housefile/image";
-import { hasKitSeed, kitsToCsv, parseKitPhotos, workLabel, type WorkKit } from "@/lib/housefile/kits";
+import {
+  hasKitSeed,
+  kitsToCsv,
+  missingSeedKitNames,
+  parseKitPhotos,
+  workLabel,
+  type WorkKit,
+} from "@/lib/housefile/kits";
 import { workTypesFor } from "@/lib/housefile/quote";
 import { deleteWorkKit, getDashboard, listWorkKits, saveWorkKit, seedWorkKits } from "@/lib/housefile/server";
 
@@ -152,6 +159,22 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
             </div>
           ) : (
             <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+              {owner && missingSeedKitNames(workId, rows.map((kit) => kit.name)).length > 0 ? (
+                <li className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    {missingSeedKitNames(workId, rows.map((kit) => kit.name)).join(", ")} can be loaded as a starter.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={seed.isPending}
+                    onClick={() => seed.mutate(workId)}
+                  >
+                    {seed.isPending ? "Loading…" : "Load missing starters"}
+                  </Button>
+                </li>
+              ) : null}
               {rows.map((kit) => {
                 const open = editing !== "new" && editing?.id === kit.id;
                 return (
@@ -274,7 +297,12 @@ function KitForm({
         </div>
         <div className="space-y-1">
           <Label htmlFor="kit-name">Sub-category</Label>
-          <Input id="kit-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="5-Inch New Install" />
+          <Input
+            id="kit-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Gutters Plus Drainage"
+          />
         </div>
       </div>
       <div className="space-y-3">
