@@ -256,10 +256,10 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
     return [
       {
         id: "guards",
-        label: "Leaf guards",
+        label: "Roll Lock Gutter Guards",
         hint: "Micromesh on the whole run.",
         lines: [
-          { item: "Leaf guards", description: "Guards on the new run.", slot: "gutter_guard", qty: "" },
+          { item: "Roll Lock Gutter Guards", description: "Guards on the new run.", slot: "gutter_guard", qty: "" },
         ],
       },
       {

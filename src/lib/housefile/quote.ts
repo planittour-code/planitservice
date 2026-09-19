@@ -199,7 +199,7 @@ export const WORK_TYPES: WorkType[] = [
       f("stories", "Stories", "number", "Two-story runs cost more to hang."),
       f("gutter_type", "Gutter spec", "text", "Size and material."),
       f("exterior_trim_paint", "Color", "text", "Usually matched to the trim."),
-      f("include_guards", "Leaf guards", "toggle", "Micromesh on the whole run."),
+      f("include_guards", "Roll Lock Gutter Guards", "toggle", "Micromesh on the whole run."),
     ],
   },
   {
@@ -889,7 +889,7 @@ function quoteGutters(inputs: Record<string, string>): QuoteLine[] {
       warranty_terms: "25-year finish warranty.",
     }),
     line({
-      name: "Leaf guards",
+      name: "Roll Lock Gutter Guards",
       description: "Micromesh, whole run.",
       qty: lf,
       unit: "lf",

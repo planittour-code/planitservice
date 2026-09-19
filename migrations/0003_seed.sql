@@ -38,7 +38,7 @@ insert into templates (id, company_id, name, trade, description, cover_note) val
   null,
   'Gutter and guard replacement',
   'exterior',
-  '6-inch aluminum gutters with leaf guards and new downspouts.',
+  '6-inch aluminum gutters with Roll Lock Gutter Guards and new downspouts.',
   'Sized for this roof, with guards so the next storm is not a service call.'
 ),
 (
@@ -85,7 +85,7 @@ values
 
   ('ti_gt_1', 'tmpl_gutter', 1, 'Remove existing gutters', 'Haul-off included.', 1, 'ls', 280, false, 'demo', null, null, null, null, null, null),
   ('ti_gt_2', 'tmpl_gutter', 2, '6-inch aluminum gutters', 'Seamless, color-matched to trim.', 140, 'lf', 12, false, 'gutter', 'LeafFilter', '6-inch aluminum', null, 'White', 25, '25-year finish warranty.'),
-  ('ti_gt_3', 'tmpl_gutter', 3, 'Leaf guards', 'Micromesh, whole run.', 140, 'lf', 18, false, 'guard', 'LeafFilter', 'Micromesh', null, null, null, 'Limited lifetime clog-free warranty.'),
+  ('ti_gt_3', 'tmpl_gutter', 3, 'Roll Lock Gutter Guards', 'Micromesh, whole run.', 140, 'lf', 18, false, 'guard', 'LeafFilter', 'Micromesh', null, null, null, 'Limited lifetime clog-free warranty.'),
   ('ti_gt_4', 'tmpl_gutter', 4, 'Downspouts and splash', 'New leaders to grade.', 4, 'ea', 85, false, 'downspout', null, null, null, 'White', null, null),
 
   ('ti_hv_1', 'tmpl_hvac', 1, 'Remove existing equipment', 'Recover refrigerant to spec.', 1, 'ls', 650, false, 'demo', null, null, null, null, null, null),

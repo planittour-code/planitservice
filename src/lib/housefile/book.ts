@@ -32,7 +32,7 @@ export const BOOK_SLOTS: BookSlot[] = [
   { id: "shingle", trade: "roofing", label: "Shingles", unit: "sq", mode: "replace" },
   { id: "window", trade: "windows", label: "Window unit", unit: "ea", mode: "replace" },
   { id: "gutter", trade: "gutters", label: "Gutters", unit: "lf", mode: "replace" },
-  { id: "gutter_guard", trade: "gutters", label: "Leaf guards", unit: "lf", mode: "replace" },
+  { id: "gutter_guard", trade: "gutters", label: "Roll Lock Gutter Guards", unit: "lf", mode: "replace" },
   { id: "siding", trade: "siding", label: "Siding", unit: "sf", mode: "replace" },
   { id: "stain", trade: "decks", label: "Deck / porch stain", unit: "sf", mode: "replace" },
   { id: "flooring", trade: "flooring", label: "Flooring", unit: "sf", mode: "replace" },

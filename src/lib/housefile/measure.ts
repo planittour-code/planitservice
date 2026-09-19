@@ -104,7 +104,7 @@ export const MEASURE_GUIDES: MeasureGuide[] = [
       },
       {
         title: "Stories and guards",
-        body: "One-story vs two-story changes hang time. Say if leaf guards are in the job.",
+        body: "One-story vs two-story changes hang time. Say if Roll Lock Gutter Guards are in the job.",
       },
     ],
     tip: "A long tape along the foundation under each eave is close enough for an estimate. The shop will still check corners on site.",
