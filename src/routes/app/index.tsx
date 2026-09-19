@@ -15,7 +15,7 @@ function ShopHome() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-[5.5rem] w-full sm:h-28 md:h-36" />
       </div>
     );
   }
@@ -37,7 +37,7 @@ function ShopHome() {
             <img
               src={company.logo_src}
               alt={company.name}
-              className="h-44 w-full object-contain p-4 sm:h-56 sm:p-6 md:h-72"
+              className="h-[5.5rem] w-full object-contain p-2 sm:h-28 sm:p-3 md:h-36"
             />
           </div>
         ) : null}

@@ -73,7 +73,7 @@ function PublicShopPage() {
       <main className="mx-auto max-w-3xl space-y-8 px-5 py-10">
         {shop.logo_src ? (
           <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-            <img src={shop.logo_src} alt={shop.name} className="h-44 w-full object-contain p-6 sm:h-56" />
+            <img src={shop.logo_src} alt={shop.name} className="h-[5.5rem] w-full object-contain p-3 sm:h-28" />
           </div>
         ) : null}
         <div className="space-y-2">
