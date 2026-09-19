@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { EstimateSheet } from "@/components/estimate-sheet";
 import { InvoiceDoc } from "@/components/invoice-doc";
 import { KitPicker } from "@/components/kit-picker";
+import { SalesSeatPicker } from "@/components/sales-seat-picker";
 import { applyPriceBook, linesNeedingBookCost, proposedCostKey, STARTER_BOOK } from "@/lib/housefile/book";
 import { GUTTER_KIT_SEED, type WorkKit } from "@/lib/housefile/kits";
 import {
@@ -57,9 +58,11 @@ import {
   getQuoteHouse,
   getRfpByToken,
   listPriceBook,
+  listTeam,
   listWorkKits,
   standardizeAddress,
 } from "@/lib/housefile/server";
+import { normalizePaymentLink } from "@/lib/housefile/payment";
 
 const queryString = z.preprocess(
   (v) => (v == null || v === "" ? undefined : String(v)),
@@ -110,6 +113,11 @@ function NewQuote() {
     queryFn: () => listWorkKits({ data: {} }),
     enabled: Boolean(user),
   });
+  const teamQ = useQuery({
+    queryKey: ["team"],
+    queryFn: () => listTeam(),
+    enabled: Boolean(user),
+  });
   const [step, setStep] = useState(1);
   const [workId, setWorkId] = useState(
     search.work ?? workForTemplate(search.template ?? "")?.id ?? "",
@@ -135,9 +143,15 @@ function NewQuote() {
   const [takeoff, setTakeoff] = useState<Record<string, string>>({});
   const [housePhotos, setHousePhotos] = useState<string[]>([]);
   const lastPropertyId = useRef(propertyId);
+  const [streetOpen, setStreetOpen] = useState(false);
+  const [streetActive, setStreetActive] = useState(0);
+  const streetBlur = useRef<number | null>(null);
   const [sent, setSent] = useState<Awaited<ReturnType<typeof createProposalFromWizard>> | null>(null);
   const [addingWork, setAddingWork] = useState(false);
   const [localCustom, setLocalCustom] = useState<string[]>([]);
+  const [salesEmails, setSalesEmails] = useState<string[]>([]);
+  const [paymentLink, setPaymentLink] = useState("");
+  const salesSeeded = useRef(false);
 
   const offered = user
     ? workTypesFor(
@@ -150,6 +164,25 @@ function NewQuote() {
           .filter((w): w is NonNullable<typeof w> => Boolean(w)),
       ];
   const work = workFromId(workId);
+  useEffect(() => {
+    if (salesSeeded.current) return;
+    const shopLink = dash.data?.company.payment_link;
+    if (shopLink && !paymentLink) setPaymentLink(shopLink);
+    const members = teamQ.data?.members ?? [];
+    if (!members.length) return;
+    const mine = (user?.primaryEmail ?? "").trim().toLowerCase();
+    const hit = members.find((m) => m.email.trim().toLowerCase() === mine);
+    if (hit) {
+      setSalesEmails([hit.email.trim().toLowerCase()]);
+      salesSeeded.current = true;
+      return;
+    }
+    const first = members[0]?.email.trim().toLowerCase();
+    if (first) {
+      setSalesEmails([first]);
+      salesSeeded.current = true;
+    }
+  }, [dash.data?.company.payment_link, teamQ.data?.members, user?.primaryEmail, paymentLink]);
   const addWork = useMutation({
     mutationFn: (name: string) => addCustomWork({ data: { name } }),
     onSuccess: (res) => {
@@ -161,7 +194,26 @@ function NewQuote() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add category"),
   });
   const templateId = work ? templateFor(work, takeoff) : "";
-  const existing = dash.data?.properties.find((p) => p.id === propertyId);
+  const houses = dash.data?.properties ?? [];
+  const existing = houses.find((p) => p.id === propertyId);
+  const streetMatches = useMemo(() => {
+    const raw = addressLine.trim();
+    if (raw.length < 2 || !houses.length) return [];
+    const needle = normalizeStreet(raw);
+    const nameNeedle = raw.toLowerCase();
+    return houses
+      .filter((p) => {
+        if (p.id === propertyId) return false;
+        const street = normalizeStreet(p.address_line);
+        const hay = `${p.homeowner_name} ${p.city} ${p.zip}`.toLowerCase();
+        return (
+          street.includes(needle) ||
+          needle.includes(street) ||
+          hay.includes(nameNeedle)
+        );
+      })
+      .slice(0, 8);
+  }, [houses, addressLine, propertyId]);
   const jobAddress = existing?.address_line || addressLine;
   const jobCity = existing?.city || city;
   const jobState = existing?.state || state;
@@ -351,6 +403,7 @@ function NewQuote() {
         sent_at: null,
         accepted_at: null,
         created_at: new Date().toISOString(),
+        payment_link: normalizePaymentLink(paymentLink) || shop?.payment_link || null,
       },
       items: billed.map((line, i) => ({
         id: `preview-${i}`,
@@ -386,11 +439,10 @@ function NewQuote() {
         agreement: shop?.agreement ?? null,
         terms: shop?.terms ?? null,
         payment_terms: shop?.payment_terms ?? null,
-        payment_link: shop?.payment_link ?? null,
+        payment_link: normalizePaymentLink(paymentLink) || shop?.payment_link || null,
       },
-      salesRep: user
-        ? { name: user.displayName || "Sales", email: user.primaryEmail ?? "" }
-        : null,
+      salesRep: invoiceSalesFromTeam(teamQ.data?.members ?? [], salesEmails, user)[0] ?? null,
+      salesReps: invoiceSalesFromTeam(teamQ.data?.members ?? [], salesEmails, user),
     };
   }, [
     quoteTitle,
@@ -407,6 +459,9 @@ function NewQuote() {
     state,
     zip,
     user,
+    paymentLink,
+    salesEmails,
+    teamQ.data?.members,
   ]);
   const missingBookCost = linesNeedingBookCost(lines, book);
   const proposedReady = missingBookCost.every((l) =>
@@ -432,6 +487,8 @@ function NewQuote() {
           housePhotos,
           rfpToken: search.rfp,
           workInviteToken: search.invite,
+          paymentLink,
+          salesEmails,
         },
       }),
     onSuccess: (result) => {
@@ -510,6 +567,47 @@ function NewQuote() {
       paint_scope: work.id === "paint" ? scope : s.paint_scope,
       [ESTIMATE_KEY]: serializeEstimateLines(linesFromKits(kits, items)),
     }));
+  }
+
+  function pickExistingHouse(house: (typeof houses)[number]) {
+    setPropertyId(house.id);
+    setAddressLine(house.address_line);
+    setCity(house.city);
+    setState(house.state);
+    setZip(house.zip);
+    setHomeownerName(house.homeowner_name);
+    setHomeownerEmail(house.homeowner_email);
+    setHomeownerPhone(house.homeowner_phone ?? "");
+    setStreetOpen(false);
+  }
+
+  function onStreetChange(value: string) {
+    setAddressLine(value);
+    setStreetOpen(true);
+    setStreetActive(0);
+    if (!propertyId) return;
+    const selected = houses.find((p) => p.id === propertyId);
+    if (!selected || normalizeStreet(selected.address_line) !== normalizeStreet(value)) {
+      setPropertyId("");
+    }
+  }
+
+  function onStreetKey(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      setStreetOpen(false);
+      return;
+    }
+    if (!streetOpen || streetMatches.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setStreetActive((i) => (i + 1) % streetMatches.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setStreetActive((i) => (i - 1 + streetMatches.length) % streetMatches.length);
+    } else if (e.key === "Enter" && streetMatches[streetActive]) {
+      e.preventDefault();
+      pickExistingHouse(streetMatches[streetActive]!);
+    }
   }
 
   function toggleKit(kit: WorkKit) {
@@ -614,39 +712,67 @@ function NewQuote() {
           <p className="text-muted-foreground">
             Start with the address. If this house already has a file, the measurements come with it.
           </p>
-          {(dash.data?.properties.length ?? 0) > 0 && (
-            <div className="space-y-1">
-              <Label htmlFor="existing">Existing house</Label>
-              <select
-                id="existing"
-                value={propertyId}
-                onChange={(e) => setPropertyId(e.target.value)}
-                className="flex h-9 w-full rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              >
-                <option value="">New address</option>
-                {dash.data?.properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.address_line} — {p.homeowner_name}
-                  </option>
-                ))}
-              </select>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="relative sm:col-span-2">
+              <Label htmlFor="street">Street/Existing Client house</Label>
+              <Input
+                id="street"
+                value={addressLine}
+                autoComplete="off"
+                role="combobox"
+                aria-expanded={streetOpen && streetMatches.length > 0}
+                aria-controls="existing-houses"
+                aria-autocomplete="list"
+                placeholder="Start typing a street or client name"
+                onChange={(e) => onStreetChange(e.target.value)}
+                onFocus={() => setStreetOpen(true)}
+                onBlur={() => {
+                  streetBlur.current = window.setTimeout(() => setStreetOpen(false), 120);
+                }}
+                onKeyDown={onStreetKey}
+              />
+              {streetOpen && streetMatches.length > 0 ? (
+                <ul
+                  id="existing-houses"
+                  role="listbox"
+                  className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-md bg-card py-1 shadow-[var(--shadow-border-hover)]"
+                >
+                  {streetMatches.map((house, i) => (
+                    <li key={house.id} role="option" aria-selected={i === streetActive}>
+                      <button
+                        type="button"
+                        className={
+                          i === streetActive
+                            ? "w-full px-3 py-2.5 text-left text-sm bg-muted"
+                            : "w-full px-3 py-2.5 text-left text-sm hover:bg-muted"
+                        }
+                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseEnter={() => setStreetActive(i)}
+                        onClick={() => pickExistingHouse(house)}
+                      >
+                        <span className="block font-medium">
+                          {house.address_line}
+                          {house.city ? `, ${house.city}` : ""}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {house.homeowner_name}
+                          {house.zip ? ` · ${house.zip}` : ""}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
-          )}
-          {!propertyId && (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Field label="Street" value={addressLine} onChange={setAddressLine} />
-              </div>
-              <Field label="City" value={city} onChange={setCity} />
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="State" value={state} onChange={setState} />
-                <Field label="ZIP" value={zip} onChange={setZip} />
-              </div>
-              <Field label="Homeowner" value={homeownerName} onChange={setHomeownerName} />
-              <Field label="Email" value={homeownerEmail} onChange={setHomeownerEmail} type="email" />
-              <Field label="Phone" value={homeownerPhone} onChange={setHomeownerPhone} />
+            <Field label="City" value={city} onChange={setCity} />
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="State" value={state} onChange={setState} />
+              <Field label="ZIP" value={zip} onChange={setZip} />
             </div>
-          )}
+            <Field label="Homeowner" value={homeownerName} onChange={setHomeownerName} />
+            <Field label="Email" value={homeownerEmail} onChange={setHomeownerEmail} type="email" />
+            <Field label="Phone" value={homeownerPhone} onChange={setHomeownerPhone} />
+          </div>
           {existing && (
             <p className="text-sm text-muted-foreground">
               {existing.address_line}, {existing.city} · {existing.fact_count} facts already on file.
@@ -725,7 +851,7 @@ function NewQuote() {
               Back
             </Button>
             <Button type="button" onClick={() => goToStep(4)}>
-              Line items from materials
+              Pre-View before sending
             </Button>
           </div>
         </div>
@@ -756,8 +882,31 @@ function NewQuote() {
             paintScope={takeoff.paint_scope}
           />
           {invoicePreview ? <InvoiceDoc bundle={invoicePreview} /> : null}
+          {user ? (
+            <div className="space-y-4 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+              <div className="space-y-1">
+                <Label htmlFor="quote-pay">Payment link</Label>
+                <Input
+                  id="quote-pay"
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://pay.example.com/your-shop"
+                  value={paymentLink}
+                  onChange={(e) => setPaymentLink(e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Prints on the estimate and invoice. Defaults to the shop payment link.
+                </p>
+              </div>
+              <SalesSeatPicker
+                members={teamQ.data?.members ?? []}
+                selected={salesEmails}
+                onChange={setSalesEmails}
+              />
+            </div>
+          ) : null}
           {lines.length > 0 && !estimateReady(estimate) && (
-            <QuotePreview lines={lines} total={total} showCost />
+            <QuotePreview lines={lines} total={total} />
           )}
           <p className="text-sm text-muted-foreground">
             Send Estimate emails this to {homeownerName || existing?.homeowner_name || "the homeowner"}
@@ -833,6 +982,24 @@ function NewQuote() {
       )}
     </div>
   );
+}
+
+function invoiceSalesFromTeam(
+  members: { email: string; name?: string | null }[],
+  selected: string[],
+  user: { displayName?: string | null; primaryEmail?: string | null } | null,
+) {
+  const byEmail = new Map(members.map((m) => [m.email.trim().toLowerCase(), m]));
+  const emails = selected.map((e) => e.trim().toLowerCase()).filter(Boolean).slice(0, 2);
+  if (!emails.length && user?.primaryEmail) emails.push(user.primaryEmail.trim().toLowerCase());
+  return emails.map((email) => {
+    const hit = byEmail.get(email);
+    const mine = user?.primaryEmail?.trim().toLowerCase() === email;
+    return {
+      name: hit?.name || (mine ? user?.displayName : "") || email.split("@")[0] || email,
+      email,
+    };
+  });
 }
 
 function guestBook() {

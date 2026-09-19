@@ -63,6 +63,7 @@ import type {
   ProposalItem,
   ProposalListRow,
   ShopClientRow,
+  ShopScheduleItem,
   ShopWorkRow,
   ProposalMessage,
   Template,
@@ -96,6 +97,7 @@ import {
   nextOpenTask,
   parseIsoDate,
   relevantTaskDate,
+  sundayOfWeek,
   taskStatus,
   todayIso,
 } from "./maintain";
@@ -162,23 +164,114 @@ function publicCompany(c: Company): HouseCompany {
   };
 }
 
-async function salesRepForProposal(sql: Sql, proposal: Proposal): Promise<InvoiceSalesRep | null> {
-  const userId = proposal.created_by;
-  if (!userId) return null;
-  const user = await sql<{ name: string | null; email: string | null }>`
-    select name, email from "user" where id = ${userId} limit 1
+function parseSalesEmails(raw: string | null | undefined): string[] {
+  if (!raw?.trim()) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(/[,;\n]+/)) {
+    const email = part.trim().toLowerCase();
+    if (!isMail(email) || seen.has(email)) continue;
+    seen.add(email);
+    out.push(email);
+    if (out.length >= 2) break;
+  }
+  return out;
+}
+
+function joinSalesEmails(emails: string[]): string | null {
+  const unique = parseSalesEmails(emails.join(","));
+  return unique.length ? unique.join(",") : null;
+}
+
+async function salesRepFromEmail(
+  sql: Sql,
+  companyId: string,
+  email: string,
+): Promise<InvoiceSalesRep | null> {
+  const key = email.trim().toLowerCase();
+  if (!isMail(key)) return null;
+  const member = await sql<{ email: string; user_id: string | null }>`
+    select email, user_id from company_members
+    where company_id = ${companyId} and lower(email) = ${key}
+    limit 1
   `;
-  const profile = await sql<{ display_name: string | null }>`
-    select display_name from user_profiles where user_id = ${userId} limit 1
+  const user = await sql<{ id: string; name: string | null; email: string | null }>`
+    select id, name, email from "user" where lower(email) = ${key} limit 1
   `;
-  const member = await sql<{ email: string }>`
-    select email from company_members where company_id = ${proposal.company_id} and user_id = ${userId} limit 1
-  `;
-  const email = (user[0]?.email || member[0]?.email || "").trim();
+  const userId = member[0]?.user_id || user[0]?.id || null;
+  let display: string | null = null;
+  if (userId) {
+    const profile = await sql<{ display_name: string | null }>`
+      select display_name from user_profiles where user_id = ${userId} limit 1
+    `;
+    display = profile[0]?.display_name?.trim() || null;
+  }
   const name =
-    profile[0]?.display_name?.trim() || user[0]?.name?.trim() || (email.includes("@") ? email.split("@")[0]! : "");
-  if (!name && !email) return null;
-  return { name: name || email, email };
+    display ||
+    user[0]?.name?.trim() ||
+    (key.includes("@") ? key.split("@")[0]! : "");
+  return { name: name || key, email: key };
+}
+
+async function salesRepsForProposal(sql: Sql, proposal: Proposal): Promise<InvoiceSalesRep[]> {
+  const stored = parseSalesEmails(proposal.sales_emails);
+  const emails = [...stored];
+  if (emails.length === 0 && proposal.created_by) {
+    const creator = await sql<{ email: string | null }>`
+      select email from "user" where id = ${proposal.created_by} limit 1
+    `;
+    const mail = creator[0]?.email?.trim().toLowerCase() ?? "";
+    if (isMail(mail)) emails.push(mail);
+  }
+  const out: InvoiceSalesRep[] = [];
+  const seen = new Set<string>();
+  for (const email of emails.slice(0, 2)) {
+    if (seen.has(email)) continue;
+    seen.add(email);
+    const rep = await salesRepFromEmail(sql, proposal.company_id, email);
+    if (rep) out.push(rep);
+  }
+  return out;
+}
+
+async function salesRepForProposal(sql: Sql, proposal: Proposal): Promise<InvoiceSalesRep | null> {
+  const reps = await salesRepsForProposal(sql, proposal);
+  return reps[0] ?? null;
+}
+
+async function teamDirectoryForShop(sql: Sql, company: Company): Promise<CompanyMember[]> {
+  const members = await sql<CompanyMember>`
+    select * from company_members where company_id = ${company.id} order by role, email
+  `;
+  const out: CompanyMember[] = [];
+  const seen = new Set<string>();
+  for (const member of members) {
+    const email = member.email.trim().toLowerCase();
+    if (!isMail(email) || seen.has(email)) continue;
+    seen.add(email);
+    const rep = await salesRepFromEmail(sql, company.id, email);
+    out.push({ ...member, email, name: rep?.name ?? email.split("@")[0] });
+  }
+  const ownerMail = (company.email || "").trim().toLowerCase();
+  if (isMail(ownerMail) && !seen.has(ownerMail)) {
+    const ownerUser = await sql<{ email: string | null; name: string | null }>`
+      select email, name from "user" where id = ${company.user_id} limit 1
+    `;
+    const email = (ownerUser[0]?.email || ownerMail).trim().toLowerCase();
+    if (isMail(email) && !seen.has(email)) {
+      const rep = await salesRepFromEmail(sql, company.id, email);
+      out.unshift({
+        id: `owner-${company.id}`,
+        company_id: company.id,
+        user_id: company.user_id,
+        email,
+        role: "owner",
+        created_at: company.created_at,
+        name: rep?.name ?? ownerUser[0]?.name ?? email.split("@")[0],
+      });
+    }
+  }
+  return out;
 }
 
 function hydrateItem<T extends { qty: number; unit_price: number; warranty_years: number | null }>(
@@ -504,6 +597,8 @@ async function reviewPartiesForProposal(sql: Sql, proposal: Proposal, property: 
       }
     }
   }
+  const shopOwners: ReviewParty[] = [];
+  const ownerSeen = new Set<string>();
   if (company) {
     if (!fileSeen.has((company.email || "").trim().toLowerCase())) {
       addReviewParty(shop, shopSeen, company.email, company.name);
@@ -513,12 +608,24 @@ async function reviewPartiesForProposal(sql: Sql, proposal: Proposal, property: 
       if (fileSeen.has(email)) continue;
       addReviewParty(shop, shopSeen, email, company.name);
     }
+    const ownerMembers = await sql<{ email: string }>`
+      select email from company_members where company_id = ${company.id} and role = ${"owner"}
+    `;
+    const ownerUser = await sql<{ email: string | null }>`
+      select email from "user" where id = ${company.user_id} limit 1
+    `;
+    addReviewParty(shopOwners, ownerSeen, company.email, "Owner");
+    addReviewParty(shopOwners, ownerSeen, ownerUser[0]?.email, "Owner");
+    for (const member of ownerMembers) {
+      addReviewParty(shopOwners, ownerSeen, member.email, "Owner");
+    }
   }
   return {
     company: company ?? null,
     address,
     file,
     shop,
+    shopOwners,
   };
 }
 
@@ -526,7 +633,7 @@ async function notifyEstimateReview(
   sql: Sql,
   proposal: Proposal,
   reason: string,
-  audience: "file" | "shop" | "all",
+  audience: "file" | "shop" | "all" | "owner",
   skip: string[] = [],
 ) {
   const property = (
@@ -541,16 +648,27 @@ async function notifyEstimateReview(
   const skipSet = new Set(skip.map((email) => email.trim().toLowerCase()).filter(Boolean));
   const who = parties.company?.name || "PlanitService";
   const targets: { to: string; name: string; url: string }[] = [];
+  const seenTo = new Set<string>();
+  const pushTarget = (party: { to: string; name: string }, url: string) => {
+    if (skipSet.has(party.to) || seenTo.has(party.to)) return;
+    seenTo.add(party.to);
+    targets.push({ ...party, url });
+  };
+  const shopUrl = `${origin}/app/proposals/${proposal.id}`;
+  const fileUrl = `${origin}/p/${proposal.share_token}`;
   if (audience === "file" || audience === "all") {
     for (const party of parties.file) {
-      if (skipSet.has(party.to)) continue;
-      targets.push({ ...party, url: `${origin}/p/${proposal.share_token}` });
+      pushTarget(party, fileUrl);
     }
   }
   if (audience === "shop" || audience === "all") {
     for (const party of parties.shop) {
-      if (skipSet.has(party.to)) continue;
-      targets.push({ ...party, url: `${origin}/app/proposals/${proposal.id}` });
+      pushTarget(party, shopUrl);
+    }
+  }
+  if (audience === "file" || audience === "owner" || audience === "all") {
+    for (const party of parties.shopOwners) {
+      pushTarget(party, shopUrl);
     }
   }
   let emailed = 0;
@@ -801,6 +919,7 @@ async function loadProposal(sql: Sql, proposal: Proposal): Promise<ProposalBundl
     company: publicCompany(asCompany(company)),
     house,
     salesRep: await salesRepForProposal(sql, proposal),
+    salesReps: await salesRepsForProposal(sql, proposal),
   };
 }
 
@@ -847,6 +966,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       open_proposal_count: num(p.open_proposal_count),
     }));
     const namedInvites = await namedWorkForShop(sql, company, session?.email);
+    const schedule = await shopScheduleFor(sql, company.id);
     return {
       company,
       role,
@@ -855,6 +975,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       clients: clientsFromHouses(houses),
       proposals,
       namedInvites,
+      schedule,
       templateCount: num(templates[0]?.c),
     };
   });
@@ -1345,6 +1466,8 @@ export type WizardInput = {
   housePhotos?: string[];
   rfpToken?: string;
   workInviteToken?: string;
+  paymentLink?: string | null;
+  salesEmails?: string[];
 };
 
 export const getQuoteHouse = createServerFn({ method: "GET" })
@@ -1493,13 +1616,23 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     const proposalId = crypto.randomUUID();
     const title = data.title?.trim() || template?.name || work?.name || "Estimate";
     const pending = role === "sales" && catalogMissing.length > 0;
+    const directory = await teamDirectoryForShop(sql, company);
+    const allowed = new Set(directory.map((m) => m.email.trim().toLowerCase()));
+    const sessionMail = session?.email?.trim().toLowerCase() ?? "";
+    const picked = parseSalesEmails((data.salesEmails ?? []).join(",")).filter((email) => allowed.has(email));
+    if (picked.length === 0 && isMail(sessionMail) && allowed.has(sessionMail)) picked.push(sessionMail);
+    if (picked.length === 0 && allowed.size) picked.push([...allowed][0]!);
+    const paymentLink = data.paymentLink === undefined
+      ? company.payment_link
+      : normalizePaymentLink(data.paymentLink);
     await sql`
       insert into proposals (
-        id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, created_by
+        id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, created_by, payment_link, sales_emails
       ) values (
         ${proposalId}, ${company.id}, ${property.id}, ${template?.id ?? null}, ${slugToken()},
         ${title}, ${pending ? "pending" : "sent"}, ${coverLetter(property.homeowner_name, work?.name ?? template?.trade ?? "work")},
-        ${pending ? null : new Date().toISOString()}, ${context.userId}
+        ${pending ? null : new Date().toISOString()}, ${context.userId},
+        ${paymentLink}, ${joinSalesEmails(picked)}
       )
     `;
     const itemsToWrite =
@@ -1621,7 +1754,14 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     }
     const proposal = (await sql<Proposal>`select * from proposals where id = ${proposalId}`)[0]!;
     let emailed = false;
-    if (!pending) {
+    if (pending) {
+      await notifyEstimateReview(
+        sql,
+        proposal,
+        `${proposal.title} needs the shop Owner to review costs before it can go to the homeowner.`,
+        "owner",
+      );
+    } else {
       try {
         const { deliverEstimateEmail } = await import("./mail");
         await deliverEstimateEmail({ property, proposal, company });
@@ -1681,12 +1821,25 @@ export const getContractorProposal = createServerFn({ method: "GET" })
 
 export const updateProposalMeta = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { id: string; title: string; coverNote: string; coverPhoto?: string | null }) => input)
+  .validator(
+    (input: {
+      id: string;
+      title: string;
+      coverNote: string;
+      coverPhoto?: string | null;
+      paymentLink?: string | null;
+      salesEmails?: string[];
+    }) => input,
+  )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const company = await companyFor(sql, context.userId, session?.email);
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
+    const paymentLink =
+      data.paymentLink === undefined ? undefined : normalizePaymentLink(data.paymentLink);
+    const salesEmails =
+      data.salesEmails === undefined ? undefined : joinSalesEmails(data.salesEmails);
     if (data.coverPhoto !== undefined) {
       await sql`
         update proposals
@@ -1698,6 +1851,16 @@ export const updateProposalMeta = createServerFn({ method: "POST" })
         update proposals
         set title = ${data.title.trim()}, cover_note = ${data.coverNote}
         where id = ${data.id} and company_id = ${company.id}
+      `;
+    }
+    if (paymentLink !== undefined) {
+      await sql`
+        update proposals set payment_link = ${paymentLink} where id = ${data.id} and company_id = ${company.id}
+      `;
+    }
+    if (salesEmails !== undefined) {
+      await sql`
+        update proposals set sales_emails = ${salesEmails} where id = ${data.id} and company_id = ${company.id}
       `;
     }
     return { ok: true as const };
@@ -2356,8 +2519,12 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
     if (!rows[0]) throw new Error("Proposal not found");
     const already = rows[0].status === "accepted" || rows[0].status === "completed";
     if (!already) {
+      const hold = sundayOfWeek();
       await sql`
-        update proposals set status = ${"accepted"}, accepted_at = now()
+        update proposals
+        set status = ${"accepted"},
+            accepted_at = now(),
+            scheduled_on = coalesce(scheduled_on, ${hold}::date)
         where id = ${rows[0].id}
       `;
     }
@@ -2382,6 +2549,7 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
             hydrateItem({ ...i, included: Boolean(i.included), optional: Boolean(i.optional) }),
           ),
           salesRep: await salesRepForProposal(sql, proposal),
+          salesReps: await salesRepsForProposal(sql, proposal),
         });
         emailed = true;
       } catch (err) {
@@ -2389,6 +2557,33 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
       }
     }
     return { ok: true as const, emailed };
+  });
+
+export const scheduleSoldEstimate = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { proposalId: string; scheduledOn: string; scheduledNote?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
+    const rows = await sql<Proposal>`
+      select * from proposals where id = ${data.proposalId} and company_id = ${company.id} limit 1
+    `;
+    const proposal = rows[0];
+    if (!proposal) throw new Error("Proposal not found");
+    if (proposal.status !== "accepted" && proposal.status !== "completed") {
+      throw new Error("Schedule the job after the estimate is sold.");
+    }
+    const scheduledOn = parseIsoDate(data.scheduledOn);
+    if (!scheduledOn) throw new Error("Need a real date.");
+    const note = data.scheduledNote?.trim() || null;
+    await sql`
+      update proposals
+      set scheduled_on = ${scheduledOn}::date, scheduled_note = ${note}
+      where id = ${proposal.id}
+    `;
+    return { ok: true as const, scheduledOn };
   });
 
 export const draftCoverNote = createServerFn({ method: "POST" })
@@ -2465,10 +2660,11 @@ async function cloneProperty(sql: Sql, source: Property, companyId: string): Pro
     const newPrId = crypto.randomUUID();
     await sql`
       insert into proposals (
-        id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, accepted_at, created_by
+        id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, accepted_at, created_by, scheduled_on, scheduled_note, payment_link, sales_emails
       ) values (
         ${newPrId}, ${companyId}, ${id}, ${pr.template_id}, ${slugToken()},
-        ${pr.title}, ${pr.status}, ${pr.cover_note}, ${pr.sent_at}, ${pr.accepted_at}, ${pr.created_by}
+        ${pr.title}, ${pr.status}, ${pr.cover_note}, ${pr.sent_at}, ${pr.accepted_at}, ${pr.created_by},
+        ${pr.scheduled_on ?? null}, ${pr.scheduled_note ?? null}, ${pr.payment_link ?? null}, ${pr.sales_emails ?? null}
       )
     `;
     const items = await sql<ProposalItem>`
@@ -2896,9 +3092,7 @@ export const listTeam = createServerFn({ method: "GET" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    const members = await sql<CompanyMember>`
-      select * from company_members where company_id = ${company.id} order by role, email
-    `;
+    const members = await teamDirectoryForShop(sql, company);
     return { role, members };
   });
 
@@ -4392,9 +4586,58 @@ function estimateDateIso(value: string | null | undefined) {
   return value.length >= 10 ? value.slice(0, 10) : todayIso();
 }
 
+function soldHoldDate(acceptedAt: string | null | undefined, scheduledOn?: string | null) {
+  if (scheduledOn && scheduledOn.length >= 10) return scheduledOn.slice(0, 10);
+  return sundayOfWeek(estimateDateIso(acceptedAt));
+}
+
+async function shopScheduleFor(sql: Sql, companyId: string): Promise<ShopScheduleItem[]> {
+  const rows = await sql<{
+    id: string;
+    title: string;
+    address_line: string;
+    city: string;
+    state: string;
+    zip: string;
+    homeowner_name: string;
+    accepted_at: string;
+    scheduled_on: string | null;
+    scheduled_note: string | null;
+  }>`
+    select pr.id, pr.title, pr.accepted_at, pr.scheduled_on, pr.scheduled_note,
+      p.address_line, p.city, p.state, p.zip, p.homeowner_name
+    from proposals pr
+    join properties p on p.id = pr.property_id
+    where pr.company_id = ${companyId}
+      and pr.status = ${"accepted"}
+      and pr.accepted_at is not null
+    order by coalesce(pr.scheduled_on, pr.accepted_at) asc
+  `;
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    address_line: row.address_line,
+    city: row.city,
+    state: row.state,
+    zip: row.zip,
+    homeowner_name: row.homeowner_name,
+    accepted_at: row.accepted_at,
+    scheduled_on: soldHoldDate(row.accepted_at, row.scheduled_on),
+    scheduled_note: row.scheduled_note,
+  }));
+}
+
 async function acceptedEstimatesForPortfolio(sql: Sql, portfolioId: string, propertyId?: string) {
-  const rows = await sql<AcceptedEstimateRow & { shop_address: string; shop_zip: string }>`
-    select pr.id, pr.title, pr.share_token, pr.accepted_at, office_p.id as property_id,
+  const rows = await sql<
+    AcceptedEstimateRow & {
+      shop_address: string;
+      shop_zip: string;
+      scheduled_on: string | null;
+      scheduled_note: string | null;
+    }
+  >`
+    select pr.id, pr.title, pr.share_token, pr.accepted_at, pr.scheduled_on, pr.scheduled_note,
+      office_p.id as property_id,
       office_p.address_line, office_p.city, office_p.state, office_p.zip, office_p.homeowner_name,
       shop_p.address_line as shop_address, shop_p.zip as shop_zip,
       c.name as company_name
@@ -4429,6 +4672,8 @@ async function acceptedEstimatesForPortfolio(sql: Sql, portfolioId: string, prop
       title: row.title,
       share_token: row.share_token,
       accepted_at: row.accepted_at,
+      scheduled_on: row.scheduled_on,
+      scheduled_note: row.scheduled_note,
       company_name: row.company_name,
       address_line: row.address_line,
       city: row.city,
@@ -4577,8 +4822,8 @@ export const getPortfolio = createServerFn({ method: "GET" })
         ? {
             id: nextEstimate.id,
             title: nextEstimate.title,
-            due_on: estimateDateIso(nextEstimate.accepted_at),
-            scheduled_on: estimateDateIso(nextEstimate.accepted_at),
+            due_on: soldHoldDate(nextEstimate.accepted_at, nextEstimate.scheduled_on),
+            scheduled_on: soldHoldDate(nextEstimate.accepted_at, nextEstimate.scheduled_on),
             status: "scheduled" as const,
             kind: "estimate" as const,
           }
@@ -4635,9 +4880,11 @@ export const getPortfolio = createServerFn({ method: "GET" })
         property_id: item.property_id,
         title: item.title,
         system_name: item.company_name,
-        due_on: estimateDateIso(item.accepted_at),
-        scheduled_on: estimateDateIso(item.accepted_at),
-        scheduled_note: `Agreed estimate from ${item.company_name}`,
+        due_on: soldHoldDate(item.accepted_at, item.scheduled_on),
+        scheduled_on: soldHoldDate(item.accepted_at, item.scheduled_on),
+        scheduled_note:
+          item.scheduled_note ||
+          `Agreed estimate from ${item.company_name}. Hold is Sunday of the sold week and can move for weather.`,
         status: "scheduled" as const,
         address_line: item.address_line,
         city: item.city,

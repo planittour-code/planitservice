@@ -3,7 +3,9 @@ import { asPaymentTerms, paymentTermLabel } from "./payment";
 import type { HouseCompany, InvoiceSalesRep, Property, Proposal, ProposalItem } from "./types";
 
 export type InvoiceView = {
-  proposal: Pick<Proposal, "id" | "sent_at" | "accepted_at" | "created_at">;
+  proposal: Pick<Proposal, "id" | "sent_at" | "accepted_at" | "created_at"> & {
+    payment_link?: string | null;
+  };
   items: Array<
     Pick<ProposalItem, "id" | "name" | "description" | "qty" | "unit" | "unit_price" | "included" | "option_id">
   >;
@@ -13,7 +15,13 @@ export type InvoiceView = {
   >;
   company: HouseCompany;
   salesRep: InvoiceSalesRep | null;
+  salesReps?: InvoiceSalesRep[];
 };
+
+export function invoiceSalesReps(view: Pick<InvoiceView, "salesRep" | "salesReps">): InvoiceSalesRep[] {
+  if (view.salesReps?.length) return view.salesReps.slice(0, 2);
+  return view.salesRep ? [view.salesRep] : [];
+}
 
 export function isDrainageInvoice(title: string | null | undefined) {
   const value = title?.trim() ?? "";
@@ -83,7 +91,11 @@ export function invoicePaymentCopy(input: {
   ].join(" ");
 }
 
-export function invoiceThankYou(rep: InvoiceSalesRep | null) {
-  if (rep?.name) return `Thank you for your business, ${rep.name}.`;
+export function invoiceThankYou(rep: InvoiceSalesRep | InvoiceSalesRep[] | null) {
+  const names = (Array.isArray(rep) ? rep : rep ? [rep] : [])
+    .map((row) => row.name.trim())
+    .filter(Boolean);
+  if (names.length === 1) return `Thank you for your business, ${names[0]}.`;
+  if (names.length === 2) return `Thank you for your business, ${names[0]} and ${names[1]}.`;
   return "Thank you for your business.";
 }

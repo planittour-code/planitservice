@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { getDashboard, listShopIndex, sendRepeatServiceCampaign } from "@/lib/housefile/server";
-import { workTypesFor } from "@/lib/housefile/quote";
+import { WORK_TYPES, workTypesFor } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/campaign")({ component: CampaignPage });
@@ -37,6 +37,10 @@ function CampaignPage() {
   const extrasOffered = offered.filter((w) => w.id !== (repeatId || offered[0]?.id));
   const extraPaid = extra.filter((id) => extrasOffered.some((w) => w.id === id));
   const repeat = offered.find((w) => w.id === repeatId) ?? offered[0];
+  const allCategoriesPaid =
+    WORK_TYPES.length > 0 && WORK_TYPES.every((w) => offered.some((o) => o.id === w.id));
+  const allServicesSelected =
+    Boolean(repeat) && extrasOffered.every((w) => extraPaid.includes(w.id));
 
   const send = useMutation({
     mutationFn: () => {
@@ -78,6 +82,13 @@ function CampaignPage() {
     setExtra((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   }
 
+  function selectAllServices() {
+    const first = repeat ?? offered[0];
+    if (!first) return;
+    setRepeatId(first.id);
+    setExtra(offered.filter((w) => w.id !== first.id).map((w) => w.id));
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
@@ -102,6 +113,16 @@ function CampaignPage() {
         </div>
       ) : (
         <>
+      {allCategoriesPaid ? (
+        <Button
+          type="button"
+          className="w-full"
+          aria-pressed={allServicesSelected}
+          onClick={selectAllServices}
+        >
+          All services paid
+        </Button>
+      ) : null}
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Repeat service</legend>
         <p className="text-sm text-muted-foreground">

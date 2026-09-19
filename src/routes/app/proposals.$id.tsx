@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { approveProposal, getContractorProposal, listTeam, sendEstimateToHomeowner } from "@/lib/housefile/server";
+import { approveProposal, getContractorProposal, listTeam } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/proposals/$id")({ component: ProposalPage });
 
@@ -38,8 +38,8 @@ function ProposalPage() {
         <div className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
           <p className="font-medium">Waiting on the owner</p>
           <p className="text-sm text-muted-foreground">
-            A cost was not in materials. Approve to send this to the homeowner and write the cost
-            into materials.
+            A cost was not in materials. The shop Owner is emailed automatically. Approve to send
+            this to the homeowner and write the cost into materials.
           </p>
           {owner && (
             <Button
@@ -59,39 +59,9 @@ function ProposalPage() {
             Property Record
           </Link>
         </Button>
-        {bundle.proposal.status !== "pending" && (
-          <SendEstimateButton
-            proposalId={bundle.proposal.id}
-            email={bundle.property.homeowner_email}
-            onSent={() => void q.refetch()}
-          />
-        )}
       </div>
       <ProposalDoc bundle={bundle} mode="contractor" onChanged={() => q.refetch()} />
     </div>
   );
 }
 
-function SendEstimateButton({
-  proposalId,
-  email,
-  onSent,
-}: {
-  proposalId: string;
-  email: string;
-  onSent: () => void;
-}) {
-  const send = useMutation({
-    mutationFn: () => sendEstimateToHomeowner({ data: proposalId }),
-    onSuccess: (result) => {
-      toast.success(`Estimate emailed to ${result.emailed} and the office on this File`);
-      onSent();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send"),
-  });
-  return (
-    <Button type="button" disabled={send.isPending} onClick={() => send.mutate()}>
-      {send.isPending ? "Sending…" : `Send Estimate to ${email}`}
-    </Button>
-  );
-}

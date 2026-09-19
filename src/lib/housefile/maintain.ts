@@ -53,6 +53,20 @@ export function addDaysIso(iso: string, days: number) {
   return todayIso(d);
 }
 
+/** Sunday that starts the US week containing `value` (sold-week calendar hold). */
+export function sundayOfWeek(value: string | Date = new Date()) {
+  const iso =
+    typeof value === "string"
+      ? value.length >= 10
+        ? value.slice(0, 10)
+        : todayIso()
+      : todayIso(value);
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return todayIso();
+  d.setDate(d.getDate() - d.getDay());
+  return todayIso(d);
+}
+
 export function parseIsoDate(value: string | null | undefined) {
   const s = value?.trim() ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;

@@ -55,6 +55,7 @@ export async function acceptedEstimatePdf(input: {
   proposal: Proposal;
   items: ProposalItem[];
   salesRep?: InvoiceSalesRep | null;
+  salesReps?: InvoiceSalesRep[];
 }): Promise<{ filename: string; bytes: Uint8Array }> {
   if (isDrainageInvoice(input.proposal.title)) {
     return invoiceReceiptPdf(input);
@@ -67,6 +68,8 @@ async function estimatePdf(input: {
   property: Property;
   proposal: Proposal;
   items: ProposalItem[];
+  salesRep?: InvoiceSalesRep | null;
+  salesReps?: InvoiceSalesRep[];
 }): Promise<{ filename: string; bytes: Uint8Array }> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -107,6 +110,10 @@ async function estimatePdf(input: {
   write(input.proposal.title || "Estimate", { size: 14, weight: "bold" });
   write(address, { size: 11 });
   write(`Prepared for ${input.property.homeowner_name}`, { size: 11, color: muted });
+  const reps = input.salesReps?.length ? input.salesReps : input.salesRep ? [input.salesRep] : [];
+  for (const rep of reps) {
+    write(`${rep.name}${rep.email ? `  ${rep.email}` : ""}`, { size: 10, color: muted });
+  }
   y -= 10;
 
   write("Work", { size: 12, weight: "bold" });
@@ -127,10 +134,11 @@ async function estimatePdf(input: {
   for (const row of schedule) {
     write(`${row.label}: ${money(row.amount)}`, { size: 10 });
   }
-  if (input.company.payment_link) {
+  const payHref = input.proposal.payment_link || input.company.payment_link;
+  if (payHref) {
     y -= 4;
     write("Pay", { size: 12, weight: "bold" });
-    write(input.company.payment_link, { size: 10 });
+    write(payHref, { size: 10 });
   }
   if (input.company.terms?.trim()) {
     y -= 8;
@@ -163,6 +171,7 @@ async function invoiceReceiptPdf(input: {
   proposal: Proposal;
   items: ProposalItem[];
   salesRep?: InvoiceSalesRep | null;
+  salesReps?: InvoiceSalesRep[];
 }): Promise<{ filename: string; bytes: Uint8Array }> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -209,10 +218,13 @@ async function invoiceReceiptPdf(input: {
   write(`Date ${shortDate(issued)}`, { size: 11 });
   write(`Due ${due}`, { size: 11 });
   y -= 6;
-  if (input.salesRep) {
-    write("Sales Representative", { size: 10, weight: "bold" });
-    write(input.salesRep.name, { size: 11 });
-    if (input.salesRep.email) write(input.salesRep.email, { size: 10, color: muted });
+  const reps = input.salesReps?.length ? input.salesReps : input.salesRep ? [input.salesRep] : [];
+  if (reps.length) {
+    write(reps.length > 1 ? "Sales Representatives" : "Sales Representative", { size: 10, weight: "bold" });
+    for (const rep of reps) {
+      write(rep.name, { size: 11 });
+      if (rep.email) write(rep.email, { size: 10, color: muted });
+    }
     y -= 4;
   }
   write("Billing", { size: 10, weight: "bold" });
@@ -245,17 +257,18 @@ async function invoiceReceiptPdf(input: {
       companyName: input.company.name,
       paymentTerms: input.company.payment_terms,
       invoiceNo,
-      hasPortal: Boolean(input.company.payment_link),
+      hasPortal: Boolean(input.proposal.payment_link || input.company.payment_link),
     }),
     92,
   )) {
     write(line, { size: 9, color: muted });
   }
-  write(invoiceThankYou(input.salesRep ?? null), { size: 10 });
-  if (input.company.payment_link) {
+  write(invoiceThankYou(input.salesReps?.length ? input.salesReps : input.salesRep ?? null), { size: 10 });
+  const pay = input.proposal.payment_link || input.company.payment_link;
+  if (pay) {
     y -= 4;
     write("Payment Portal", { size: 11, weight: "bold" });
-    write(input.company.payment_link, { size: 10 });
+    write(pay, { size: 10 });
   }
   y -= 8;
   write("Special Instructions", { size: 12, weight: "bold" });

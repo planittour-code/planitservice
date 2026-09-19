@@ -7,7 +7,10 @@ export type FieldGroup =
   | "siding"
   | "decks"
   | "porches"
-  | "systems";
+  | "systems"
+  | "plumbing"
+  | "pool"
+  | "lawn";
 
 export type FieldDef = {
   key: string;
@@ -72,6 +75,24 @@ export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo
     blurb: "HVAC, water heater, electrical, attic, and appliances — washer and dryer, dishwasher, refrigerator, oven, ice maker.",
     photo: "/houses/cat-systems.jpg",
   },
+  {
+    id: "plumbing",
+    label: "Plumbing",
+    blurb: "Fixtures, leaks, drains, and the water heater.",
+    photo: "/houses/cat-systems.jpg",
+  },
+  {
+    id: "pool",
+    label: "Pool service",
+    blurb: "Type, year, and the equipment on this pool.",
+    photo: "/houses/cat-house.jpg",
+  },
+  {
+    id: "lawn",
+    label: "Lawn/Grounds",
+    blurb: "Lot, mow, irrigation, and beds.",
+    photo: "/houses/cat-house.jpg",
+  },
 ];
 
 /** Same photos as FIELD_GROUPS, keyed for estimating work ids (deck / porch) too. */
@@ -88,6 +109,10 @@ export const CATEGORY_PHOTO: Record<string, string> = {
   porch: "/houses/cat-porches.jpg",
   flooring: "/houses/cat-house.jpg",
   systems: "/houses/cat-systems.jpg",
+  plumbing: "/houses/cat-systems.jpg",
+  hvac: "/houses/cat-systems.jpg",
+  pool: "/houses/cat-house.jpg",
+  lawn: "/houses/cat-house.jpg",
 };
 
 /** Homeowner “The house” quote helpers — shown first, and this helps quote. */
@@ -849,6 +874,83 @@ export const FIELD_CATALOG: FieldDef[] = [
     group: "systems",
     hint: "Make, model, and a photo for each appliance.",
     placeholder: "",
+  },
+  {
+    key: "plumbing_scope",
+    label: "Plumbing work",
+    group: "plumbing",
+    hint: "Repair, fixture, drain, or water heater.",
+    placeholder: "repair",
+  },
+  {
+    key: "fixture_count",
+    label: "Fixtures",
+    group: "plumbing",
+    hint: "Toilets, sinks, or valves on this house.",
+    placeholder: "1",
+  },
+  {
+    key: "plumbing_note",
+    label: "Plumbing notes",
+    group: "plumbing",
+    hint: "The leak, clog, or fixture that needs work.",
+    placeholder: "Kitchen sink slow drain",
+  },
+  {
+    key: "pool_type",
+    label: "Pool type",
+    group: "pool",
+    hint: "In-ground, above-ground, or spa.",
+    placeholder: "inground",
+  },
+  {
+    key: "pool_year",
+    label: "Pool year",
+    group: "pool",
+    hint: "Age of the shell and equipment.",
+    placeholder: "2014",
+  },
+  {
+    key: "pool_equipment",
+    label: "Pool equipment",
+    group: "pool",
+    hint: "Pump, filter, heater, and salt system.",
+    placeholder: "Pentair pump and cartridge filter",
+  },
+  {
+    key: "pool_scope",
+    label: "Pool work",
+    group: "pool",
+    hint: "Weekly, open, close, or repair.",
+    placeholder: "weekly",
+  },
+  {
+    key: "mow_frequency",
+    label: "Mow frequency",
+    group: "lawn",
+    hint: "How often the lawn is cut.",
+    placeholder: "weekly",
+  },
+  {
+    key: "irrigation",
+    label: "Irrigation",
+    group: "lawn",
+    hint: "Zones, clock, and what is failing.",
+    placeholder: "6 zones, Hunter clock",
+  },
+  {
+    key: "lawn_notes",
+    label: "Grounds notes",
+    group: "lawn",
+    hint: "Beds, trees, and what the next visit should know.",
+    placeholder: "Front beds need mulch",
+  },
+  {
+    key: "lawn_scope",
+    label: "Lawn work",
+    group: "lawn",
+    hint: "Mow, seasonal, irrigation, or beds.",
+    placeholder: "mow",
   },
 ];
 

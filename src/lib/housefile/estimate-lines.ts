@@ -80,6 +80,27 @@ const FLOORING: Starter[] = [
   { item: "New flooring", description: "Product from materials.", slot: "flooring", qty: "" },
 ];
 
+const PLUMBING: Starter[] = [
+  { item: "Diagnose and protect", description: "Find the path and protect the floor.", qty: "1" },
+  { item: "Plumbing work", description: "Repair, fixture, drain, or water heater.", qty: "1" },
+  { item: "Test and cleanup", description: "Pressurize and leave the area dry.", qty: "1" },
+];
+
+const HVAC: Starter[] = [
+  { item: "Inspect the system", description: "Age, brand, and what is failing.", qty: "1" },
+  { item: "HVAC work", description: "Tune-up, repair, or replacement.", qty: "1" },
+];
+
+const POOL: Starter[] = [
+  { item: "Pool visit", description: "Weekly care, open, close, or a repair.", qty: "1" },
+  { item: "Chemicals and equipment", description: "Balance water and service the pad.", qty: "1" },
+];
+
+const LAWN: Starter[] = [
+  { item: "Site walk", description: "Lot, beds, and access.", qty: "1" },
+  { item: "Lawn and grounds", description: "Mow, cleanup, irrigation, or beds.", qty: "1" },
+];
+
 export function startersFor(workId: string, paintScope?: string): Starter[] {
   switch (workId) {
     case "paint":
@@ -98,6 +119,14 @@ export function startersFor(workId: string, paintScope?: string): Starter[] {
       return PORCH;
     case "flooring":
       return FLOORING;
+    case "plumbing":
+      return PLUMBING;
+    case "hvac":
+      return HVAC;
+    case "pool":
+      return POOL;
+    case "lawn":
+      return LAWN;
     default:
       return [
         { item: "Scope of work", description: "Describe the work at this address.", qty: "1" },
@@ -347,6 +376,15 @@ export function lineShowsInstalledProduct(name: string) {
   if (!n) return true;
   if (/\bclean(?:ing|er|s)?\b/.test(n)) return false;
   if (/\bdownspouts?\b/.test(n)) return false;
+  return true;
+}
+
+/** Cleaning is a visit, not a measured run — do not print a quantity like 31 lf. */
+export function lineShowsQuantity(name: string) {
+  const n = name.trim().toLowerCase();
+  if (!n) return true;
+  if (/\bclean(?:ing|er|s)?\b/.test(n) && /\bgutters?\b/.test(n)) return false;
+  if (/^gutter cleaning$/.test(n)) return false;
   return true;
 }
 

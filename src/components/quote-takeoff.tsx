@@ -114,17 +114,12 @@ export function TakeoffForm({
 export function QuotePreview({
   lines,
   total,
-  showCost = false,
   sticky = false,
 }: {
   lines: QuoteLine[];
   total: number;
-  showCost?: boolean;
   sticky?: boolean;
 }) {
-  const costTotal = lines
-    .filter((l) => l.included && l.qty > 0 && l.unit_cost != null)
-    .reduce((s, l) => s + l.qty * (l.unit_cost ?? 0), 0);
   return (
     <aside
       className={cn(
@@ -134,9 +129,6 @@ export function QuotePreview({
     >
       <p className="text-xs tracking-wide text-muted-foreground uppercase">This quote</p>
       <p className="font-display text-3xl font-medium tabular-nums">{money(total)}</p>
-      {showCost && costTotal > 0 && (
-        <p className="text-xs text-muted-foreground">Material cost {money(costTotal)}</p>
-      )}
       <ul className="mt-3 space-y-2 text-sm">
         {lines.map((l) => (
           <li

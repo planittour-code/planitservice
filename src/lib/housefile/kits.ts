@@ -354,6 +354,109 @@ const PORCH_KIT_SEED: KitSeed[] = [
   },
 ];
 
+const PLUMBING_KIT_SEED: KitSeed[] = [
+  {
+    name: "Leak repair",
+    lines: [
+      ls("Diagnose and protect", "Find the path and protect the floor."),
+      ls("Repair the leak", "Joints, valves, or supply as found."),
+      ls("Test and cleanup", "Pressurize and leave the area dry."),
+    ],
+  },
+  {
+    name: "New fixture",
+    lines: [
+      ls("Pull the old fixture", "Cap and protect the finish."),
+      { name: "Set the new fixture", description: "Toilet, faucet, or valve on this quote.", unit: "ea", qty: "1" },
+      ls("Test and cleanup", "Run water and wipe down."),
+    ],
+  },
+  {
+    name: "Water heater",
+    lines: [
+      ls("Drain and disconnect", "Shut water and power or gas."),
+      { name: "Set the water heater", description: "The unit that stays with the house.", unit: "ea", qty: "1" },
+      ls("Start and test", "Fill, fire, and check for leaks."),
+    ],
+  },
+];
+
+const HVAC_KIT_SEED: KitSeed[] = [
+  {
+    name: "Tune-up",
+    lines: [
+      ls("Inspect the system", "Filters, coils, and safeties."),
+      ls("Clean and check charge", "Condensate, amp draw, and thermostat."),
+    ],
+  },
+  {
+    name: "Repair",
+    lines: [
+      ls("Diagnose the call", "Find the failed part."),
+      ls("Repair the system", "Parts and labor as quoted."),
+      ls("Test cool or heat", "Leave the house comfortable."),
+    ],
+  },
+  {
+    name: "Replacement",
+    lines: [
+      ls("Remove the old system", "Haul the condenser and air handler."),
+      { name: "Set the new system", description: "Sized for this house.", unit: "ea", qty: "1" },
+      ls("Start-up and walkthrough", "Charge, thermostat, and filter."),
+    ],
+  },
+];
+
+const POOL_KIT_SEED: KitSeed[] = [
+  {
+    name: "Weekly service",
+    lines: [
+      ls("Brush, vacuum, and baskets", "The weekly visit."),
+      ls("Balance chemicals", "Sanitizer, pH, and alkalinity."),
+    ],
+  },
+  {
+    name: "Opening",
+    lines: [
+      ls("Remove the cover", "Store and rinse."),
+      ls("Start equipment", "Pump, filter, and sanitizer."),
+      ls("Balance water", "First chemistry of the season."),
+    ],
+  },
+  {
+    name: "Closing",
+    lines: [
+      ls("Winterize lines", "Blow and plug as needed."),
+      ls("Cover the pool", "Water bags or a safety cover."),
+      ls("Shut equipment", "Pump, heater, and clock."),
+    ],
+  },
+];
+
+const LAWN_KIT_SEED: KitSeed[] = [
+  {
+    name: "Mow and edge",
+    lines: [
+      ls("Mow the turf", "Height as quoted."),
+      ls("Edge and blow", "Walks, beds, and driveway."),
+    ],
+  },
+  {
+    name: "Seasonal cleanup",
+    lines: [
+      ls("Leaves and debris", "Beds and turf."),
+      ls("Haul-off", "Bags or the truck."),
+    ],
+  },
+  {
+    name: "Irrigation",
+    lines: [
+      ls("Walk the zones", "Heads, valves, and clock."),
+      ls("Repair as found", "Heads, pipe, or wiring."),
+    ],
+  },
+];
+
 export const KIT_SEEDS: Record<string, KitSeed[]> = {
   gutters: GUTTER_KIT_SEED,
   paint: PAINT_KIT_SEED,
@@ -363,6 +466,10 @@ export const KIT_SEEDS: Record<string, KitSeed[]> = {
   deck: DECK_KIT_SEED,
   porch: PORCH_KIT_SEED,
   flooring: FLOORING_KIT_SEED,
+  plumbing: PLUMBING_KIT_SEED,
+  hvac: HVAC_KIT_SEED,
+  pool: POOL_KIT_SEED,
+  lawn: LAWN_KIT_SEED,
 };
 
 export function hasKitSeed(workId: string) {
@@ -385,6 +492,16 @@ const WORK_ALIASES: Record<string, string> = {
   porches: "porch",
   floors: "flooring",
   floor: "flooring",
+  plumber: "plumbing",
+  heating: "hvac",
+  "air conditioning": "hvac",
+  ac: "hvac",
+  pools: "pool",
+  "pool service": "pool",
+  landscaping: "lawn",
+  landscape: "lawn",
+  "lawn/grounds": "lawn",
+  grounds: "lawn",
 };
 
 export function workIdFromLabel(raw: string) {

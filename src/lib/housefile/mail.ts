@@ -86,6 +86,7 @@ export async function deliverAcceptedEstimateEmail(input: {
   company: Company;
   items: ProposalItem[];
   salesRep?: { name: string; email: string } | null;
+  salesReps?: { name: string; email: string }[];
 }) {
   const { sendAcceptedEstimateEmail } = await import("@/lib/auth/mail.server");
   const pdf = await acceptedEstimatePdf({
@@ -94,6 +95,7 @@ export async function deliverAcceptedEstimateEmail(input: {
     proposal: input.proposal,
     items: input.items,
     salesRep: input.salesRep ?? null,
+    salesReps: input.salesReps,
   });
   const total = input.items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   await sendAcceptedEstimateEmail({
@@ -106,7 +108,7 @@ export async function deliverAcceptedEstimateEmail(input: {
     schedule: paymentSchedule(total, input.company.payment_terms).map(
       (row) => `${row.label}: ${money(row.amount)}`,
     ),
-    paymentLink: normalizePaymentLink(input.company.payment_link),
+    paymentLink: normalizePaymentLink(input.proposal.payment_link || input.company.payment_link),
     proposalUrl: publicUrl(`/p/${input.proposal.share_token}/accepted`),
     pdf,
   });

@@ -13,10 +13,12 @@ import {
   invoiceTotal,
 } from "@/lib/housefile/invoice";
 import { normalizePaymentLink } from "@/lib/housefile/payment";
-import type { InvoiceView } from "@/lib/housefile/invoice";
+import { lineShowsQuantity } from "@/lib/housefile/estimate-lines";
+import { invoiceSalesReps, type InvoiceView } from "@/lib/housefile/invoice";
 
 export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
-  const { proposal, items, property, company, salesRep } = bundle;
+  const { proposal, items, property, company } = bundle;
+  const reps = invoiceSalesReps(bundle);
   const lines = invoiceLines(items);
   const total = invoiceTotal(items);
   const invoiceNo = invoiceNumber(proposal);
@@ -25,7 +27,7 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
   const place = companyPlace(company);
   const websiteHref = companyWebsiteHref(company.website);
   const websiteLabel = companyWebsiteLabel(company.website);
-  const portal = normalizePaymentLink(company.payment_link);
+  const portal = normalizePaymentLink(proposal.payment_link || company.payment_link);
   const mailTo = [company.name, ...place].filter(Boolean);
 
   return (
@@ -64,17 +66,23 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
           ))}
           {company.phone ? <p className="text-sm text-muted-foreground">{company.phone}</p> : null}
         </div>
-        {salesRep ? (
-          <div className="space-y-1 sm:text-right">
-            <p className="text-xs tracking-wide text-muted-foreground uppercase">Sales Representative</p>
-            <p className="font-medium">{salesRep.name}</p>
-            {salesRep.email ? (
-              <p className="text-sm text-muted-foreground">
-                <a className="underline underline-offset-4" href={`mailto:${salesRep.email}`}>
-                  {salesRep.email}
-                </a>
-              </p>
-            ) : null}
+        {reps.length ? (
+          <div className="space-y-3 sm:text-right">
+            {reps.map((rep) => (
+              <div key={rep.email || rep.name} className="space-y-1">
+                <p className="text-xs tracking-wide text-muted-foreground uppercase">
+                  {reps.length > 1 ? "Sales Representative" : "Sales Representative"}
+                </p>
+                <p className="font-medium">{rep.name}</p>
+                {rep.email ? (
+                  <p className="text-sm text-muted-foreground">
+                    <a className="underline underline-offset-4" href={`mailto:${rep.email}`}>
+                      {rep.email}
+                    </a>
+                  </p>
+                ) : null}
+              </div>
+            ))}
           </div>
         ) : null}
       </section>
@@ -131,9 +139,11 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
                     <td className="py-3 pr-3 font-medium">{item.name}</td>
                     <td className="py-3 pr-3 text-muted-foreground">
                       {item.description || "—"}
-                      <span className="mt-1 block text-xs">
-                        {item.qty} {item.unit}
-                      </span>
+                      {lineShowsQuantity(item.name) ? (
+                        <span className="mt-1 block text-xs">
+                          {item.qty} {item.unit}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="py-3 text-right tabular-nums">{money(item.qty * item.unit_price)}</td>
                   </tr>
@@ -153,7 +163,7 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
             hasPortal: Boolean(portal),
           })}
         </p>
-        <p className="text-sm">{invoiceThankYou(salesRep)}</p>
+        <p className="text-sm">{invoiceThankYou(reps)}</p>
         {portal ? (
           <Button asChild className="min-h-12 w-full sm:w-auto">
             <a href={portal} target="_blank" rel="noreferrer">

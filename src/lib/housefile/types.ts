@@ -40,6 +40,7 @@ export type CompanyMember = {
   email: string;
   role: ShopRole;
   created_at: string;
+  name?: string | null;
 };
 
 export type Property = {
@@ -123,6 +124,10 @@ export type Proposal = {
   sent_at: string | null;
   accepted_at: string | null;
   created_by: string | null;
+  scheduled_on?: string | null;
+  scheduled_note?: string | null;
+  payment_link?: string | null;
+  sales_emails?: string | null;
 };
 
 export type ProposalItem = {
@@ -221,6 +226,19 @@ export type ShopWorkRow = {
   completed_at: string | null;
 };
 
+export type ShopScheduleItem = {
+  id: string;
+  title: string;
+  address_line: string;
+  city: string;
+  state: string;
+  zip: string;
+  homeowner_name: string;
+  accepted_at: string;
+  scheduled_on: string;
+  scheduled_note: string | null;
+};
+
 export type ShopClientRow = {
   key: string;
   name: string;
@@ -291,6 +309,7 @@ export type ProposalBundle = {
   company: HouseCompany;
   house: HouseFile;
   salesRep: InvoiceSalesRep | null;
+  salesReps: InvoiceSalesRep[];
 };
 
 export type HomeownerHouse = PropertyListRow & {
@@ -458,6 +477,8 @@ export type PortfolioAcceptedEstimate = {
   title: string;
   share_token: string;
   accepted_at: string;
+  scheduled_on: string | null;
+  scheduled_note: string | null;
   company_name: string;
   address_line: string;
   city: string;

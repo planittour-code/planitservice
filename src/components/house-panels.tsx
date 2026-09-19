@@ -257,7 +257,13 @@ export function PhotoGrid({
         ) : undefined
       }
     >
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div
+        className={
+          mode === "homeowner"
+            ? "grid grid-cols-4 gap-2 md:grid-cols-6"
+            : "grid grid-cols-2 gap-3 md:grid-cols-3"
+        }
+      >
         {file.photos.map((p) => (
           <figure key={p.id} className="overflow-hidden rounded-lg bg-card shadow-[var(--shadow-border)]">
             <img src={p.src} alt={p.caption || p.category} className="aspect-[4/3] w-full object-cover" />
@@ -310,7 +316,13 @@ export function PhotoGrid({
             </figcaption>
           </figure>
         ))}
-        <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-card/60 px-3 py-4 text-center text-sm text-muted-foreground hover:bg-muted">
+        <label
+          className={
+            mode === "homeowner"
+              ? "flex min-h-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-card/60 px-2 py-2 text-center text-xs text-muted-foreground hover:bg-muted"
+              : "flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-card/60 px-3 py-4 text-center text-sm text-muted-foreground hover:bg-muted"
+          }
+        >
           <Camera className="size-5 text-primary" />
           <span>{busy ? "Adding…" : "Add a photo"}</span>
           <input

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -15,44 +15,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { StreetView } from "@/components/street-view";
 import { InvoiceDoc } from "@/components/invoice-doc";
 import { Mark } from "@/components/logo";
-import { lineShowsInstalledProduct, optionLabel } from "@/lib/housefile/estimate-lines";
+import { lineShowsInstalledProduct, lineShowsQuantity, optionLabel } from "@/lib/housefile/estimate-lines";
 import { money, shortDate } from "@/lib/housefile/format";
 import { isDrainageInvoice } from "@/lib/housefile/invoice";
 import { normalizePaymentLink, paymentSchedule, paymentTermLabel } from "@/lib/housefile/payment";
+import { SalesSeatPicker } from "@/components/sales-seat-picker";
+import { SoldDateMover } from "@/components/shop-schedule";
 import {
   acceptProposalPublic,
   addContractorMessage,
   addHomeownerMessage,
-  completeProposal,
   draftCoverNote,
+  listTeam,
   pingEstimateReview,
+  sendEstimateToHomeowner,
   reviseProposalPublic,
   updateProposalMeta,
   upsertProposalItem,
 } from "@/lib/housefile/server";
+import { sundayOfWeek } from "@/lib/housefile/maintain";
 import type { ProposalBundle, ProposalItem } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
 
 export function ProposalTotals({
   items,
-  showCost = false,
 }: {
   items: ProposalItem[];
-  showCost?: boolean;
 }) {
   const included = items.filter((i) => i.included);
   const total = included.reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   const skipped = items.filter((i) => !i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
-  const cost = included.reduce((sum, i) => sum + (i.unit_cost != null ? i.qty * i.unit_cost : 0), 0);
   return (
     <div className="flex flex-col items-end gap-1">
       {skipped > 0 && (
         <p className="text-sm text-muted-foreground">
           Optional not included {money(skipped)}
         </p>
-      )}
-      {showCost && cost > 0 && (
-        <p className="text-sm text-muted-foreground">Material cost {money(cost)}</p>
       )}
       <p className="font-display text-2xl font-medium tabular-nums">{money(total)}</p>
     </div>
@@ -69,7 +67,8 @@ export function ProposalDoc({
   onChanged: () => void;
 }) {
   const navigate = useNavigate();
-  const { proposal, items, property, company, house } = bundle;
+  const { proposal, items, property, company, house, salesReps } = bundle;
+  const payHref = normalizePaymentLink(proposal.payment_link || company.payment_link);
   const locked = proposal.status === "completed" || mode === "accepted";
   const editMode: "homeowner" | "contractor" = mode === "contractor" ? "contractor" : "homeowner";
   const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
@@ -117,21 +116,21 @@ export function ProposalDoc({
             </Button>
           </div>
         ) : null}
-        {mode === "contractor" && proposal.status !== "completed" && proposal.status !== "pending" ? (
-          <div className="flex flex-col gap-3 rounded-xl bg-muted px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              When the work is done, mark it complete. Colors, products, and warranties copy into the property record.
-            </p>
-            <Button
-              onClick={async () => {
-                await completeProposal({ data: { proposalId: proposal.id } });
-                toast.success("Job written into the property record");
-                onChanged();
-              }}
-            >
-              Mark job complete
-            </Button>
-          </div>
+        {mode === "contractor" && proposal.status !== "pending" && proposal.status !== "completed" ? (
+          <SendEstimateBar
+            proposalId={proposal.id}
+            email={property.homeowner_email}
+            onSent={onChanged}
+          />
+        ) : null}
+        {mode === "contractor" && proposal.status === "accepted" ? (
+          <SoldHoldBar
+            proposalId={proposal.id}
+            acceptedAt={proposal.accepted_at}
+            scheduledOn={proposal.scheduled_on}
+            scheduledNote={proposal.scheduled_note}
+            onChanged={onChanged}
+          />
         ) : null}
       </article>
     );
@@ -173,6 +172,39 @@ export function ProposalDoc({
           <p className="max-w-2xl whitespace-pre-wrap text-base leading-relaxed">{proposal.cover_note}</p>
         ) : null}
 
+        {(salesReps ?? []).length || payHref ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(salesReps ?? []).length ? (
+              <div className="space-y-1">
+                <p className="text-xs tracking-wide text-muted-foreground uppercase">
+                  {(salesReps ?? []).length > 1 ? "Salespeople" : "Salesperson"}
+                </p>
+                {(salesReps ?? []).map((rep) => (
+                  <p key={rep.email || rep.name} className="text-sm">
+                    <span className="font-medium">{rep.name}</span>
+                    {rep.email ? (
+                      <>
+                        {" · "}
+                        <a className="underline underline-offset-4" href={`mailto:${rep.email}`}>
+                          {rep.email}
+                        </a>
+                      </>
+                    ) : null}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+            {payHref ? (
+              <div className="space-y-1">
+                <p className="text-xs tracking-wide text-muted-foreground uppercase">Payment</p>
+                <a className="text-sm underline underline-offset-4 break-all" href={payHref} target="_blank" rel="noreferrer">
+                  {payHref}
+                </a>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {mode === "contractor" && (
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={proposal.status} />
@@ -182,9 +214,24 @@ export function ProposalDoc({
           </div>
         )}
 
-        {!locked && proposal.status !== "pending" && proposal.status !== "accepted" && (
+        {mode === "contractor" && proposal.status !== "pending" && proposal.status !== "completed" ? (
+          <SendEstimateBar
+            proposalId={proposal.id}
+            email={property.homeowner_email}
+            onSent={onChanged}
+          />
+        ) : !locked && proposal.status !== "pending" && proposal.status !== "accepted" ? (
           <NotifyReviewBar token={proposal.share_token} mode={editMode} />
-        )}
+        ) : null}
+        {mode === "contractor" && proposal.status === "accepted" ? (
+          <SoldHoldBar
+            proposalId={proposal.id}
+            acceptedAt={proposal.accepted_at}
+            scheduledOn={proposal.scheduled_on}
+            scheduledNote={proposal.scheduled_note}
+            onChanged={onChanged}
+          />
+        ) : null}
       </header>
 
       {mode === "contractor" && !locked && (
@@ -248,7 +295,7 @@ export function ProposalDoc({
         />
       )}
 
-      <ProposalTotals items={items} showCost={mode === "contractor"} />
+      <ProposalTotals items={items} />
 
       {mode === "contractor" && !locked && (
         <>
@@ -307,7 +354,19 @@ export function ProposalDoc({
             <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
               <p className="text-sm tracking-wide text-muted-foreground uppercase">Contractor</p>
               <p className="font-medium">{company.name}</p>
-              <p className="text-sm text-muted-foreground">Estimate from {company.name}.</p>
+              {(salesReps ?? []).map((rep) => (
+                <p key={rep.email || rep.name} className="text-sm text-muted-foreground">
+                  {rep.name}
+                  {rep.email ? (
+                    <>
+                      {" · "}
+                      <a className="underline underline-offset-4" href={`mailto:${rep.email}`}>
+                        {rep.email}
+                      </a>
+                    </>
+                  ) : null}
+                </p>
+              ))}
             </div>
           </section>
           <section className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
@@ -321,9 +380,9 @@ export function ProposalDoc({
                 </li>
               ))}
             </ul>
-            {normalizePaymentLink(company.payment_link) ? (
+            {payHref ? (
               <Button asChild className="min-h-12 w-full">
-                <a href={normalizePaymentLink(company.payment_link)!} target="_blank" rel="noreferrer">
+                <a href={payHref} target="_blank" rel="noreferrer">
                   Pay {company.name}
                 </a>
               </Button>
@@ -344,23 +403,6 @@ export function ProposalDoc({
           </p>
         </section>
       ) : null}
-
-      {mode === "contractor" && proposal.status !== "completed" && proposal.status !== "pending" && (
-        <div className="flex flex-col gap-3 rounded-xl bg-muted px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            When the work is done, mark it complete. Colors, products, and warranties copy into the property record.
-          </p>
-          <Button
-            onClick={async () => {
-              await completeProposal({ data: { proposalId: proposal.id } });
-              toast.success("Job written into the property record");
-              onChanged();
-            }}
-          >
-            Mark job complete
-          </Button>
-        </div>
-      )}
     </article>
   );
 }
@@ -403,8 +445,13 @@ function ContractorMeta({
   const [title, setTitle] = useState(bundle.proposal.title);
   const [cover, setCover] = useState(bundle.proposal.cover_note ?? "");
   const [photo, setPhoto] = useState<string | null>(bundle.proposal.cover_photo_src ?? null);
+  const [pay, setPay] = useState(bundle.proposal.payment_link || bundle.company.payment_link || "");
+  const [salesEmails, setSalesEmails] = useState(
+    (bundle.salesReps ?? []).map((r) => r.email.trim().toLowerCase()).filter(Boolean).slice(0, 2),
+  );
   const [drafting, setDrafting] = useState(false);
   const photos = bundle.house.photos;
+  const team = useQuery({ queryKey: ["team"], queryFn: () => listTeam() });
   return (
     <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
       <div className="space-y-1">
@@ -446,6 +493,18 @@ function ContractorMeta({
           ))}
         </div>
       </div>
+      <div className="space-y-1">
+        <Label htmlFor="ppay">Payment link</Label>
+        <Input
+          id="ppay"
+          type="url"
+          inputMode="url"
+          placeholder="https://pay.example.com/your-shop"
+          value={pay}
+          onChange={(e) => setPay(e.target.value)}
+        />
+      </div>
+      <SalesSeatPicker members={team.data?.members ?? []} selected={salesEmails} onChange={setSalesEmails} />
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -453,7 +512,14 @@ function ContractorMeta({
           size="sm"
           onClick={async () => {
             await updateProposalMeta({
-              data: { id: bundle.proposal.id, title, coverNote: cover, coverPhoto: photo },
+              data: {
+                id: bundle.proposal.id,
+                title,
+                coverNote: cover,
+                coverPhoto: photo,
+                paymentLink: pay,
+                salesEmails,
+              },
             });
             toast.success("Proposal updated");
             onChanged();
@@ -610,6 +676,68 @@ function lineSettled(item: ProposalItem) {
   return item.review_status === "accepted" || item.review_status === "change_accepted";
 }
 
+function SoldHoldBar({
+  proposalId,
+  acceptedAt,
+  scheduledOn,
+  scheduledNote,
+  onChanged,
+}: {
+  proposalId: string;
+  acceptedAt: string | null;
+  scheduledOn?: string | null;
+  scheduledNote?: string | null;
+  onChanged: () => void;
+}) {
+  const hold = scheduledOn?.slice(0, 10) || sundayOfWeek(acceptedAt || undefined);
+  return (
+    <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+      <p className="text-sm text-muted-foreground">
+        Sold work is on the shop calendar for Sunday of that week. Move the hold if weather or the
+        crew needs the following week.
+      </p>
+      <SoldDateMover
+        item={{ id: proposalId, scheduled_on: hold, scheduled_note: scheduledNote ?? null }}
+        onSaved={onChanged}
+      />
+    </div>
+  );
+}
+
+function SendEstimateBar({
+  proposalId,
+  email,
+  onSent,
+}: {
+  proposalId: string;
+  email: string;
+  onSent: () => void;
+}) {
+  const send = useMutation({
+    mutationFn: () => sendEstimateToHomeowner({ data: proposalId }),
+    onSuccess: (result) => {
+      toast.success(`Estimate emailed to ${result.emailed} and the office on this File`);
+      onSent();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send"),
+  });
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">
+        Send this estimate to {email || "the homeowner"} and the office on this File.
+      </p>
+      <Button
+        type="button"
+        className="min-h-11 w-full sm:w-auto"
+        disabled={send.isPending}
+        onClick={() => send.mutate()}
+      >
+        {send.isPending ? "Sending…" : "Send estimate"}
+      </Button>
+    </div>
+  );
+}
+
 function NotifyReviewBar({
   token,
   mode,
@@ -635,7 +763,7 @@ function NotifyReviewBar({
     <div className="flex flex-col gap-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-muted-foreground">
         {mode === "contractor"
-          ? "Email the owner and office when this estimate needs their review."
+          ? "The shop Owner is emailed automatically when this estimate needs review. You can also email the homeowner and office."
           : "Email the shop when this estimate needs their review."}
       </p>
       <Button
@@ -728,6 +856,7 @@ function ProposalLine({
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description ?? "");
   const showProduct = lineShowsInstalledProduct(item.name);
+  const showQty = lineShowsQuantity(item.name);
   const [qty, setQty] = useState(String(item.qty));
   const [price, setPrice] = useState(String(item.unit_price));
   const line = item.qty * item.unit_price;
@@ -801,16 +930,24 @@ function ProposalLine({
             )}
           </div>
           {item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
-          <p className="text-xs text-muted-foreground">
-            {item.qty} {item.unit}
-            {showProduct && item.manufacturer ? ` · ${item.manufacturer}` : ""}
-            {showProduct && item.product_name ? ` ${item.product_name}` : ""}
-            {showProduct && item.color ? ` · ${item.color}` : ""}
-            {showProduct && item.sku ? ` · ${item.sku}` : ""}
-            {mode === "contractor" && showProduct && item.unit_cost != null
-              ? ` · cost ${money(item.unit_cost)}`
-              : ""}
-          </p>
+          {showQty ||
+          (showProduct &&
+            (item.manufacturer ||
+              item.product_name ||
+              item.color ||
+              item.sku ||
+              (mode === "contractor" && item.unit_cost != null))) ? (
+            <p className="text-xs text-muted-foreground">
+              {showQty ? `${item.qty} ${item.unit}` : ""}
+              {showProduct && item.manufacturer ? `${showQty ? " · " : ""}${item.manufacturer}` : ""}
+              {showProduct && item.product_name ? ` ${item.product_name}` : ""}
+              {showProduct && item.color ? ` · ${item.color}` : ""}
+              {showProduct && item.sku ? ` · ${item.sku}` : ""}
+              {mode === "contractor" && showProduct && item.unit_cost != null
+                ? ` · cost ${money(item.unit_cost)}`
+                : ""}
+            </p>
+          ) : null}
           {showProduct && item.warranty_terms && (
             <p className="text-xs text-primary">
               Warranty

@@ -295,6 +295,104 @@ export const WORK_TYPES: WorkType[] = [
       f("include_base", "New baseboards", "toggle", "Shoe and base in the rooms."),
     ],
   },
+  {
+    id: "plumbing",
+    templateId: "tmpl_plumbing",
+    trade: "plumbing",
+    name: "Plumbing",
+    blurb: "Leaks, fixtures, drains, and the water heater that stays with the house.",
+    fields: [
+      f("plumbing_scope", "The work", "select", "Repair, a new fixture, or the water heater.", {
+        options: [
+          { value: "repair", label: "Leak or repair" },
+          { value: "fixture", label: "New fixture" },
+          { value: "water_heater", label: "Water heater" },
+          { value: "drain", label: "Drain clearing" },
+        ],
+      }),
+      f("fixture_count", "Fixtures", "number", "Toilets, sinks, or valves on this quote.", {
+        unit: "ea",
+        placeholder: "1",
+      }),
+      f("water_heater_type", "Water heater", "text", "Tank, tankless, or hybrid."),
+      f("plumbing_note", "What is failing", "text", "The leak, clog, or fixture that needs work."),
+    ],
+  },
+  {
+    id: "hvac",
+    templateId: "tmpl_hvac",
+    trade: "hvac",
+    name: "HVAC",
+    blurb: "Tune-up, repair, or a new system sized for this house.",
+    fields: [
+      f("hvac_scope", "The work", "select", "Service visit, repair, or replacement.", {
+        options: [
+          { value: "tuneup", label: "Tune-up / maintenance" },
+          { value: "repair", label: "Repair" },
+          { value: "replace", label: "Replacement" },
+        ],
+        fieldKey: "",
+      }),
+      f("hvac_type", "System", "text", "Split, heat pump, or boiler."),
+      f("hvac_year", "Year", "number", "Age is the quote."),
+      f("hvac_brand", "Brand", "text", "Parts and warranty lookup."),
+      f("hvac_tons", "Tons", "number", "Sized from the last load calc."),
+      f("square_feet", "Finished square feet", "number", "Helps size a replacement.", { unit: "sf" }),
+    ],
+  },
+  {
+    id: "pool",
+    templateId: "tmpl_pool",
+    trade: "pool",
+    name: "Pool service",
+    blurb: "Weekly care, opening and closing, and the equipment on this pool.",
+    fields: [
+      f("pool_scope", "The work", "select", "Weekly service, open, close, or a repair.", {
+        options: [
+          { value: "weekly", label: "Weekly service" },
+          { value: "open", label: "Opening" },
+          { value: "close", label: "Closing" },
+          { value: "repair", label: "Repair" },
+        ],
+      }),
+      f("pool_type", "Pool type", "select", "What is in the ground or on the pad.", {
+        options: [
+          { value: "inground", label: "In-ground" },
+          { value: "above", label: "Above-ground" },
+          { value: "spa", label: "Spa / hot tub" },
+        ],
+      }),
+      f("pool_year", "Pool year", "number", "Age of the shell and equipment."),
+      f("pool_equipment", "Equipment", "text", "Pump, filter, heater, and salt system."),
+    ],
+  },
+  {
+    id: "lawn",
+    templateId: "tmpl_lawn",
+    trade: "lawn",
+    name: "Lawn/Grounds",
+    blurb: "Mow, beds, irrigation, and the lot that stays with the house.",
+    fields: [
+      f("lawn_scope", "The work", "select", "Mow, seasonal cleanup, irrigation, or beds.", {
+        options: [
+          { value: "mow", label: "Mow and edge" },
+          { value: "seasonal", label: "Seasonal cleanup" },
+          { value: "irrigation", label: "Irrigation" },
+          { value: "beds", label: "Mulch and beds" },
+        ],
+      }),
+      f("lot_size", "Lot size", "text", "Access, dumpsters, and landscaping."),
+      f("mow_frequency", "Mow frequency", "select", "How often the lawn is cut.", {
+        options: [
+          { value: "weekly", label: "Weekly" },
+          { value: "biweekly", label: "Every other week" },
+          { value: "monthly", label: "Monthly" },
+        ],
+      }),
+      f("irrigation", "Irrigation", "text", "Zones, clock, and what is failing."),
+      f("lawn_notes", "Grounds notes", "text", "Beds, trees, and what the next visit should know."),
+    ],
+  },
 ];
 
 export const WORK_BY_ID = Object.fromEntries(WORK_TYPES.map((w) => [w.id, w]));
@@ -497,6 +595,14 @@ export function buildQuote(workId: string, inputs: Record<string, string>): Quot
       return quotePorch(inputs);
     case "flooring":
       return quoteFlooring(inputs);
+    case "plumbing":
+      return quotePlumbing(inputs);
+    case "hvac":
+      return quoteHvac(inputs);
+    case "pool":
+      return quotePool(inputs);
+    case "lawn":
+      return quoteLawn(inputs);
     default:
       return [];
   }
@@ -1113,6 +1219,265 @@ function quoteFlooring(inputs: Record<string, string>): QuoteLine[] {
       category: "trim",
     }),
   ].filter((l) => l.qty > 0);
+}
+
+function quotePlumbing(inputs: Record<string, string>): QuoteLine[] {
+  const fixtures = Math.max(1, nInput(inputs, "fixture_count", 1));
+  const scope = inputs.plumbing_scope || "repair";
+  const note = inputs.plumbing_note || "The plumbing on this quote.";
+  const heater = inputs.water_heater_type || "Water heater";
+  const lines: QuoteLine[] = [
+    line({
+      name: "Diagnose and protect",
+      description: "Find the path, shut water as needed, and protect the floor.",
+      qty: 1,
+      unit: "ls",
+      unit_price: 125,
+      category: "prep",
+    }),
+  ];
+  if (scope === "water_heater") {
+    lines.push(
+      line({
+        name: heater,
+        description: "Set the unit that stays with the house.",
+        qty: 1,
+        unit: "ea",
+        unit_price: 1480,
+        category: "water_heater",
+        product_name: heater,
+        warranty_years: 6,
+        warranty_terms: "6-year tank warranty on the unit quoted.",
+      }),
+    );
+  } else if (scope === "fixture") {
+    lines.push(
+      line({
+        name: "Set fixtures",
+        description: note,
+        qty: fixtures,
+        unit: "ea",
+        unit_price: 280,
+        category: "fixture",
+      }),
+    );
+  } else if (scope === "drain") {
+    lines.push(
+      line({
+        name: "Clear the drain",
+        description: note,
+        qty: 1,
+        unit: "ls",
+        unit_price: 245,
+        category: "drain",
+      }),
+    );
+  } else {
+    lines.push(
+      line({
+        name: "Repair the leak",
+        description: note,
+        qty: fixtures,
+        unit: "ea",
+        unit_price: 185,
+        category: "repair",
+      }),
+    );
+  }
+  lines.push(
+    line({
+      name: "Test and cleanup",
+      description: "Pressurize, check joints, and leave the area dry.",
+      qty: 1,
+      unit: "ls",
+      unit_price: 75,
+      category: "closeout",
+    }),
+  );
+  return lines.filter((l) => l.qty > 0);
+}
+
+function quoteHvac(inputs: Record<string, string>): QuoteLine[] {
+  const scope = inputs.hvac_scope || "tuneup";
+  const tons = Math.max(1.5, nInput(inputs, "hvac_tons", 2.5));
+  const brand = inputs.hvac_brand || "Carrier";
+  const kind = inputs.hvac_type || "Split system";
+  const year = inputs.hvac_year;
+  const lines: QuoteLine[] = [
+    line({
+      name: "Inspect the system",
+      description: [kind, year ? `Year ${year}` : ""].filter(Boolean).join(" · "),
+      qty: 1,
+      unit: "ls",
+      unit_price: 95,
+      category: "prep",
+    }),
+  ];
+  if (scope === "replace") {
+    lines.push(
+      line({
+        name: `${brand} ${tons}-ton system`,
+        description: `${kind} sized for this house.`,
+        qty: 1,
+        unit: "ea",
+        unit_price: Math.round(tons * 1850),
+        category: "hvac",
+        manufacturer: brand,
+        product_name: `${tons}-ton ${kind}`,
+        warranty_years: 10,
+        warranty_terms: "10-year parts when registered.",
+      }),
+    );
+  } else if (scope === "repair") {
+    lines.push(
+      line({
+        name: "Repair the system",
+        description: "Parts and labor as found on this visit.",
+        qty: 1,
+        unit: "ls",
+        unit_price: 420,
+        category: "repair",
+      }),
+    );
+  } else {
+    lines.push(
+      line({
+        name: "Tune-up",
+        description: "Clean, check charge, and test safeties.",
+        qty: 1,
+        unit: "ea",
+        unit_price: 189,
+        category: "service",
+      }),
+    );
+  }
+  return lines.filter((l) => l.qty > 0);
+}
+
+function quotePool(inputs: Record<string, string>): QuoteLine[] {
+  const scope = inputs.pool_scope || "weekly";
+  const kind = inputs.pool_type || "inground";
+  const equipment = inputs.pool_equipment || "Pump, filter, and sanitizer.";
+  const label = kind === "spa" ? "Spa" : kind === "above" ? "Above-ground pool" : "In-ground pool";
+  const lines: QuoteLine[] = [
+    line({
+      name: `${label} visit`,
+      description: equipment,
+      qty: 1,
+      unit: "ea",
+      unit_price: scope === "weekly" ? 145 : 95,
+      category: "service",
+    }),
+  ];
+  if (scope === "open") {
+    lines.push(
+      line({
+        name: "Open the pool",
+        description: "Remove the cover, start equipment, and balance water.",
+        qty: 1,
+        unit: "ls",
+        unit_price: 385,
+        category: "open",
+      }),
+    );
+  } else if (scope === "close") {
+    lines.push(
+      line({
+        name: "Close the pool",
+        description: "Winterize lines, cover, and shut equipment.",
+        qty: 1,
+        unit: "ls",
+        unit_price: 365,
+        category: "close",
+      }),
+    );
+  } else if (scope === "repair") {
+    lines.push(
+      line({
+        name: "Repair equipment",
+        description: equipment,
+        qty: 1,
+        unit: "ls",
+        unit_price: 320,
+        category: "repair",
+      }),
+    );
+  } else {
+    lines.push(
+      line({
+        name: "Chemicals and brush",
+        description: "Balance, vacuum, and empty the baskets.",
+        qty: 1,
+        unit: "ls",
+        unit_price: 55,
+        category: "chem",
+      }),
+    );
+  }
+  return lines.filter((l) => l.qty > 0);
+}
+
+function quoteLawn(inputs: Record<string, string>): QuoteLine[] {
+  const scope = inputs.lawn_scope || "mow";
+  const lot = inputs.lot_size || "This lot";
+  const freq = inputs.mow_frequency || "weekly";
+  const notes = inputs.lawn_notes || inputs.irrigation || "Beds and turf on this lot.";
+  const lines: QuoteLine[] = [
+    line({
+      name: "Site walk",
+      description: `${lot}. ${notes}`,
+      qty: 1,
+      unit: "ls",
+      unit_price: 45,
+      category: "prep",
+    }),
+  ];
+  if (scope === "irrigation") {
+    lines.push(
+      line({
+        name: "Irrigation service",
+        description: inputs.irrigation || "Clock, zones, and heads as quoted.",
+        qty: 1,
+        unit: "ls",
+        unit_price: 285,
+        category: "irrigation",
+      }),
+    );
+  } else if (scope === "beds") {
+    lines.push(
+      line({
+        name: "Mulch and beds",
+        description: notes,
+        qty: 1,
+        unit: "ls",
+        unit_price: 420,
+        category: "beds",
+      }),
+    );
+  } else if (scope === "seasonal") {
+    lines.push(
+      line({
+        name: "Seasonal cleanup",
+        description: "Leaves, beds, and haul-off on this lot.",
+        qty: 1,
+        unit: "ls",
+        unit_price: 365,
+        category: "cleanup",
+      }),
+    );
+  } else {
+    lines.push(
+      line({
+        name: "Mow and edge",
+        description: `${freq} cut on this lot.`,
+        qty: 1,
+        unit: "visit",
+        unit_price: 75,
+        category: "mow",
+      }),
+    );
+  }
+  return lines.filter((l) => l.qty > 0);
 }
 
 export function factsFromTakeoff(work: WorkType, inputs: Record<string, string>) {
