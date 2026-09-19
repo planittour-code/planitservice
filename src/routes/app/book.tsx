@@ -181,7 +181,7 @@ function PriceBookPage() {
       )}
 
       <Input
-        placeholder="Filter by product, slot, trade"
+        placeholder="Filter by product or trade"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
@@ -334,10 +334,10 @@ function PriceBookPage() {
           <h2 className="font-display text-xl font-medium">Upload a CSV</h2>
           <p className="text-sm text-muted-foreground">
             One file for the catalog: work category, sub-category, line items, and materials.
-            Columns are work_category, sub_category, item, description, qty, unit, slot,
+            Columns are work_category, sub_category, item, description, qty, unit,
             manufacturer, product_name, sku, color, cost, sell, warranty_years, warranty_terms.
-            A kit row needs sub_category and item. A product row needs slot and product_name. Both
-            can live on the same row. The older trade / slot / product_name file still imports as
+            A kit row needs sub_category and item. A product row needs product_name. Both
+            can live on the same row. The older trade / product_name file still imports as
             materials only.
           </p>
           <p className="text-sm text-muted-foreground">
@@ -354,7 +354,7 @@ function PriceBookPage() {
             onChange={(e) => setCsv(e.target.value)}
             rows={8}
             className="w-full rounded-md bg-card p-3 font-mono text-sm shadow-[var(--shadow-border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            placeholder="work_category,sub_category,item,description,qty,unit,slot,manufacturer,product_name,sku,color,cost,sell,warranty_years,warranty_terms"
+            placeholder="work_category,sub_category,item,description,qty,unit,manufacturer,product_name,sku,color,cost,sell,warranty_years,warranty_terms"
           />
           <Button type="button" disabled={!csv.trim() || upload.isPending} onClick={() => upload.mutate()}>
             {upload.isPending ? "Importing…" : "Import catalog"}
@@ -401,7 +401,7 @@ function BookForm({
   }) => void;
 }) {
   const slotChoices = slots.length ? slots : BOOK_SLOTS;
-  const [slot, setSlot] = useState<BookSlotId>(
+  const [slot] = useState<BookSlotId>(
     (initial?.slot as BookSlotId) || slotChoices[0]?.id || "gutter",
   );
   const def = BOOK_SLOTS.find((s) => s.id === slot) ?? slotChoices[0]!;
@@ -502,33 +502,6 @@ function BookForm({
               .catch((err) => toast.error(err instanceof Error ? err.message : "Could not read photo"));
           }}
         />
-      </div>
-      <div className="space-y-1 sm:col-span-2">
-        <Label htmlFor="slot">Slot</Label>
-        <select
-          id="slot"
-          value={slot}
-          onChange={(e) => {
-            const next = e.target.value as BookSlotId;
-            setSlot(next);
-            const s = BOOK_SLOTS.find((x) => x.id === next)!;
-            setTrade(s.trade);
-            setUnit(s.unit);
-            check(cost, sell, next);
-          }}
-          className="flex h-9 w-full rounded-md bg-background px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
-        >
-          {initial?.slot && !slotChoices.some((s) => s.id === initial.slot) ? (
-            <option value={initial.slot}>
-              {BOOK_SLOTS.find((s) => s.id === initial.slot)?.label ?? initial.slot}
-            </option>
-          ) : null}
-          {slotChoices.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
       </div>
       <Field label="Manufacturer" value={manufacturer} onChange={setManufacturer} />
       <Field label="Product" value={product} onChange={setProduct} />

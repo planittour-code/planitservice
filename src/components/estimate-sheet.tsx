@@ -169,45 +169,15 @@ function LineCard({
     <div className="space-y-2 rounded-lg bg-background p-2.5 shadow-[var(--shadow-border)] sm:p-3">
       <div className="flex items-center justify-between gap-3">
         <p className="min-w-0 truncate font-medium">{heading}</p>
-        <div className="flex shrink-0 items-center gap-1">
-          <select
-            value={isOptional ? "optional" : "line"}
-            aria-label="Line type"
-            className="flex h-9 rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
-            onChange={(e) => onType(e.target.value === "optional")}
-          >
-            <option value="line">Line item</option>
-            <option value="optional">Optional work</option>
-          </select>
-          <Button type="button" size="sm" variant="outline" onClick={() => photoInput.current?.click()}>
-            <Camera className="size-4" />
-            Add photo
-          </Button>
-          <input
-            ref={photoInput}
-            type="file"
-            accept="image/*"
-            multiple
-            className="sr-only"
-            onChange={(e) => {
-              onPhotos(e.target.files);
-              e.target.value = "";
-            }}
-          />
-          {canRemove && (
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-11"
-              aria-label="Remove line"
-              title="Remove line"
-              onClick={onRemove}
-            >
-              <X className="size-4" />
-            </Button>
-          )}
-        </div>
+        <select
+          value={isOptional ? "optional" : "line"}
+          aria-label="Line type"
+          className="flex h-9 shrink-0 rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
+          onChange={(e) => onType(e.target.value === "optional")}
+        >
+          <option value="line">Line item</option>
+          <option value="optional">Optional work</option>
+        </select>
       </div>
       <div className="space-y-1">
         <Label htmlFor={`item-${row.id}`}>Item</Label>
@@ -229,13 +199,51 @@ function LineCard({
           placeholder="Scope, prep, product, notes the homeowner should see"
         />
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <NumField label="Quantity" value={row.qty} onChange={(v) => onPatch({ qty: v })} />
-        <NumField label="Cost" value={row.cost} onChange={(v) => onPatch({ cost: v })} />
-        <NumField label="Price" value={row.price} onChange={(v) => onPatch({ price: v })} />
-        <div className="space-y-1">
-          <Label>Amount</Label>
-          <p className="flex h-9 items-center tabular-nums">{money(lineAmount(row))}</p>
+      <div className="flex items-end gap-1">
+        <div className="grid min-w-0 flex-1 grid-cols-3 gap-2">
+          <NumField label="Quantity" value={row.qty} onChange={(v) => onPatch({ qty: v })} />
+          <NumField label="Cost" value={row.price} onChange={(v) => onPatch({ price: v })} />
+          <div className="space-y-1">
+            <Label>Total</Label>
+            <p className="flex h-9 items-center tabular-nums">{money(lineAmount(row))}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="size-11"
+            aria-label="Add photo"
+            title="Add photo"
+            onClick={() => photoInput.current?.click()}
+          >
+            <Camera className="size-4" />
+          </Button>
+          <input
+            ref={photoInput}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={(e) => {
+              onPhotos(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          {canRemove ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-11"
+              aria-label="Remove line"
+              title="Remove line"
+              onClick={onRemove}
+            >
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </div>
       {(row.photos ?? []).length > 0 && (

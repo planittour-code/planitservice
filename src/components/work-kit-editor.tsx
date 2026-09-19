@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { money, num } from "@/lib/housefile/format";
 import { compressImage } from "@/lib/housefile/image";
 import {
   hasKitSeed,
@@ -195,24 +196,50 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                       onSave={(row) => save.mutate(row)}
                     />
                   ) : (
-                    <>
-                      <div>
-                        <p className="font-medium">{kit.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
-                        </p>
-                      </div>
-                      {owner && (
-                        <div className="flex gap-2">
-                          <Button type="button" size="sm" variant="outline" onClick={() => setEditing(kit)}>
-                            Edit
-                          </Button>
-                          <Button type="button" size="sm" variant="ghost" onClick={() => remove.mutate(kit.id)}>
-                            Remove
-                          </Button>
+                    <div className="w-full space-y-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="font-medium">{kit.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
+                          </p>
                         </div>
-                      )}
-                    </>
+                        {owner && (
+                          <div className="flex gap-2">
+                            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(kit)}>
+                              Edit
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => remove.mutate(kit.id)}>
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <ul className="space-y-2">
+                        {kit.items.map((item) => (
+                          <li
+                            key={item.id}
+                            className="grid gap-2 rounded-lg bg-background px-3 py-2 text-sm shadow-[var(--shadow-border)] sm:grid-cols-12 sm:items-center"
+                          >
+                            <p className="font-medium sm:col-span-5">{item.name}</p>
+                            <p className="text-muted-foreground sm:col-span-2">
+                              <span className="mr-1 text-xs tracking-wide uppercase">Quantity</span>
+                              {item.qty?.trim() || "—"}
+                            </p>
+                            <p className="text-muted-foreground sm:col-span-2">
+                              <span className="mr-1 text-xs tracking-wide uppercase">Cost</span>
+                              {item.price != null ? money(item.price) : "—"}
+                            </p>
+                            <p className="tabular-nums sm:col-span-3">
+                              <span className="mr-1 text-xs tracking-wide text-muted-foreground uppercase">
+                                Total
+                              </span>
+                              {money(kitLineTotal(item.qty, item.price))}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </li>
                 );
@@ -354,37 +381,40 @@ function KitLineRow({
 
   return (
     <div className="space-y-2 rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
-      <div className="flex items-start gap-1">
-        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-12">
-          <div className="space-y-1 sm:col-span-3">
-            <Label className="sr-only">Item</Label>
-            <Input value={line.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Line item" />
-          </div>
-          <div className="space-y-1 sm:col-span-3">
-            <Label className="sr-only">Description</Label>
-            <Input
-              value={line.description}
-              onChange={(e) => onChange({ description: e.target.value })}
-              placeholder="Description"
-            />
-          </div>
-          <div className="space-y-1 sm:col-span-2">
+      <div className="grid gap-2 sm:grid-cols-12">
+        <div className="space-y-1 sm:col-span-5">
+          <Label>Item</Label>
+          <Input value={line.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Line item" />
+        </div>
+        <div className="space-y-1 sm:col-span-5">
+          <Label>Description</Label>
+          <Input
+            value={line.description}
+            onChange={(e) => onChange({ description: e.target.value })}
+            placeholder="Description"
+          />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label>Unit</Label>
+          <Input
+            value={line.unit}
+            onChange={(e) => onChange({ unit: e.target.value })}
+            placeholder="lf"
+          />
+        </div>
+      </div>
+      <div className="flex items-end gap-1">
+        <div className="grid min-w-0 flex-1 grid-cols-3 gap-2">
+          <div className="space-y-1">
             <Label>Quantity</Label>
             <Input
               value={line.qty}
               onChange={(e) => onChange({ qty: e.target.value })}
               placeholder="Quantity"
+              inputMode="decimal"
             />
           </div>
-          <div className="space-y-1 sm:col-span-2">
-            <Label>Footage</Label>
-            <Input
-              value={line.unit}
-              onChange={(e) => onChange({ unit: e.target.value })}
-              placeholder="Footage"
-            />
-          </div>
-          <div className="space-y-1 sm:col-span-2">
+          <div className="space-y-1">
             <Label>Cost</Label>
             <Input
               value={line.price}
@@ -393,8 +423,12 @@ function KitLineRow({
               inputMode="decimal"
             />
           </div>
+          <div className="space-y-1">
+            <Label>Total</Label>
+            <p className="flex h-9 items-center tabular-nums">{money(kitLineTotal(line.qty, line.price))}</p>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 sm:pt-6">
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             type="button"
             size="icon"
@@ -449,6 +483,10 @@ function KitLineRow({
       )}
     </div>
   );
+}
+
+function kitLineTotal(qty: string | null | undefined, price: string | number | null | undefined) {
+  return Math.round(num(qty) * num(price) * 100) / 100;
 }
 
 function downloadCsv(text: string) {
