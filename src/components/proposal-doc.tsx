@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StreetView } from "@/components/street-view";
 import { InvoiceDoc } from "@/components/invoice-doc";
 import { Mark } from "@/components/logo";
-import { optionLabel } from "@/lib/housefile/estimate-lines";
+import { lineShowsInstalledProduct, optionLabel } from "@/lib/housefile/estimate-lines";
 import { money, shortDate } from "@/lib/housefile/format";
 import { isDrainageInvoice } from "@/lib/housefile/invoice";
 import { normalizePaymentLink, paymentSchedule, paymentTermLabel } from "@/lib/housefile/payment";
@@ -727,6 +727,7 @@ function ProposalLine({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description ?? "");
+  const showProduct = lineShowsInstalledProduct(item.name);
   const [qty, setQty] = useState(String(item.qty));
   const [price, setPrice] = useState(String(item.unit_price));
   const line = item.qty * item.unit_price;
@@ -802,15 +803,15 @@ function ProposalLine({
           {item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
           <p className="text-xs text-muted-foreground">
             {item.qty} {item.unit}
-            {item.manufacturer ? ` · ${item.manufacturer}` : ""}
-            {item.product_name ? ` ${item.product_name}` : ""}
-            {item.color ? ` · ${item.color}` : ""}
-            {item.sku ? ` · ${item.sku}` : ""}
-            {mode === "contractor" && item.unit_cost != null
+            {showProduct && item.manufacturer ? ` · ${item.manufacturer}` : ""}
+            {showProduct && item.product_name ? ` ${item.product_name}` : ""}
+            {showProduct && item.color ? ` · ${item.color}` : ""}
+            {showProduct && item.sku ? ` · ${item.sku}` : ""}
+            {mode === "contractor" && showProduct && item.unit_cost != null
               ? ` · cost ${money(item.unit_cost)}`
               : ""}
           </p>
-          {item.warranty_terms && (
+          {showProduct && item.warranty_terms && (
             <p className="text-xs text-primary">
               Warranty
               {item.warranty_years ? ` · ${item.warranty_years} yr` : ""} — {item.warranty_terms}

@@ -14,9 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EstimateSheet } from "@/components/estimate-sheet";
 import { InvoiceDoc } from "@/components/invoice-doc";
+import { KitPicker } from "@/components/kit-picker";
 import { applyPriceBook, linesNeedingBookCost, proposedCostKey, STARTER_BOOK } from "@/lib/housefile/book";
 import { GUTTER_KIT_SEED, type WorkKit } from "@/lib/housefile/kits";
-import { cn } from "@/lib/utils";
 import {
   ESTIMATE_KEY,
   blankEstimateLine,
@@ -24,9 +24,12 @@ import {
   catalogLinesFromBook,
   estimateReady,
   estimateTotal,
-  linesFromKitItems,
+  joinKitIds,
+  kitNamesLabel,
+  linesFromKits,
   parseEstimateLines,
   seedEstimateLines,
+  selectedKitIds,
   serializeEstimateLines,
   toQuoteLines,
 } from "@/lib/housefile/estimate-lines";
@@ -282,14 +285,22 @@ function NewQuote() {
     const scope = search.template === "tmpl_ext_paint" ? "exterior" : "interior";
     setTakeoff((prev) => {
       if (prev.__work === work.id) return prev;
-      const preset = search.kit ? workKits.find((kit) => kit.id === search.kit) : undefined;
-      if (preset) {
+      const presetIds = search.kit
+        ? search.kit
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : [];
+      const presets = presetIds
+        .map((id) => workKits.find((kit) => kit.id === id))
+        .filter((kit): kit is WorkKit => Boolean(kit));
+      if (presets.length) {
         return {
           __work: work.id,
           paint_scope: work.id === "paint" ? scope : "",
-          __kit: preset.id,
-          __kit_name: preset.name,
-          [ESTIMATE_KEY]: serializeEstimateLines(linesFromKitItems(preset.items, items)),
+          __kit: joinKitIds(presets.map((kit) => kit.id)),
+          __kit_name: kitNamesLabel(presets.map((kit) => kit.name)),
+          [ESTIMATE_KEY]: serializeEstimateLines(linesFromKits(presets, items)),
         };
       }
       if (workKits.length > 0) {
@@ -476,11 +487,11 @@ function NewQuote() {
     goToStep(addressReady ? 3 : 1);
   }
 
-  function applyKit(kit: WorkKit | null) {
+  function applyKits(kits: WorkKit[]) {
     if (!work) return;
     const items = user ? (bookQ.data?.items ?? []) : guestBook();
     const scope = takeoff.paint_scope || (search.template === "tmpl_ext_paint" ? "exterior" : "interior");
-    if (!kit) {
+    if (!kits.length) {
       setTakeoff((s) => ({
         ...s,
         __work: work.id,
@@ -494,11 +505,20 @@ function NewQuote() {
     setTakeoff((s) => ({
       ...s,
       __work: work.id,
-      __kit: kit.id,
-      __kit_name: kit.name,
+      __kit: joinKitIds(kits.map((kit) => kit.id)),
+      __kit_name: kitNamesLabel(kits.map((kit) => kit.name)),
       paint_scope: work.id === "paint" ? scope : s.paint_scope,
-      [ESTIMATE_KEY]: serializeEstimateLines(linesFromKitItems(kit.items, items)),
+      [ESTIMATE_KEY]: serializeEstimateLines(linesFromKits(kits, items)),
     }));
+  }
+
+  function toggleKit(kit: WorkKit) {
+    const ids = selectedKitIds(takeoff.__kit);
+    const nextIds = ids.includes(kit.id) ? ids.filter((id) => id !== kit.id) : [...ids, kit.id];
+    const next = nextIds
+      .map((id) => workKits.find((row) => row.id === id))
+      .filter((row): row is WorkKit => Boolean(row));
+    applyKits(next);
   }
 
   const shownStep = !addressReady ? 1 : step;
@@ -647,9 +667,9 @@ function NewQuote() {
           {workKits.length > 0 && work ? (
             <KitPicker
               kits={workKits}
-              selectedId={takeoff.__kit}
-              onPick={applyKit}
-              onSkip={() => applyKit(null)}
+              selectedIds={selectedKitIds(takeoff.__kit)}
+              onToggle={toggleKit}
+              onSkip={() => applyKits([])}
               skipped={Boolean(!takeoff.__kit && takeoff[ESTIMATE_KEY])}
             />
           ) : null}
@@ -840,60 +860,6 @@ function normalizeStreet(value: string) {
     .replace(/\b(boulevard|blvd)\b/g, "blvd")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function KitPicker({
-  kits,
-  selectedId,
-  onPick,
-  onSkip,
-  skipped,
-}: {
-  kits: WorkKit[];
-  selectedId?: string;
-  onPick: (kit: WorkKit) => void;
-  onSkip: () => void;
-  skipped: boolean;
-}) {
-  return (
-    <div className="space-y-3">
-      <div>
-        <p className="font-display text-xl font-medium">Sub-category</p>
-        <p className="text-sm text-muted-foreground">
-          Starts the quote with that bundle. Every line stays editable.
-        </p>
-      </div>
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {kits.map((kit) => {
-          const on = selectedId === kit.id;
-          return (
-            <li key={kit.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedId === kit.id) return;
-                  onPick(kit);
-                }}
-                className={cn(
-                  "flex min-h-20 w-full flex-col items-start rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
-                  "transition-[box-shadow,opacity] duration-150 hover:opacity-95",
-                  on ? "bg-primary text-primary-foreground" : "bg-card",
-                )}
-              >
-                <p className="font-display text-lg font-medium">{kit.name}</p>
-                <p className={cn("text-sm", on ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                  {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
-                </p>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      <Button type="button" variant={skipped ? "secondary" : "outline"} onClick={onSkip}>
-        {skipped ? "Using a blank starter" : "Start without a kit"}
-      </Button>
-    </div>
-  );
 }
 
 function Field({

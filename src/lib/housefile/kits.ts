@@ -121,6 +121,23 @@ export const GUTTER_KIT_SEED: KitSeed[] = [
       ls("Site protection and haul-off", "Beds, walks, and debris from the drainage run."),
     ],
   },
+  {
+    name: "Maintenance Plan",
+    lines: [
+      {
+        name: "Gutter cleaning",
+        description: "Scoop and flush the run and leaders.",
+        unit: "lf",
+      },
+      ls("Inspect hangers, seams, and pitch", "Walk the eaves and note repairs on this visit."),
+      ls("Seal leaks as found", "Joints, miters, and outlets."),
+      {
+        name: "Seasonal visits",
+        description: "Scheduled cleanings on the plan.",
+        unit: "ea",
+      },
+    ],
+  },
 ];
 
 const PAINT_KIT_SEED: KitSeed[] = [

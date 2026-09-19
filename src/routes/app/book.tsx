@@ -138,8 +138,8 @@ function PriceBookPage() {
         <div>
           <h1 className="font-display text-3xl font-medium tracking-tight">Materials</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            Quotes pick a work category, then a sub-category. Edit the lines here. Cost and sell stay
-            in the shop — the homeowner sees the sell price.
+            Quotes pick a work category, then one or more sub-categories. Edit the lines here. Cost
+            and sell stay in the shop — the homeowner sees the sell price.
           </p>
         </div>
         {owner && (

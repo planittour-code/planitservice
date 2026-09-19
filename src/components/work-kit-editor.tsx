@@ -97,8 +97,8 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
         <div>
           <h2 className="font-display text-xl font-medium">Sub-categories</h2>
           <p className="text-sm text-muted-foreground">
-            Quotes pick a work category, then a sub-category. Starters load for each trade you
-            offer — edit the lines any time.
+            Quotes pick a work category, then one or more sub-categories. Starters load for each
+            trade you offer — edit the lines any time.
           </p>
         </div>
         {owner && (

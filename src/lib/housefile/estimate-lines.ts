@@ -341,10 +341,20 @@ export function linesForOption(
   });
 }
 
+/** Gutter materials and finish warranty belong on the new run, not cleaning or downspouts. */
+export function lineShowsInstalledProduct(name: string) {
+  const n = name.trim().toLowerCase();
+  if (!n) return true;
+  if (/\bclean(?:ing|er|s)?\b/.test(n)) return false;
+  if (/\bdownspouts?\b/.test(n)) return false;
+  return true;
+}
+
 function starterToLine(row: Starter, book: PriceBookItem[]): EstimateLine {
-  const item = row.slot
-    ? book.find((b) => b.active !== false && b.slot === row.slot)
-    : undefined;
+  const item =
+    row.slot && lineShowsInstalledProduct(row.item)
+      ? book.find((b) => b.active !== false && b.slot === row.slot)
+      : undefined;
   const base: EstimateLine = {
     id: crypto.randomUUID(),
     bookId: "",
@@ -357,6 +367,22 @@ function starterToLine(row: Starter, book: PriceBookItem[]): EstimateLine {
     unit: row.unit,
   };
   return item ? applyBookToLine({ ...base, description: row.description }, item) : base;
+}
+
+export function selectedKitIds(raw: string | undefined): string[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+export function joinKitIds(ids: string[]): string {
+  return ids.filter(Boolean).join(",");
+}
+
+export function kitNamesLabel(names: string[]): string {
+  return names.map((name) => name.trim()).filter(Boolean).join(", ");
 }
 
 export function linesFromKitItems(
@@ -384,6 +410,32 @@ export function linesFromKitItems(
     );
     return { ...line, item: row.name, photos: parseKitPhotos(row.photos) };
   });
+}
+
+export function linesFromKits(
+  kits: {
+    items: {
+      name: string;
+      description?: string | null;
+      qty?: string | null;
+      unit?: string | null;
+      slot?: string | null;
+      photos?: string[] | string | null;
+    }[];
+  }[],
+  book: PriceBookItem[],
+): EstimateLine[] {
+  const items = kits.flatMap((kit) => kit.items ?? []);
+  const lines = linesFromKitItems(items, book);
+  const seen = new Set<string>();
+  const merged: EstimateLine[] = [];
+  for (const line of lines) {
+    const key = line.item.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(line);
+  }
+  return merged.length ? merged : [blankEstimateLine()];
 }
 
 export function seedEstimateLines(
@@ -559,11 +611,14 @@ export function applyCatalogToLine(
   pick: CatalogLine,
   book: PriceBookItem[],
 ): EstimateLine {
-  const product = pick.bookId
-    ? book.find((b) => b.id === pick.bookId)
-    : pick.slot
-      ? book.find((b) => b.active !== false && b.slot === pick.slot)
-      : undefined;
+  const bindProduct = lineShowsInstalledProduct(pick.name);
+  const product = !bindProduct
+    ? undefined
+    : pick.bookId
+      ? book.find((b) => b.id === pick.bookId)
+      : pick.slot
+        ? book.find((b) => b.active !== false && b.slot === pick.slot)
+        : undefined;
   const extra = product
     ? [
         product.color ? `Color: ${product.color}` : "",
@@ -611,7 +666,8 @@ export function estimatePhotos(lines: EstimateLine[]): { caption: string; src: s
 
 export function toQuoteLines(lines: EstimateLine[], book: PriceBookItem[]): QuoteLine[] {
   return lines.filter((line) => line.item.trim()).map((line) => {
-    const item = book.find((b) => b.id === line.bookId);
+    const matched = book.find((b) => b.id === line.bookId);
+    const item = lineShowsInstalledProduct(line.item) ? matched : undefined;
     const cost = String(line.cost).trim() === "" ? null : num(line.cost);
     return {
       name: line.item.trim(),
@@ -623,7 +679,7 @@ export function toQuoteLines(lines: EstimateLine[], book: PriceBookItem[]): Quot
       included: num(line.qty) > 0 && String(line.price).trim() !== "",
       category: item?.trade || "quote",
       manufacturer: item?.manufacturer ?? null,
-      product_name: item?.product_name ?? line.item.trim(),
+      product_name: item?.product_name ?? null,
       sku: item?.sku ?? null,
       color: item?.color ?? null,
       warranty_years: item?.warranty_years ?? null,

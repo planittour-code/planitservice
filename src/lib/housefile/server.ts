@@ -2751,6 +2751,18 @@ async function kitsForCompany(sql: Sql, companyId: string, workId?: string): Pro
     select trades from companies where id = ${companyId} limit 1
   `;
   await seedStarterKits(sql, companyId, parseTradeTokens(company[0]?.trades));
+  await sql`
+    update work_kit_items i
+    set slot = null
+    from work_kits k
+    where i.kit_id = k.id
+      and k.company_id = ${companyId}
+      and i.slot = ${"gutter"}
+      and (
+        lower(i.name) like ${"%clean%"}
+        or lower(i.name) like ${"%downspout%"}
+      )
+  `;
   const kits = workId
     ? await sql<Omit<WorkKit, "items">>`
         select * from work_kits where company_id = ${companyId} and work_id = ${workId} order by sort_order, name
