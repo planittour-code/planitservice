@@ -11,6 +11,7 @@ import {
   kitPhotosPayload,
   parseCatalogCsv,
   parseKitPhotos,
+  parseKitPrice,
   type WorkKit,
   type WorkKitItem,
 } from "./kits";
@@ -2846,10 +2847,10 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
         let order = 0;
         for (const line of lines) {
           await sql`
-            insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+            insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot, price)
             values (
               ${crypto.randomUUID()}, ${kitId}, ${order}, ${line.name}, ${line.description || null},
-              ${line.qty || null}, ${line.unit || "ls"}, ${line.slot}
+              ${line.qty || null}, ${line.unit || "ls"}, ${line.slot}, ${line.price}
             )
           `;
           order += 1;
@@ -2897,10 +2898,10 @@ async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[]) 
       let lineOrder = 0;
       for (const line of kit.lines) {
         await sql`
-          insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+          insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot, price)
           values (
             ${crypto.randomUUID()}, ${kitId}, ${lineOrder}, ${line.name}, ${line.description},
-            ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}
+            ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}, ${null}
           )
         `;
         lineOrder += 1;
@@ -2931,10 +2932,10 @@ async function seedMissingKits(sql: Sql, companyId: string, workId: string, seed
     let lineOrder = 0;
     for (const line of kit.lines) {
       await sql`
-        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot)
+        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot, price)
         values (
           ${crypto.randomUUID()}, ${kitId}, ${lineOrder}, ${line.name}, ${line.description},
-          ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}
+          ${line.qty ?? null}, ${line.unit ?? "ls"}, ${line.slot ?? null}, ${null}
         )
       `;
       lineOrder += 1;
@@ -2972,7 +2973,13 @@ async function kitsForCompany(sql: Sql, companyId: string, workId?: string): Pro
     const rows = await sql<Omit<WorkKitItem, "photos"> & { photos: unknown }>`
       select * from work_kit_items where kit_id = ${kit.id} order by sort_order
     `;
-    items.push(...rows.map((row) => ({ ...row, photos: parseKitPhotos(row.photos) })));
+    items.push(
+      ...rows.map((row) => ({
+        ...row,
+        photos: parseKitPhotos(row.photos),
+        price: parseKitPrice(row.price),
+      })),
+    );
   }
   const byKit = new Map<string, WorkKitItem[]>();
   for (const item of items) {
@@ -3023,6 +3030,7 @@ export const saveWorkKit = createServerFn({ method: "POST" })
         qty?: string;
         unit?: string;
         slot?: string;
+        price?: string;
         photos?: string[];
       }[];
     }) => input,
@@ -3060,11 +3068,11 @@ export const saveWorkKit = createServerFn({ method: "POST" })
       const itemName = item.name.trim();
       if (!itemName) continue;
       await sql`
-        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot, photos)
+        insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot, price, photos)
         values (
           ${crypto.randomUUID()}, ${kitId}, ${order}, ${itemName}, ${item.description?.trim() || null},
           ${item.qty?.trim() || null}, ${item.unit?.trim() || "ls"}, ${item.slot?.trim() || null},
-          ${kitPhotosPayload(item.photos)}
+          ${parseKitPrice(item.price)}, ${kitPhotosPayload(item.photos)}
         )
       `;
       order += 1;

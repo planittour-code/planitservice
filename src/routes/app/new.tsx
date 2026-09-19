@@ -325,6 +325,7 @@ function NewQuote() {
         qty: line.qty ?? null,
         unit: line.unit ?? "ls",
         slot: line.slot ?? null,
+        price: null,
         photos: [],
       })),
     })) satisfies WorkKit[];

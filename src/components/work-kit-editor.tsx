@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { slotsForOfferedWork, type BookSlot } from "@/lib/housefile/book";
 import { compressImage } from "@/lib/housefile/image";
 import {
   hasKitSeed,
@@ -25,6 +24,7 @@ type DraftLine = {
   qty: string;
   unit: string;
   slot: string;
+  price: string;
   photos: string[];
 };
 
@@ -35,6 +35,7 @@ const emptyLine = (): DraftLine => ({
   qty: "",
   unit: "ls",
   slot: "",
+  price: "",
   photos: [],
 });
 
@@ -44,7 +45,6 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   const categories = dash.data ? workTypesFor(dash.data.company.trades) : [];
   const tradesReady = Boolean(dash.data);
   const offeredIds = useMemo(() => new Set(categories.map((c) => c.id)), [categories]);
-  const offeredSlots = useMemo(() => slotsForOfferedWork(categories.map((c) => c.id)), [categories]);
   const kits = q.data?.kits ?? [];
   const grouped = useMemo(() => {
     const map = new Map<string, WorkKit[]>();
@@ -120,7 +120,6 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
           key="new"
           initial={null}
           categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-          slots={offeredSlots}
           pending={save.isPending}
           onCancel={() => setEditing(null)}
           onSave={(row) => save.mutate(row)}
@@ -191,7 +190,6 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                       key={kit.id}
                       initial={kit}
                       categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-                      slots={offeredSlots}
                       pending={save.isPending}
                       onCancel={() => setEditing(null)}
                       onSave={(row) => save.mutate(row)}
@@ -230,14 +228,12 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
 function KitForm({
   initial,
   categories,
-  slots,
   pending,
   onCancel,
   onSave,
 }: {
   initial: WorkKit | null;
   categories: { id: string; name: string }[];
-  slots: BookSlot[];
   pending: boolean;
   onCancel: () => void;
   onSave: (row: { id?: string; workId: string; name: string; items: DraftLine[] }) => void;
@@ -257,6 +253,7 @@ function KitForm({
           qty: i.qty ?? "",
           unit: i.unit || "ls",
           slot: i.slot ?? "",
+          price: i.price != null ? String(i.price) : "",
           photos: parseKitPhotos(i.photos),
         }))
       : [emptyLine()],
@@ -311,7 +308,6 @@ function KitForm({
           <KitLineRow
             key={line.key}
             line={line}
-            slots={slots}
             onChange={(patch) => setLine(i, patch)}
             onRemove={() => removeLine(i)}
           />
@@ -334,12 +330,10 @@ function KitForm({
 
 function KitLineRow({
   line,
-  slots,
   onChange,
   onRemove,
 }: {
   line: DraftLine;
-  slots: BookSlot[];
   onChange: (patch: Partial<DraftLine>) => void;
   onRemove: () => void;
 }) {
@@ -362,46 +356,45 @@ function KitLineRow({
     <div className="space-y-2 rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
       <div className="flex items-start gap-1">
         <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-12">
-          <div className="sm:col-span-3">
+          <div className="space-y-1 sm:col-span-3">
             <Label className="sr-only">Item</Label>
             <Input value={line.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Line item" />
           </div>
-          <div className="sm:col-span-3">
+          <div className="space-y-1 sm:col-span-3">
+            <Label className="sr-only">Description</Label>
             <Input
               value={line.description}
               onChange={(e) => onChange({ description: e.target.value })}
               placeholder="Description"
             />
           </div>
-          <Input
-            className="sm:col-span-2"
-            value={line.qty}
-            onChange={(e) => onChange({ qty: e.target.value })}
-            placeholder="Qty"
-          />
-          <Input
-            className="sm:col-span-2"
-            value={line.unit}
-            onChange={(e) => onChange({ unit: e.target.value })}
-            placeholder="Unit"
-          />
-          <select
-            value={line.slot}
-            onChange={(e) => onChange({ slot: e.target.value })}
-            className="flex h-9 w-full rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none sm:col-span-2"
-          >
-            <option value="">No product slot</option>
-            {line.slot && !slots.some((s) => s.id === line.slot) ? (
-              <option value={line.slot}>{line.slot}</option>
-            ) : null}
-            {slots.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Quantity</Label>
+            <Input
+              value={line.qty}
+              onChange={(e) => onChange({ qty: e.target.value })}
+              placeholder="Quantity"
+            />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Footage</Label>
+            <Input
+              value={line.unit}
+              onChange={(e) => onChange({ unit: e.target.value })}
+              placeholder="Footage"
+            />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Cost</Label>
+            <Input
+              value={line.price}
+              onChange={(e) => onChange({ price: e.target.value })}
+              placeholder="Cost"
+              inputMode="decimal"
+            />
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 pt-0">
+        <div className="flex shrink-0 items-center gap-1 sm:pt-6">
           <Button
             type="button"
             size="icon"

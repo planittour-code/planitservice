@@ -11,8 +11,15 @@ export type WorkKitItem = {
   qty: string | null;
   unit: string;
   slot: string | null;
+  price: number | null;
   photos: string[];
 };
+
+export function parseKitPrice(raw: unknown): number | null {
+  if (raw == null || raw === "") return null;
+  const n = typeof raw === "number" ? raw : Number(String(raw).replace(/[^0-9.+-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
 
 export function parseKitPhotos(raw: unknown): string[] {
   let list: unknown[] = [];
@@ -541,6 +548,7 @@ export type CatalogCsvKitLine = {
   qty: string;
   unit: string;
   slot: string | null;
+  price: number | null;
 };
 
 export type CatalogCsv = {
@@ -592,6 +600,7 @@ export function parseCatalogCsv(text: string): CatalogCsv {
         qty: col(cols, "qty"),
         unit: col(cols, "unit") || "ls",
         slot,
+        price: nMaybe(col(cols, "price") || col(cols, "sell")),
       });
     }
 
@@ -671,7 +680,7 @@ export function kitsToCsv(kits: WorkKit[]) {
         "",
         "",
         "",
-        "",
+        item.price != null ? String(item.price) : "",
         "",
         "",
       ].join(","),

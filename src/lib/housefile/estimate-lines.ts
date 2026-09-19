@@ -388,11 +388,12 @@ export function lineShowsQuantity(name: string) {
   return true;
 }
 
-function starterToLine(row: Starter, book: PriceBookItem[]): EstimateLine {
+function starterToLine(row: Starter, book: PriceBookItem[], kitPrice?: number | null): EstimateLine {
   const item =
     row.slot && lineShowsInstalledProduct(row.item)
       ? book.find((b) => b.active !== false && b.slot === row.slot)
       : undefined;
+  const price = kitPrice != null && Number.isFinite(kitPrice) ? String(kitPrice) : "";
   const base: EstimateLine = {
     id: crypto.randomUUID(),
     bookId: "",
@@ -400,11 +401,13 @@ function starterToLine(row: Starter, book: PriceBookItem[]): EstimateLine {
     description: row.description,
     qty: row.qty ?? "",
     cost: "",
-    price: "",
+    price,
     photos: [],
     unit: row.unit,
   };
-  return item ? applyBookToLine({ ...base, description: row.description }, item) : base;
+  if (!item) return base;
+  const filled = applyBookToLine({ ...base, description: row.description }, item);
+  return kitPrice != null && Number.isFinite(kitPrice) ? { ...filled, price } : filled;
 }
 
 export function selectedKitIds(raw: string | undefined): string[] {
@@ -430,6 +433,7 @@ export function linesFromKitItems(
     qty?: string | null;
     unit?: string | null;
     slot?: string | null;
+    price?: number | null;
     photos?: string[] | string | null;
   }[],
   book: PriceBookItem[],
@@ -445,6 +449,7 @@ export function linesFromKitItems(
         slot: row.slot ? (row.slot as BookSlotId) : undefined,
       },
       book,
+      row.price,
     );
     return { ...line, item: row.name, photos: parseKitPhotos(row.photos) };
   });
@@ -458,6 +463,7 @@ export function linesFromKits(
       qty?: string | null;
       unit?: string | null;
       slot?: string | null;
+      price?: number | null;
       photos?: string[] | string | null;
     }[];
   }[],
@@ -572,6 +578,7 @@ export type CatalogLine = {
   qty?: string;
   unit?: string;
   slot?: string | null;
+  price?: number | null;
   bookId?: string;
 };
 
@@ -583,6 +590,7 @@ type CatalogKit = {
     qty?: string | null;
     unit?: string | null;
     slot?: string | null;
+    price?: number | null;
   }[];
 };
 
@@ -600,6 +608,7 @@ export function catalogLinesForWork(
       qty: row.qty ?? "",
       unit: row.unit ?? undefined,
       slot: row.slot ?? null,
+      price: row.price,
     }))
     .filter((row) => row.name);
   const source =
@@ -676,11 +685,13 @@ export function applyCatalogToLine(
     unit: pick.unit || line.unit,
     cost: product?.cost != null ? String(product.cost) : "",
     price:
-      product?.sell != null
-        ? String(product.sell)
-        : product?.cost != null
-          ? String(product.cost)
-          : "",
+      pick.price != null && Number.isFinite(pick.price)
+        ? String(pick.price)
+        : product?.sell != null
+          ? String(product.sell)
+          : product?.cost != null
+            ? String(product.cost)
+            : "",
   };
 }
 

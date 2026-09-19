@@ -154,7 +154,7 @@ function PriceBookPage() {
       <div>
         <h2 className="font-display text-xl font-medium">Products</h2>
         <p className="text-sm text-muted-foreground">
-          What this shop buys and sells. Sub-category lines can pick from these slots.
+          What this shop buys and sells. Sub-category lines can set a price.
         </p>
       </div>
 
