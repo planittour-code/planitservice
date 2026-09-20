@@ -206,7 +206,9 @@ function SettingsPage() {
         </div>
         <div className="space-y-2">
           <Label>Logo</Label>
-          {logo ? <img src={logo} alt="" className="h-12 w-auto object-contain" /> : null}
+          {logo ? (
+            <img src={logo} alt="" className="h-10 w-auto max-w-[9rem] object-contain" />
+          ) : null}
           <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md bg-card px-4 text-sm shadow-[var(--shadow-border)]">
             {logo ? "Change logo" : "Upload logo"}
             <input

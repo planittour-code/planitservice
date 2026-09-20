@@ -71,12 +71,14 @@ function PublicShopPage() {
         </Button>
       </PublicHeader>
       <main className="mx-auto max-w-3xl space-y-8 px-5 py-10">
-        {shop.logo_src ? (
-          <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-            <img src={shop.logo_src} alt={shop.name} className="h-[5.5rem] w-full object-contain p-3 sm:h-28" />
-          </div>
-        ) : null}
         <div className="space-y-2">
+          {shop.logo_src ? (
+            <img
+              src={shop.logo_src}
+              alt=""
+              className="h-12 w-auto max-w-[10rem] object-contain sm:h-14"
+            />
+          ) : null}
           <h1 className="font-display text-4xl font-medium tracking-tight">{shop.name}</h1>
           {place ? <p className="text-muted-foreground">{place}</p> : null}
           {shop.years_in_business ? (

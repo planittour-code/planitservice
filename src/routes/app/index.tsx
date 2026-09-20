@@ -15,7 +15,7 @@ function ShopHome() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-[5.5rem] w-full sm:h-28 md:h-36" />
+        <Skeleton className="h-12 w-40 sm:h-14" />
       </div>
     );
   }
@@ -32,17 +32,17 @@ function ShopHome() {
   return (
     <div className="space-y-10">
       <div className="space-y-4">
-        {company.logo_src ? (
-          <div className="-mx-4 overflow-hidden bg-card shadow-[var(--shadow-border)] sm:-mx-5 sm:rounded-xl">
-            <img
-              src={company.logo_src}
-              alt={company.name}
-              className="h-[5.5rem] w-full object-contain p-2 sm:h-28 sm:p-3 md:h-36"
-            />
-          </div>
-        ) : null}
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            {company.logo_src ? (
+              <img
+                src={company.logo_src}
+                alt=""
+                className="h-12 w-auto max-w-[10rem] object-contain sm:h-14"
+              />
+            ) : null}
+            <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+          </div>
           <Button asChild variant="outline">
             <Link to="/app/book">Materials</Link>
           </Button>
