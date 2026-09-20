@@ -82,11 +82,11 @@ function PropertiesPage() {
   const emptyShop = houses.length === 0 && work.length === 0 && filteredWork.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Jobs</h1>
-          <p className="mt-1 max-w-xl text-muted-foreground">
+          <h1 className="font-display text-2xl font-medium tracking-tight">Jobs</h1>
+          <p className="mt-1 text-muted-foreground">
             Work in progress, the people you quote, and the houses on file. Search any of those.
           </p>
         </div>
@@ -183,7 +183,7 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
   const open = rows.filter((row) => row.kind === "proposal" || row.kind === "invite");
   const done = rows.filter((row) => row.kind === "job");
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {open.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Open</h2>

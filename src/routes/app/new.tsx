@@ -625,7 +625,7 @@ function NewQuote() {
   if (sent) {
     if (sent.pending) {
       return (
-        <div className="mx-auto max-w-xl space-y-6">
+        <div className="space-y-3">
           <h1 className="font-display text-3xl font-medium tracking-tight">Waiting on the owner.</h1>
           <p className="text-muted-foreground">
             You entered a cost that was not in materials. {sent.homeownerName} will not see this quote
@@ -640,7 +640,7 @@ function NewQuote() {
       );
     }
     return (
-      <div className="mx-auto max-w-xl space-y-6">
+      <div className="space-y-3">
         <h1 className="font-display text-3xl font-medium tracking-tight">
           {sent.emailed ? "Estimate sent." : "Estimate saved."}
         </h1>
@@ -659,7 +659,7 @@ function NewQuote() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="space-y-3">
       <div className="space-y-4">
         <h1 className="font-display text-3xl font-medium tracking-tight">
           {inviteQ.data?.invite.title
@@ -885,7 +885,7 @@ function NewQuote() {
           {invoicePreview ? <InvoiceDoc bundle={invoicePreview} /> : null}
           {user ? (
             <div className="space-y-4 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label htmlFor="quote-pay">Payment link</Label>
                 <Input
                   id="quote-pay"
@@ -936,7 +936,7 @@ function NewQuote() {
               </p>
               {missingBookCost.map((line) =>
                 line.bookId ? (
-                  <div key={line.bookId} className="space-y-1">
+                  <div key={line.bookId} className="space-y-0.5">
                     <Label htmlFor={`send-cost-${line.bookId}`}>
                       {line.name} cost ({line.unit})
                     </Label>
@@ -1043,7 +1043,7 @@ function Field({
 }) {
   const id = label.toLowerCase();
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>

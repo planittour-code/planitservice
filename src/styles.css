@@ -73,12 +73,6 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
-  button,
-  [role="button"] {
-    border-width: 1px;
-    border-style: solid;
-    border-color: var(--color-primary);
-  }
   h1,
   h2,
   h3 {
@@ -90,6 +84,13 @@
   * {
     border-color: var(--color-border);
   }
+  button,
+  [role="button"],
+  a.inline-flex.items-center.justify-center {
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--color-primary);
+  }
   html,
   body,
   #app {
@@ -99,9 +100,9 @@
   }
   body {
     font-family: var(--font-sans);
-    font-size: 1.0625rem;
-    line-height: 1.55;
-    letter-spacing: 0.005em;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    letter-spacing: 0.002em;
     padding-bottom: env(safe-area-inset-bottom);
   }
   h1,
@@ -118,6 +119,7 @@
   }
   select {
     appearance: none;
+    min-height: 2rem;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235c574f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
     background-repeat: no-repeat;
     background-position: right 0.5rem center;

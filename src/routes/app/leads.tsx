@@ -18,11 +18,11 @@ function LeadsPage() {
   const place = [area?.city, area?.zip].filter(Boolean).join(" ");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div>
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Request Estimates</p>
-        <h1 className="font-display text-3xl font-medium tracking-tight">Leads in your area</h1>
-        <p className="mt-2 max-w-xl text-muted-foreground">
+        <h1 className="font-display text-2xl font-medium tracking-tight">Leads in your area</h1>
+        <p className="mt-1 text-muted-foreground">
           Open requests for {trades.length ? trades.join(", ") : "the categories you offer"}
           {place ? ` near ${place}` : ""}. Only jobs in those categories, in this shop’s service
           area.

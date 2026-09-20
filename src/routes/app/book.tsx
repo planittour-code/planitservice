@@ -133,11 +133,11 @@ function PriceBookPage() {
   const editingId = editing && editing !== "new" ? editing.id : undefined;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Materials</h1>
-          <p className="mt-2 max-w-xl text-muted-foreground">
+          <h1 className="font-display text-2xl font-medium tracking-tight">Materials</h1>
+          <p className="mt-1 text-muted-foreground">
             Quotes pick a work category, then one or more sub-categories. Edit the lines here. Cost
             and sell stay in the shop — the homeowner sees the sell price.
           </p>
@@ -152,7 +152,7 @@ function PriceBookPage() {
       {owner && <WorkKitEditor owner={owner} />}
 
       <div>
-        <h2 className="font-display text-xl font-medium">Products</h2>
+        <h2 className="font-display text-lg font-medium">Products</h2>
         <p className="text-sm text-muted-foreground">
           What this shop buys and sells. Sub-category lines can set a price.
         </p>
@@ -197,7 +197,7 @@ function PriceBookPage() {
         />
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-3">
         {grouped.map(([label, rows]) => (
           <section key={label} className="space-y-2">
             <h2 className="text-xs tracking-wide text-muted-foreground uppercase">{label}</h2>
@@ -331,7 +331,7 @@ function PriceBookPage() {
 
       {owner && (
         <section className="space-y-3">
-          <h2 className="font-display text-xl font-medium">Upload a CSV</h2>
+          <h2 className="font-display text-lg font-medium">Upload a CSV</h2>
           <p className="text-sm text-muted-foreground">
             One file for the catalog: work category, sub-category, line items, and materials.
             Columns are work_category, sub_category, item, description, qty, unit,
@@ -525,7 +525,7 @@ function BookForm({
         }}
       />
       <Field label="Warranty years" value={years} onChange={setYears} />
-      <div className="space-y-1 sm:col-span-2">
+      <div className="space-y-0.5 sm:col-span-2">
         <Label htmlFor="terms">Warranty terms</Label>
         <Input id="terms" value={terms} onChange={(e) => setTerms(e.target.value)} />
       </div>
@@ -611,7 +611,7 @@ function Field({
 }) {
   const id = label.toLowerCase().replace(/\s+/g, "-");
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>

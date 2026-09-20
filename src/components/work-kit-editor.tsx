@@ -93,10 +93,10 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   });
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl font-medium">Sub-categories</h2>
+          <h2 className="font-display text-lg font-medium">Sub-categories</h2>
           <p className="text-sm text-muted-foreground">
             Quotes pick a work category, then one or more sub-categories. Starters load for each
             trade you offer — edit the lines any time.
@@ -232,7 +232,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                             </p>
                             <p className="tabular-nums sm:col-span-3">
                               <span className="mr-1 text-xs tracking-wide text-muted-foreground uppercase">
-                                Total
+                                Amount
                               </span>
                               {money(kitLineTotal(item.qty, item.price))}
                             </p>
@@ -304,7 +304,7 @@ function KitForm({
     >
       <p className="font-display text-lg font-medium">{initial ? `Editing ${initial.name}` : "New sub-category"}</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="kit-work">Work category</Label>
           <select
             id="kit-work"
@@ -319,7 +319,7 @@ function KitForm({
             ))}
           </select>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="kit-name">Sub-category</Label>
           <Input
             id="kit-name"
@@ -381,31 +381,21 @@ function KitLineRow({
 
   return (
     <div className="space-y-2 rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
-      <div className="grid gap-2 sm:grid-cols-12">
-        <div className="space-y-1 sm:col-span-5">
-          <Label>Item</Label>
-          <Input value={line.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Line item" />
-        </div>
-        <div className="space-y-1 sm:col-span-5">
-          <Label>Description</Label>
-          <Input
-            value={line.description}
-            onChange={(e) => onChange({ description: e.target.value })}
-            placeholder="Description"
-          />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <Label>Unit</Label>
-          <Input
-            value={line.unit}
-            onChange={(e) => onChange({ unit: e.target.value })}
-            placeholder="lf"
-          />
-        </div>
-      </div>
       <div className="flex items-end gap-1">
-        <div className="grid min-w-0 flex-1 grid-cols-3 gap-2">
-          <div className="space-y-1">
+        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-12">
+          <div className="space-y-0.5 sm:col-span-3">
+            <Label>Line item</Label>
+            <Input value={line.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Line item" />
+          </div>
+          <div className="space-y-0.5 sm:col-span-3">
+            <Label>Description</Label>
+            <Input
+              value={line.description}
+              onChange={(e) => onChange({ description: e.target.value })}
+              placeholder="Description"
+            />
+          </div>
+          <div className="space-y-0.5 sm:col-span-2">
             <Label>Quantity</Label>
             <Input
               value={line.qty}
@@ -414,7 +404,7 @@ function KitLineRow({
               inputMode="decimal"
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5 sm:col-span-2">
             <Label>Cost</Label>
             <Input
               value={line.price}
@@ -423,9 +413,9 @@ function KitLineRow({
               inputMode="decimal"
             />
           </div>
-          <div className="space-y-1">
-            <Label>Total</Label>
-            <p className="flex h-9 items-center tabular-nums">{money(kitLineTotal(line.qty, line.price))}</p>
+          <div className="space-y-0.5 sm:col-span-2">
+            <Label>Amount</Label>
+            <p className="flex h-8 items-center tabular-nums">{money(kitLineTotal(line.qty, line.price))}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -433,7 +423,7 @@ function KitLineRow({
             type="button"
             size="icon"
             variant="outline"
-            className="size-11"
+            className="size-8"
             aria-label="Add image"
             title="Add image"
             onClick={() => photoInput.current?.click()}
@@ -455,7 +445,7 @@ function KitLineRow({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-11"
+            className="size-8"
             aria-label="Remove line"
             title="Remove line"
             onClick={onRemove}

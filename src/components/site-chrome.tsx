@@ -285,7 +285,7 @@ export function WizardSteps({
 
 export function SignedInHeader({
   to,
-  max = "max-w-5xl",
+  max = "max-w-7xl",
   children,
   mobileNav,
 }: {
@@ -296,7 +296,7 @@ export function SignedInHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-secondary text-secondary-foreground">
-      <div className={cn("mx-auto flex flex-wrap items-center gap-2 px-4 py-2.5 sm:px-6", max)}>
+      <div className={cn("mx-auto flex flex-wrap items-center gap-1.5 px-3 py-1.5 sm:px-4", max)}>
         <Wordmark to={to} className="text-secondary-foreground" />
         {children}
       </div>
@@ -317,7 +317,7 @@ export function AppNavLink({
   return (
     <Link
       to={to as never}
-      className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-secondary-foreground/85 hover:bg-white/10 hover:text-secondary-foreground [&.active]:bg-white/12 [&.active]:text-secondary-foreground"
+      className="inline-flex min-h-8 shrink-0 items-center rounded-md border border-transparent px-2.5 text-sm font-medium text-secondary-foreground/85 hover:bg-white/10 hover:text-secondary-foreground [&.active]:bg-white/12 [&.active]:text-secondary-foreground"
       activeOptions={{ exact }}
     >
       {children}

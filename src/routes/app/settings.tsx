@@ -95,14 +95,14 @@ function SettingsPage() {
   const publicUrl = company.slug ? `https://planitservice.com/s/${company.slug}` : "";
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="space-y-3">
       <div>
-        <h1 className="font-display text-3xl font-medium tracking-tight">Shop settings</h1>
+        <h1 className="font-display text-2xl font-medium tracking-tight">Shop settings</h1>
         <p className="text-muted-foreground">This name appears on proposals and invitations.</p>
       </div>
-      <section className="space-y-3">
+      <section className="space-y-2">
         <div>
-          <h2 className="font-display text-xl font-medium">Services Offered</h2>
+          <h2 className="font-display text-lg font-medium">Services Offered</h2>
           <p className="text-sm text-muted-foreground">
             ${dollars(SHOP_MONTHLY)}/month per category. These are the only trades this shop quotes,
             and the only Request Estimates you receive.
@@ -151,9 +151,9 @@ function SettingsPage() {
         busy={saveTrades.isPending}
       />
       {publicUrl ? (
-        <section className="space-y-3">
+        <section className="space-y-2">
           <div>
-            <h2 className="font-display text-xl font-medium">Public page</h2>
+            <h2 className="font-display text-lg font-medium">Public page</h2>
             <p className="break-all text-sm text-muted-foreground">
               <a className="underline underline-offset-4" href={`/s/${company.slug}`} target="_blank" rel="noreferrer">
                 {publicUrl}
@@ -182,25 +182,25 @@ function SettingsPage() {
         </section>
       ) : null}
       <form
-        className="space-y-2 border-t border-border pt-6"
+        className="space-y-1.5 border-t border-border pt-4"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
         }}
       >
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="cn">Company</Label>
           <Input id="cn" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="tr">Trade</Label>
           <Input id="tr" value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="paint, roofing, general" />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="ph">Phone</Label>
           <Input id="ph" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="em">Email</Label>
           <Input id="em" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
@@ -225,11 +225,11 @@ function SettingsPage() {
             />
           </label>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="ag">Estimate language</Label>
           <Textarea id="ag" rows={4} value={agreement} onChange={(e) => setAgreement(e.target.value)} />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="tm">Terms and conditions</Label>
           <Textarea id="tm" rows={5} value={terms} onChange={(e) => setTerms(e.target.value)} />
         </div>
@@ -254,7 +254,7 @@ function SettingsPage() {
             ))}
           </div>
         </fieldset>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label htmlFor="pay">Payment link</Label>
           <Input
             id="pay"
@@ -271,9 +271,9 @@ function SettingsPage() {
           Save
         </Button>
       </form>
-      <section className="space-y-3 border-t border-border pt-8">
+      <section className="space-y-2 border-t border-border pt-4">
         <div>
-          <h2 className="font-display text-2xl font-medium tracking-tight">Materials</h2>
+          <h2 className="font-display text-lg font-medium tracking-tight">Materials</h2>
           <p className="text-sm text-muted-foreground">
             Materials this shop sells. Add a product, set cost and sell. Quotes pick from here.
           </p>
@@ -298,9 +298,9 @@ function BillingSection() {
   });
 
   return (
-    <section className="space-y-3 border-t border-border pt-8">
+    <section className="space-y-2 border-t border-border pt-4">
       <div>
-        <h2 className="font-display text-2xl font-medium tracking-tight">Billing</h2>
+        <h2 className="font-display text-lg font-medium tracking-tight">Billing</h2>
         <p className="text-sm text-muted-foreground">
           ${dollars(SHOP_MONTHLY)}/month per category you offer, plus extra seats. Adding or
           removing a category updates the subscription. Cancel anytime — access continues through
@@ -334,9 +334,9 @@ function TeamSection() {
   if (q.isLoading) return <Skeleton className="h-24 w-full" />;
   const owner = q.data?.role === "owner";
   return (
-    <section className="space-y-4 border-t border-border pt-8">
+    <section className="space-y-2 border-t border-border pt-4">
       <div>
-        <h2 className="font-display text-2xl font-medium tracking-tight">Sales team</h2>
+        <h2 className="font-display text-lg font-medium tracking-tight">Sales team</h2>
         <p className="text-sm text-muted-foreground">
           They quote from materials. If a cost is missing they propose one, and you approve before
           the homeowner sees it.

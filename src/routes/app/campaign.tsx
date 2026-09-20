@@ -90,11 +90,11 @@ function CampaignPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-3">
       <div>
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Past customers</p>
-        <h1 className="font-display text-3xl font-medium tracking-tight">Schedule the next visit</h1>
-        <p className="mt-2 text-muted-foreground">
+        <h1 className="font-display text-2xl font-medium tracking-tight">Schedule the next visit</h1>
+        <p className="mt-1 text-muted-foreground">
           Email people you already worked. Offer only the categories this shop pays for — $
           {dollars(SHOP_MONTHLY)}/month each. They open the File and book you for that work.
         </p>
@@ -123,7 +123,7 @@ function CampaignPage() {
           All services paid
         </Button>
       ) : null}
-      <fieldset className="space-y-2">
+      <fieldset className="space-y-1.5">
         <legend className="text-sm font-medium">Repeat service</legend>
         <p className="text-sm text-muted-foreground">
           Only categories this shop pays for. Homeowners hear about this work — not every trade on
@@ -153,7 +153,7 @@ function CampaignPage() {
       </fieldset>
 
       {extrasOffered.length > 0 && (
-        <fieldset className="space-y-2">
+        <fieldset className="space-y-1.5">
           <legend className="text-sm font-medium">Also offer</legend>
           <p className="text-sm text-muted-foreground">
             Other paid categories at the same address. Unpaid trades do not show here.
@@ -183,7 +183,7 @@ function CampaignPage() {
 
       {offered.length > 0 ? (
         <>
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         <Label htmlFor="note">Note (optional)</Label>
         <Textarea
           id="note"
@@ -194,7 +194,7 @@ function CampaignPage() {
         />
       </div>
 
-      <section className="space-y-3">
+      <section className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="font-display text-lg font-medium">Who to email</h2>

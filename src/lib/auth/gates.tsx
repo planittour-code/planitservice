@@ -61,8 +61,8 @@ export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
         to="/account"
         className={
           dark
-            ? "flex min-h-11 items-center gap-2 rounded-md px-1 text-secondary-foreground hover:bg-white/10"
-            : "flex min-h-11 items-center gap-2 rounded-sm px-1 hover:bg-muted"
+            ? "flex min-h-8 items-center gap-2 rounded-md px-1 text-secondary-foreground hover:bg-white/10"
+            : "flex min-h-8 items-center gap-2 rounded-md px-1 hover:bg-muted"
         }
         aria-label="Account"
       >
@@ -70,14 +70,14 @@ export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
           <img
             src={user.profileImageUrl}
             alt=""
-            className="h-8 w-8 rounded-full object-cover"
+            className="h-6 w-6 rounded-full object-cover"
           />
         ) : (
           <span
             className={
               dark
-                ? "grid h-8 w-8 place-items-center rounded-full bg-white/15 text-sm font-medium text-secondary-foreground"
-                : "grid h-8 w-8 place-items-center rounded-full bg-muted text-sm font-semibold"
+                ? "grid h-6 w-6 place-items-center rounded-full bg-white/15 text-xs font-medium text-secondary-foreground"
+                : "grid h-6 w-6 place-items-center rounded-full bg-muted text-xs font-semibold"
             }
           >
             {label.charAt(0).toUpperCase()}

@@ -172,11 +172,11 @@ function LineCard({
         <select
           value={isOptional ? "optional" : "line"}
           aria-label="Line type"
-          className="flex h-9 shrink-0 rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
+          className="flex h-8 shrink-0 rounded-md bg-card px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
           onChange={(e) => onType(e.target.value === "optional")}
         >
-          <option value="line">Line item</option>
-          <option value="optional">Optional work</option>
+          <option value="line">Line</option>
+          <option value="optional">Optional</option>
         </select>
       </div>
       <div className="space-y-1">
@@ -204,8 +204,8 @@ function LineCard({
           <NumField label="Quantity" value={row.qty} onChange={(v) => onPatch({ qty: v })} />
           <NumField label="Cost" value={row.price} onChange={(v) => onPatch({ price: v })} />
           <div className="space-y-1">
-            <Label>Total</Label>
-            <p className="flex h-9 items-center tabular-nums">{money(lineAmount(row))}</p>
+            <Label>Amount</Label>
+            <p className="flex h-8 items-center tabular-nums">{money(lineAmount(row))}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -213,7 +213,7 @@ function LineCard({
             type="button"
             size="icon"
             variant="outline"
-            className="size-11"
+            className="size-8"
             aria-label="Add photo"
             title="Add photo"
             onClick={() => photoInput.current?.click()}
@@ -236,7 +236,7 @@ function LineCard({
               type="button"
               size="icon"
               variant="ghost"
-              className="size-11"
+              className="size-8"
               aria-label="Remove line"
               title="Remove line"
               onClick={onRemove}

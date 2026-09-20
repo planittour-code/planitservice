@@ -30,7 +30,7 @@ function ShopHome() {
     properties.reduce((n, p) => n + p.job_count + p.open_proposal_count, 0) + namedInvites.length;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-4">
       <div className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -41,7 +41,7 @@ function ShopHome() {
                 className="h-12 w-auto max-w-[10rem] object-contain sm:h-14"
               />
             ) : null}
-            <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">{company.name}</h1>
+            <h1 className="font-display text-2xl font-medium tracking-tight md:text-3xl">{company.name}</h1>
           </div>
           <Button asChild variant="outline">
             <Link to="/app/book">Materials</Link>
@@ -49,9 +49,9 @@ function ShopHome() {
         </div>
       </div>
 
-      <section className="space-y-4">
+      <section className="space-y-2">
         <div>
-          <h2 className="font-display text-xl font-medium">Start a Quote</h2>
+          <h2 className="font-display text-lg font-medium">Start a Quote</h2>
           <p className="text-sm text-muted-foreground">
             Address and the ask first. Photos, measurements, then line items from Materials.
           </p>
@@ -67,9 +67,9 @@ function ShopHome() {
       </section>
 
       {namedInvites.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-2">
           <div>
-            <h2 className="font-display text-xl font-medium">Named jobs</h2>
+            <h2 className="font-display text-lg font-medium">Named jobs</h2>
             <p className="text-sm text-muted-foreground">
               Work sent to this shop from a Property Record. Quote from Materials.
             </p>
@@ -100,8 +100,8 @@ function ShopHome() {
       <ShopScheduleBoard items={schedule ?? []} />
 
       {role === "owner" && (pending?.length ?? 0) > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-display text-xl font-medium">Needs approval</h2>
+        <section className="space-y-2">
+          <h2 className="font-display text-lg font-medium">Needs approval</h2>
           <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
             {pending.map((pr) => (
               <li key={pr.id}>
@@ -126,7 +126,7 @@ function ShopHome() {
 
       {properties.length === 0 && namedInvites.length === 0 ? (
         <Card>
-          <CardContent className="space-y-3 py-10 text-center">
+          <CardContent className="space-y-2 py-6 text-center">
             <h2 className="font-display text-2xl font-medium">No clients yet</h2>
             <p className="text-sm text-muted-foreground">
               Enter an address, pick the work, and fill the details that price it. The house, the
@@ -135,10 +135,10 @@ function ShopHome() {
           </CardContent>
         </Card>
       ) : (
-        <section className="space-y-3">
+        <section className="space-y-2">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-medium">Client List</h2>
+              <h2 className="font-display text-lg font-medium">Client List</h2>
               <p className="text-sm text-muted-foreground">
                 {propertyCount} {propertyCount === 1 ? "property" : "properties"} · {jobCount}{" "}
                 {jobCount === 1 ? "job" : "jobs"}
@@ -180,9 +180,9 @@ function ShopHome() {
       )}
 
       {proposals.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-2">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 className="font-display text-xl font-medium">Recent quotes</h2>
+            <h2 className="font-display text-lg font-medium">Recent quotes</h2>
             <Button asChild variant="ghost" size="sm">
               <Link to="/app/properties">All jobs</Link>
             </Button>
