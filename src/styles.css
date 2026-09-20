@@ -15,8 +15,8 @@
   --color-muted-foreground: #5c574f;
   --color-primary: #32d74b;
   --color-primary-foreground: #052e16;
-  --color-secondary: #243a44;
-  --color-secondary-foreground: #f6f3ee;
+  --color-secondary: #0b3a6a;
+  --color-secondary-foreground: #ffffff;
   --color-accent: #32d74b;
   --color-accent-foreground: #052e16;
   --color-border: #ddd6cc;
@@ -28,7 +28,7 @@
   --color-go-foreground: #052e16;
   --color-warning: #b45309;
   --color-warning-foreground: #ffffff;
-  --color-ink: #243a44;
+  --color-ink: #0b3a6a;
   --color-paper: #fffcf7;
   --color-trade-paint: #0b3a6a;
   --color-trade-roof: #1f2937;
