@@ -31,7 +31,7 @@ export function NamedShopInvite({
           type="button"
           disabled
           title="Invite a shop is on Pro"
-          className="inline-flex min-h-11 items-center gap-1 rounded-sm px-3 text-sm font-semibold text-white/40"
+          className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-white/40"
         >
           Invite a shop
           <ChevronDown className="size-4" aria-hidden />
@@ -42,7 +42,7 @@ export function NamedShopInvite({
 
   return (
     <details className="relative">
-      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-sm px-3 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-md px-2 text-xs font-medium text-white/90 hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden">
         Invite a shop
         <ChevronDown className="size-4" aria-hidden />
       </summary>

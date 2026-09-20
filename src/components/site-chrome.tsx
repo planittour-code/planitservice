@@ -255,7 +255,7 @@ export function WizardSteps({
         const current = step === item.n;
         const done = step > item.n;
         const className = cn(
-          "flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-2 text-sm",
+          "flex h-7 w-full items-center justify-center gap-1.5 rounded-md px-2 text-xs",
           current && "bg-primary text-primary-foreground",
           done && "bg-muted text-foreground",
           !current && !done && "bg-card text-muted-foreground shadow-[var(--shadow-border)]",
@@ -352,7 +352,7 @@ export function FileNav({ homeowner = false }: { homeowner?: boolean }) {
           <li key={l.href}>
             <a
               href={l.href}
-              className="inline-flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="inline-flex h-7 items-center rounded-md px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               {l.label}
             </a>

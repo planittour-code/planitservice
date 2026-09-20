@@ -260,7 +260,7 @@ export function HouseRoomsEditor({
               type="button"
               disabled={disabled}
               className={cn(
-                "min-h-11 rounded-md px-3 text-sm shadow-[var(--shadow-border)]",
+                "h-7 rounded-md px-2 text-xs shadow-[var(--shadow-border)]",
                 drainage === choice.value ? "bg-primary text-primary-foreground" : "bg-card",
               )}
               onClick={() => {
@@ -297,7 +297,7 @@ export function HouseRoomsEditor({
           <label
             key={field.key}
             htmlFor={`fact-${field.key}`}
-            className="flex min-h-11 items-center gap-2 rounded-md bg-muted/50 px-2.5 py-2 text-sm shadow-[var(--shadow-border)]"
+            className="flex h-7 items-center gap-2 rounded-md bg-muted/50 px-2 text-xs shadow-[var(--shadow-border)]"
           >
             <input
               id={`fact-${field.key}`}

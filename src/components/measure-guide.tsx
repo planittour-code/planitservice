@@ -44,7 +44,7 @@ export function MeasureGuidePanel({
             type="button"
             onClick={() => setOpenId(g.id)}
             className={cn(
-              "inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm shadow-[var(--shadow-border)]",
+              "inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs shadow-[var(--shadow-border)]",
               openId === g.id
                 ? "bg-secondary text-secondary-foreground"
                 : "bg-background hover:shadow-[var(--shadow-border-hover)]",

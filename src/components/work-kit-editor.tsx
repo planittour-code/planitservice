@@ -415,7 +415,7 @@ function KitLineRow({
           </div>
           <div className="space-y-0.5 sm:col-span-2">
             <Label>Amount</Label>
-            <p className="flex h-8 items-center tabular-nums">{money(kitLineTotal(line.qty, line.price))}</p>
+            <p className="flex h-7 items-center tabular-nums">{money(kitLineTotal(line.qty, line.price))}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -423,7 +423,7 @@ function KitLineRow({
             type="button"
             size="icon"
             variant="outline"
-            className="size-8"
+            className="size-7"
             aria-label="Add image"
             title="Add image"
             onClick={() => photoInput.current?.click()}
@@ -445,7 +445,7 @@ function KitLineRow({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-8"
+            className="size-7"
             aria-label="Remove line"
             title="Remove line"
             onClick={onRemove}

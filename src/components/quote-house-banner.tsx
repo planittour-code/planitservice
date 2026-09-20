@@ -70,7 +70,7 @@ export function QuoteHouseBanner({
   }
 
   const addControl = canAdd ? (
-    <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md bg-card/95 px-3 text-sm font-medium shadow-[var(--shadow-border)]">
+    <label className="inline-flex h-7 cursor-pointer items-center gap-2 rounded-md bg-card/95 px-2 text-xs font-medium shadow-[var(--shadow-border)]">
       <Camera className="size-4" />
       {gallery.length ? "Add photo" : "Add photo"}
       <input

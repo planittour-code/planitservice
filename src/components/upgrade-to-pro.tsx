@@ -63,7 +63,7 @@ export function UpgradeToPro({
         </p>
         <Button
           type="button"
-          className="min-h-11 bg-go text-go-foreground hover:opacity-90"
+          className="bg-go text-go-foreground hover:opacity-90"
           onClick={() => setConfirming(true)}
         >
           Upgrade to Pro
@@ -84,7 +84,7 @@ export function UpgradeToPro({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          className="min-h-11 bg-go text-go-foreground hover:opacity-90"
+          className="bg-go text-go-foreground hover:opacity-90"
           disabled={accept.isPending}
           onClick={() => accept.mutate()}
         >
@@ -93,7 +93,7 @@ export function UpgradeToPro({
         <Button
           type="button"
           variant="outline"
-          className="min-h-11"
+          className=""
           disabled={accept.isPending}
           onClick={() => setConfirming(false)}
         >

@@ -30,8 +30,8 @@ function ShopHome() {
     properties.reduce((n, p) => n + p.job_count + p.open_proposal_count, 0) + namedInvites.length;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-4">
+    <div className="space-y-2">
+      <div className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {company.logo_src ? (

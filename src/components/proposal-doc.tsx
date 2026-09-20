@@ -472,7 +472,7 @@ function ContractorMeta({
             type="button"
             onClick={() => setPhoto(null)}
             className={cn(
-              "min-h-11 rounded-md px-3 text-sm shadow-[var(--shadow-border)]",
+              "h-7 rounded-md px-2 text-xs shadow-[var(--shadow-border)]",
               photo === null ? "bg-primary text-primary-foreground" : "bg-card",
             )}
           >
@@ -728,7 +728,7 @@ function SendEstimateBar({
       </p>
       <Button
         type="button"
-        className="min-h-11 w-full sm:w-auto"
+        className="w-full sm:w-auto"
         disabled={send.isPending}
         onClick={() => send.mutate()}
       >
@@ -769,7 +769,7 @@ function NotifyReviewBar({
       <Button
         type="button"
         variant="outline"
-        className="min-h-11 w-full sm:w-auto"
+        className="w-full sm:w-auto"
         disabled={ping.isPending}
         onClick={() => ping.mutate()}
       >
@@ -800,7 +800,7 @@ function AcceptAllBar({
       </p>
       <Button
         type="button"
-        className="min-h-11 w-full sm:w-auto"
+        className="w-full sm:w-auto"
         disabled={busy}
         data-preview-ok
         onClick={async () => {
@@ -964,7 +964,7 @@ function ProposalLine({
       {mode === "homeowner" && !locked && !lineSettled(item) && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           {item.optional && !hideInclude && (
-            <label className="flex min-h-11 items-center gap-2 text-sm">
+            <label className="flex h-7 items-center gap-2 text-xs">
               <input
                 type="checkbox"
                 checked={item.included}
@@ -991,13 +991,13 @@ function ProposalLine({
             </div>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button type="button" className="min-h-11 flex-1" onClick={() => void acceptLine()}>
+              <Button type="button" className="flex-1" onClick={() => void acceptLine()}>
                 Accept
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11 flex-1"
+                className="flex-1"
                 onClick={() => setNoteOpen(true)}
               >
                 Add Note
@@ -1133,7 +1133,7 @@ function MessageForm({
         }
         rows={3}
       />
-      <Button type="submit" className="min-h-11">
+      <Button type="submit">
         {mode === "homeowner" ? "Send to the shop" : "Add to the history"}
       </Button>
     </form>

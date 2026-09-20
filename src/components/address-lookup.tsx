@@ -148,7 +148,7 @@ export function AddressLookup({ onTease }: { onTease?: (tease: AddressTease) => 
         </label>
         <Button
           type="submit"
-          size="lg"
+          size="sm"
           className="h-14 shrink-0 px-8 text-base"
           disabled={lookup.isPending || query.trim().length < 3}
         >

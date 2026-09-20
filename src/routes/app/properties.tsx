@@ -82,7 +82,7 @@ function PropertiesPage() {
   const emptyShop = houses.length === 0 && work.length === 0 && filteredWork.length === 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-medium tracking-tight">Jobs</h1>
@@ -160,7 +160,7 @@ function ViewTab({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm",
+        "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs",
         active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground shadow-[var(--shadow-border)]",
       )}
     >
@@ -183,7 +183,7 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
   const open = rows.filter((row) => row.kind === "proposal" || row.kind === "invite");
   const done = rows.filter((row) => row.kind === "job");
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {open.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Open</h2>
@@ -277,7 +277,7 @@ function ClientsList({ rows, query }: { rows: ShopClientRow[]; query: string }) 
                 <Link
                   to="/app/properties/$id"
                   params={{ id: house.id }}
-                  className="flex min-h-11 items-center justify-between gap-3 px-3 py-2 text-sm"
+                  className="flex h-7 items-center justify-between gap-3 px-3 text-xs"
                 >
                   <span>{house.address_line}</span>
                   <span className="text-muted-foreground">

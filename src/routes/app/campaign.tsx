@@ -90,7 +90,7 @@ function CampaignPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div>
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Past customers</p>
         <h1 className="font-display text-2xl font-medium tracking-tight">Schedule the next visit</h1>

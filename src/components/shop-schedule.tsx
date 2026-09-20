@@ -194,7 +194,7 @@ function DayJobs({
               <Link
                 to="/app/proposals/$id"
                 params={{ id: item.id }}
-                className="flex min-h-11 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+                className="flex min-h-7 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p className="font-medium">{item.title}</p>

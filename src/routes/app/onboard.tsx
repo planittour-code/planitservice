@@ -368,7 +368,7 @@ function Onboard() {
             {logo ? (
               <img src={logo} alt="" className="h-10 w-auto max-w-[9rem] rounded-md bg-card object-contain p-1.5 shadow-[var(--shadow-border)]" />
             ) : null}
-            <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md bg-card px-4 text-sm shadow-[var(--shadow-border)]">
+            <label className="inline-flex h-7 cursor-pointer items-center rounded-md bg-card px-2 text-xs shadow-[var(--shadow-border)]">
               {logo ? "Change logo" : "Upload logo"}
               <input
                 ref={logoRef}

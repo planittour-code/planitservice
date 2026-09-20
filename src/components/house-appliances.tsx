@@ -113,7 +113,7 @@ export function HouseAppliancesEditor({
                 type="button"
                 disabled={disabled}
                 className={cn(
-                  "min-h-11 rounded-md px-3 text-sm shadow-[var(--shadow-border)]",
+                  "h-7 rounded-md px-2 text-xs shadow-[var(--shadow-border)]",
                   sets === choice ? "bg-primary text-primary-foreground" : "bg-card",
                 )}
                 onClick={() => {

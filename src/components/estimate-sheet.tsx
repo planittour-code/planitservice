@@ -205,7 +205,7 @@ function LineCard({
           <NumField label="Cost" value={row.price} onChange={(v) => onPatch({ price: v })} />
           <div className="space-y-1">
             <Label>Amount</Label>
-            <p className="flex h-8 items-center tabular-nums">{money(lineAmount(row))}</p>
+            <p className="flex h-7 items-center tabular-nums">{money(lineAmount(row))}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -213,7 +213,7 @@ function LineCard({
             type="button"
             size="icon"
             variant="outline"
-            className="size-8"
+            className="size-7"
             aria-label="Add photo"
             title="Add photo"
             onClick={() => photoInput.current?.click()}
@@ -236,7 +236,7 @@ function LineCard({
               type="button"
               size="icon"
               variant="ghost"
-              className="size-8"
+              className="size-7"
               aria-label="Remove line"
               title="Remove line"
               onClick={onRemove}

@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-primary text-sm font-medium tracking-normal transition-[opacity,transform,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
+  "inline-flex h-7 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-primary px-2 text-xs font-medium tracking-normal transition-[opacity,transform,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:size-3 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -16,10 +16,10 @@ const buttonVariants = cva(
         link: "border-primary text-secondary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-8 px-3 text-sm",
-        sm: "h-7 rounded-md px-2 text-xs",
-        lg: "h-9 px-4 text-sm",
-        icon: "size-8",
+        default: "h-7 px-2 text-xs",
+        sm: "h-7 px-2 text-xs",
+        lg: "h-7 px-2 text-xs",
+        icon: "size-7 p-0",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

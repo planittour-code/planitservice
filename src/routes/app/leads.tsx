@@ -18,7 +18,7 @@ function LeadsPage() {
   const place = [area?.city, area?.zip].filter(Boolean).join(" ");
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div>
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Request Estimates</p>
         <h1 className="font-display text-2xl font-medium tracking-tight">Leads in your area</h1>

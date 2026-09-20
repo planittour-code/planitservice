@@ -95,7 +95,7 @@ function SettingsPage() {
   const publicUrl = company.slug ? `https://planitservice.com/s/${company.slug}` : "";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div>
         <h1 className="font-display text-2xl font-medium tracking-tight">Shop settings</h1>
         <p className="text-muted-foreground">This name appears on proposals and invitations.</p>
@@ -120,7 +120,7 @@ function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setPickingTrades(true)}
-                className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
+                className="inline-flex h-7 items-center rounded-md border border-border bg-background px-2 text-xs"
               >
                 {work.name}
               </button>
@@ -130,7 +130,7 @@ function SettingsPage() {
             <button
               type="button"
               onClick={() => setPickingTrades(true)}
-              className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
+              className="inline-flex h-7 items-center rounded-md border border-border bg-background px-2 text-xs"
             >
               +Add
             </button>
@@ -209,7 +209,7 @@ function SettingsPage() {
           {logo ? (
             <img src={logo} alt="" className="h-10 w-auto max-w-[9rem] object-contain" />
           ) : null}
-          <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md bg-card px-4 text-sm shadow-[var(--shadow-border)]">
+          <label className="inline-flex h-7 cursor-pointer items-center rounded-md bg-card px-2 text-xs shadow-[var(--shadow-border)]">
             {logo ? "Change logo" : "Upload logo"}
             <input
               type="file"
