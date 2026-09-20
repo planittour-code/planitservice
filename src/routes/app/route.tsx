@@ -29,7 +29,7 @@ function AppLayout() {
   if (isPending || (user && audiencePending)) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="mx-auto max-w-7xl px-3 py-4">
+        <div className="mx-auto max-w-[90rem] px-3 py-4">
           <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
         </div>
       </div>
@@ -64,6 +64,7 @@ function AppLayout() {
     <div className="min-h-screen bg-background">
       <SignedInHeader
         to="/app"
+        max="max-w-[90rem]"
         mobileNav={
           onboardPath ? undefined : (
             <nav className="flex gap-1 overflow-x-auto border-t border-white/10 px-2 py-0.5 sm:hidden">
@@ -100,7 +101,7 @@ function AppLayout() {
           <UserButton tone="dark" />
         </div>
       </SignedInHeader>
-      <div className="mx-auto max-w-7xl px-3 py-3 sm:px-4 sm:py-4">
+      <div className="mx-auto max-w-[90rem] px-3 py-3 sm:px-4 sm:py-4">
         <Outlet />
       </div>
     </div>
