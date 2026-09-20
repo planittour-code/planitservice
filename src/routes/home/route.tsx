@@ -46,7 +46,7 @@ function HomeLayout() {
           <UserButton tone="dark" />
         </nav>
       </SignedInHeader>
-      <div className="mx-auto max-w-5xl px-5 py-5">
+      <div className="mx-auto max-w-5xl px-5 py-6 sm:px-6 sm:py-8">
         <Outlet />
       </div>
     </div>

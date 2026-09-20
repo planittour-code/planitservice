@@ -73,7 +73,7 @@ function AccountPage() {
       <main className="mx-auto max-w-3xl space-y-8 px-5 py-10">
         <div>
           <p className="text-sm tracking-wide text-muted-foreground uppercase">Account</p>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight">
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
             {data?.name ?? user.displayName ?? "You"}
           </h1>
           <p className="mt-1 text-muted-foreground">{data?.email ?? user.primaryEmail}</p>

@@ -67,14 +67,14 @@ export function PublicHeader({
   const { user, isPending } = useCurrentUserState();
   const lane = path ?? (home === "/shop" ? "contractor" : "choose");
   return (
-    <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-secondary text-secondary-foreground">
       <div
         className={cn(
-          "mx-auto flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5",
-          compact ? "max-w-3xl py-1.5" : "max-w-6xl py-1.5 sm:py-2.5",
+          "mx-auto flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6",
+          compact ? "max-w-3xl py-2.5" : "max-w-5xl py-2.5 sm:py-3",
         )}
       >
-        <Wordmark to="/" className="text-secondary-foreground [&_span]:text-white" />
+        <Wordmark to="/" className="text-secondary-foreground" />
         <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2">
           {lane === "choose" &&
             (isPending ? (
@@ -168,7 +168,7 @@ function HeaderLink({
       search={search as never}
       hash={hash}
       className={cn(
-        "rounded-sm px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white",
+        "rounded-md px-3 py-2 text-sm font-medium text-secondary-foreground/85 hover:bg-white/10 hover:text-secondary-foreground",
         hideOnMobile && "hidden sm:inline-flex",
       )}
     >
@@ -180,7 +180,7 @@ function HeaderLink({
 export function PageFooter({ shop = false }: { shop?: boolean }) {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-5 py-10 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <span>
           {shop
             ? "Know the house before you start talking."
@@ -285,7 +285,7 @@ export function WizardSteps({
 
 export function SignedInHeader({
   to,
-  max = "max-w-6xl",
+  max = "max-w-5xl",
   children,
   mobileNav,
 }: {
@@ -295,9 +295,9 @@ export function SignedInHeader({
   mobileNav?: ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-30 bg-secondary text-secondary-foreground">
-      <div className={cn("mx-auto flex flex-wrap items-center gap-2 px-4 py-1.5 sm:px-5", max)}>
-        <Wordmark to={to} className="text-secondary-foreground [&_span]:text-white" />
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-secondary text-secondary-foreground">
+      <div className={cn("mx-auto flex flex-wrap items-center gap-2 px-4 py-2.5 sm:px-6", max)}>
+        <Wordmark to={to} className="text-secondary-foreground" />
         {children}
       </div>
       {mobileNav}
@@ -317,7 +317,7 @@ export function AppNavLink({
   return (
     <Link
       to={to as never}
-      className="inline-flex min-h-11 shrink-0 items-center rounded-sm px-3 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white [&.active]:bg-white/15 [&.active]:text-white"
+      className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-secondary-foreground/85 hover:bg-white/10 hover:text-secondary-foreground [&.active]:bg-white/12 [&.active]:text-secondary-foreground"
       activeOptions={{ exact }}
     >
       {children}

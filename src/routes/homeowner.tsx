@@ -82,13 +82,13 @@ function StartHouseRecord() {
             alt="Homeowners reviewing house photos on the porch"
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/70" />
-          <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-5 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
+          <div className="absolute inset-0 bg-ink/55" />
+          <div className="relative mx-auto grid max-w-5xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
-              <p className="text-sm font-bold tracking-[0.16em] text-primary uppercase">
+              <p className="text-sm font-medium tracking-wide text-primary">
                 For the homeowner
               </p>
-              <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-white md:text-5xl">
+              <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white md:text-5xl">
                 The house keeps the record. The shops who worked it stay on it.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
@@ -109,7 +109,7 @@ function StartHouseRecord() {
 
             <div id="signup" className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
               <p className="text-sm tracking-wide text-muted-foreground uppercase">Start a Property Record</p>
-              <p className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+              <p className="mt-2 font-display text-3xl font-semibold tracking-tight">
                 ${dollars(cadence === "annual" ? annual : monthly)}
                 <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">
                   / {cadence === "annual" ? "year" : "month"}
@@ -268,7 +268,7 @@ function StartHouseRecord() {
         </section>
 
         <section className="border-t border-border">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-5 md:grid-cols-3">
+          <div className="mx-auto grid max-w-5xl gap-8 px-4 py-16 sm:px-5 md:grid-cols-3">
             <Proof
               photo="/houses/maple-front.jpg"
               kicker="Keep the file"
@@ -292,7 +292,7 @@ function StartHouseRecord() {
 
         <section className="border-t border-border bg-card/40">
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 px-4 py-16 text-center sm:px-5">
-            <h2 className="font-display text-3xl font-extrabold tracking-tight">
+            <h2 className="font-display text-3xl font-semibold tracking-tight">
               Stop hunting for the last receipt.
             </h2>
             <p className="max-w-xl text-muted-foreground leading-relaxed">

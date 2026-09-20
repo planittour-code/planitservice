@@ -169,10 +169,10 @@ function Login() {
       </PublicHeader>
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-8 md:grid-cols-2 md:items-center">
         <div className="space-y-4">
-          <p className="text-sm font-bold tracking-[0.16em] text-secondary uppercase">
+          <p className="text-sm font-medium tracking-wide text-secondary">
             {homeowner ? "For the homeowner" : manager ? "For property managers" : "For contractors"}
           </p>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight md:text-5xl">
+          <h1 className="font-display text-4xl font-semibold tracking-tight md:text-5xl">
             {homeowner
               ? "Keep the record. Call the shop back."
               : manager

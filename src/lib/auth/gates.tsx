@@ -61,7 +61,7 @@ export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
         to="/account"
         className={
           dark
-            ? "flex min-h-11 items-center gap-2 rounded-sm px-1 text-white hover:bg-white/10"
+            ? "flex min-h-11 items-center gap-2 rounded-md px-1 text-secondary-foreground hover:bg-white/10"
             : "flex min-h-11 items-center gap-2 rounded-sm px-1 hover:bg-muted"
         }
         aria-label="Account"
@@ -76,7 +76,7 @@ export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
           <span
             className={
               dark
-                ? "grid h-8 w-8 place-items-center rounded-full bg-white/15 text-sm font-semibold text-white"
+                ? "grid h-8 w-8 place-items-center rounded-full bg-white/15 text-sm font-medium text-secondary-foreground"
                 : "grid h-8 w-8 place-items-center rounded-full bg-muted text-sm font-semibold"
             }
           >
@@ -95,7 +95,7 @@ export function UserButton({ tone = "light" }: { tone?: "light" | "dark" }) {
           }}
           className={
             dark
-              ? "cursor-pointer text-sm font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline disabled:opacity-70"
+              ? "cursor-pointer text-sm font-medium text-secondary-foreground/80 underline-offset-4 hover:text-secondary-foreground hover:underline disabled:opacity-70"
               : "cursor-pointer text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-70"
           }
         >

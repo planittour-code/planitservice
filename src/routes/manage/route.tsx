@@ -32,7 +32,7 @@ function ManageFrame() {
   if (!justSignedOut() && authReady && audience.hats.manager) {
     return (
       <div className="min-h-screen bg-background">
-        <SignedInHeader to="/manage" max="max-w-6xl">
+        <SignedInHeader to="/manage" max="max-w-5xl">
           <nav className="ml-auto flex items-center gap-1">
             <AppNavLink to="/manage" exact>
               Work
@@ -45,7 +45,7 @@ function ManageFrame() {
             <UserButton tone="dark" />
           </nav>
         </SignedInHeader>
-        <div className="mx-auto max-w-6xl px-5 py-5">
+        <div className="mx-auto max-w-5xl px-5 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </div>
       </div>
@@ -86,13 +86,13 @@ function ManageMarketing() {
             alt="A property manager checking houses on a clipboard"
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/70" />
-          <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-5 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
+          <div className="absolute inset-0 bg-ink/55" />
+          <div className="relative mx-auto grid max-w-5xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
-              <p className="text-sm font-bold tracking-[0.16em] text-primary uppercase">
+              <p className="text-sm font-medium tracking-wide text-primary">
                 For property managers
               </p>
-              <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-white md:text-5xl">
+              <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white md:text-5xl">
                 Records, a calendar, and Request Estimates.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
@@ -142,9 +142,9 @@ function ManageMarketing() {
         </section>
 
         <section id="pricing" className="border-t border-border bg-card/40">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-[1fr_1fr] md:items-center">
+          <div className="mx-auto grid max-w-5xl gap-10 px-5 py-16 md:grid-cols-[1fr_1fr] md:items-center">
             <div className="space-y-4">
-              <h2 className="font-display text-3xl font-extrabold tracking-tight">
+              <h2 className="font-display text-3xl font-semibold tracking-tight">
                 A portfolio, not ten homeowner plans.
               </h2>
               <p className="text-muted-foreground">
@@ -160,7 +160,7 @@ function ManageMarketing() {
             </div>
             <div className="rounded-xl bg-primary p-6 text-primary-foreground shadow-[var(--shadow-border)] sm:p-8">
               <p className="text-sm tracking-wide uppercase opacity-80">The portfolio</p>
-              <p className="mt-3 font-display text-5xl font-extrabold tracking-tight">
+              <p className="mt-3 font-display text-5xl font-semibold tracking-tight">
                 ${dollars(MANAGE_MONTHLY)}
                 <span className="ml-2 text-lg font-sans font-normal opacity-80">/ month</span>
               </p>
@@ -215,7 +215,7 @@ function SignedInOpenPortfolio() {
   return (
     <div className="space-y-3">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>
-      <p className="font-display text-2xl font-extrabold tracking-tight">Open a portfolio on this login</p>
+      <p className="font-display text-2xl font-semibold tracking-tight">Open a portfolio on this login</p>
       <p className="text-sm text-muted-foreground">
         Pay for the office, then add the houses you manage. Card details stay on Stripe.
       </p>

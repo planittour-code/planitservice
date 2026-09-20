@@ -1,35 +1,35 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @theme {
-  --font-sans: "Barlow", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Barlow Condensed", "Barlow", "Segoe UI", sans-serif;
+  --font-sans: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Source Serif 4", "Georgia", "Times New Roman", serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --color-background: #ffffff;
-  --color-foreground: #1a1a1a;
-  --color-card: #ffffff;
-  --color-card-foreground: #1a1a1a;
-  --color-muted: #f3f4f6;
-  --color-muted-foreground: #4b5563;
+  --color-background: #f6f3ee;
+  --color-foreground: #2a2723;
+  --color-card: #fffcf7;
+  --color-card-foreground: #2a2723;
+  --color-muted: #ece7df;
+  --color-muted-foreground: #5c574f;
   --color-primary: #32d74b;
   --color-primary-foreground: #052e16;
-  --color-secondary: #0b3a6a;
-  --color-secondary-foreground: #ffffff;
+  --color-secondary: #243a44;
+  --color-secondary-foreground: #f6f3ee;
   --color-accent: #32d74b;
   --color-accent-foreground: #052e16;
-  --color-border: #e5e7eb;
-  --color-input: #d1d5db;
-  --color-ring: #0b3a6a;
+  --color-border: #ddd6cc;
+  --color-input: #cfc8bd;
+  --color-ring: #2f6b3a;
   --color-destructive: #b42318;
   --color-destructive-foreground: #ffffff;
   --color-go: #32d74b;
   --color-go-foreground: #052e16;
   --color-warning: #b45309;
   --color-warning-foreground: #ffffff;
-  --color-ink: #0b3a6a;
-  --color-paper: #ffffff;
+  --color-ink: #243a44;
+  --color-paper: #fffcf7;
   --color-trade-paint: #0b3a6a;
   --color-trade-roof: #1f2937;
   --color-trade-windows: #1d4e89;
@@ -42,12 +42,12 @@
   --color-trade-pool: #1d4e89;
   --color-trade-lawn: #0b3a6a;
 
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius: 6px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius: 8px;
 
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-quick: 150ms;
@@ -55,11 +55,11 @@
   --motion-slow: 400ms;
 
   --shadow-border:
-    0 0 0 1px rgb(15 23 42 / 0.08),
-    0 1px 2px rgb(15 23 42 / 0.06);
+    0 0 0 1px rgb(42 39 35 / 0.08),
+    0 1px 2px rgb(42 39 35 / 0.05);
   --shadow-border-hover:
-    0 0 0 1px rgb(15 23 42 / 0.12),
-    0 4px 12px rgb(15 23 42 / 0.08);
+    0 0 0 1px rgb(42 39 35 / 0.12),
+    0 6px 16px rgb(42 39 35 / 0.08);
 }
 
 @layer base {
@@ -99,6 +99,9 @@
   }
   body {
     font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    letter-spacing: 0.005em;
     padding-bottom: env(safe-area-inset-bottom);
   }
   h1,
@@ -106,19 +109,16 @@
   h3,
   .font-display {
     font-family: var(--font-display);
-  }
-  h1,
-  h2,
-  h3 {
-    letter-spacing: -0.02em;
+    letter-spacing: -0.018em;
+    line-height: 1.2;
   }
   img {
-    outline: 1px solid rgb(15 23 42 / 0.08);
+    outline: 1px solid rgb(42 39 35 / 0.08);
     outline-offset: -1px;
   }
   select {
     appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235c574f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
     background-repeat: no-repeat;
     background-position: right 0.5rem center;
     padding-right: 1.75rem;

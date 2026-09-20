@@ -24,12 +24,12 @@ function WelcomeSite() {
             alt=""
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/70" />
-          <div className="relative mx-auto max-w-3xl space-y-6 px-4 py-16 text-center sm:px-5 md:py-24">
-            <p className="text-sm font-bold tracking-[0.18em] text-primary uppercase">
+          <div className="absolute inset-0 bg-ink/55" />
+          <div className="relative mx-auto max-w-3xl space-y-6 px-4 py-16 text-center sm:px-6 md:py-24">
+            <p className="text-sm font-medium tracking-wide text-primary">
               PlanitService
             </p>
-            <h1 className="font-display text-5xl font-extrabold tracking-tight text-balance text-white md:text-7xl">
+            <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl md:text-6xl">
               The file for the house. The service with a plan.
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-white/90">
@@ -53,7 +53,7 @@ function WelcomeSite() {
 
         <section className="border-t border-border">
           <div className="mx-auto max-w-5xl px-4 py-14 sm:px-5">
-            <p className="text-center text-sm font-bold tracking-[0.16em] text-secondary uppercase">
+            <p className="text-center text-sm font-medium tracking-wide text-secondary">
               Choose how you use it
             </p>
             <div className="mt-8 grid gap-6 md:grid-cols-3">
@@ -139,7 +139,7 @@ function PathCard({
       <p className={`text-sm tracking-wide uppercase ${emphasis ? "opacity-80" : "text-muted-foreground"}`}>
         {kicker}
       </p>
-      <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight">{title}</h2>
+      <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight">{title}</h2>
       <p className={`mt-4 flex-1 leading-relaxed ${emphasis ? "opacity-90" : "text-muted-foreground"}`}>
         {body}
       </p>

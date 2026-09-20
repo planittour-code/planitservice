@@ -41,14 +41,14 @@ function HomePage() {
             alt="A contractor with a tablet in front of a house and work van"
             className="absolute inset-0 size-full object-cover outline-none"
           />
-          <div className="absolute inset-0 bg-ink/70" />
-          <div className="relative mx-auto max-w-6xl px-5 pb-16 pt-8 md:pt-14">
+          <div className="absolute inset-0 bg-ink/55" />
+          <div className="relative mx-auto max-w-5xl px-5 pb-16 pt-8 md:pt-14">
             <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
               <div className="space-y-6">
-                <p className="text-sm font-bold tracking-[0.16em] text-primary uppercase">
+                <p className="text-sm font-medium tracking-wide text-primary">
                   For contractors
                 </p>
-                <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-white sm:text-5xl md:text-6xl">
+                <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl md:text-6xl">
                   Turn one job into the next visit.
                 </h1>
                 <p className="max-w-xl text-lg leading-relaxed text-pretty text-primary-foreground/80">
@@ -74,7 +74,7 @@ function HomePage() {
               </div>
             </div>
             {tease && (
-              <div className="mx-auto mt-10 max-w-6xl text-foreground">
+              <div className="mx-auto mt-10 max-w-5xl text-foreground">
                 <TeaseCard tease={tease} />
               </div>
             )}
@@ -85,7 +85,7 @@ function HomePage() {
 
         <section className="border-t border-border bg-card/40">
           <div className="mx-auto max-w-xl space-y-8 px-5 py-16">
-            <h2 className="text-center font-display text-3xl font-extrabold tracking-tight text-balance md:text-4xl">
+            <h2 className="text-center font-display text-3xl font-semibold tracking-tight text-balance md:text-4xl">
               A little homework can remove a lot of guesswork.
             </h2>
             <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
@@ -119,9 +119,9 @@ function HomePage() {
         </section>
 
         <section id="pricing" className="border-t border-border bg-card/40">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-[1fr_1fr] md:items-center">
+          <div className="mx-auto grid max-w-5xl gap-10 px-5 py-16 md:grid-cols-[1fr_1fr] md:items-center">
             <div className="space-y-4">
-              <h2 className="font-display text-3xl font-extrabold tracking-tight">
+              <h2 className="font-display text-3xl font-semibold tracking-tight">
                 Getting to Approval has never been easier.
               </h2>
               <img
@@ -145,7 +145,7 @@ function HomePage() {
             </div>
             <div className="rounded-xl bg-primary p-6 text-primary-foreground shadow-[var(--shadow-border)] sm:p-8">
               <p className="text-sm tracking-wide uppercase opacity-80">The shop</p>
-              <p className="mt-3 font-display text-5xl font-extrabold tracking-tight">
+              <p className="mt-3 font-display text-5xl font-semibold tracking-tight">
                 ${dollars(SHOP_MONTHLY)}
                 <span className="ml-2 text-lg font-sans font-normal opacity-80">/ category / month</span>
               </p>
@@ -196,7 +196,7 @@ function SignedInOpenShop() {
   return (
     <div className="space-y-3">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>
-      <p className="font-display text-2xl font-extrabold tracking-tight">Open a shop on this login</p>
+      <p className="font-display text-2xl font-semibold tracking-tight">Open a shop on this login</p>
       <p className="text-sm text-muted-foreground">
         Pay for the shop, then quote from the Property Record. Card details stay on Stripe.
       </p>

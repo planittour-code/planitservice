@@ -8,7 +8,7 @@ export function Mark({ className }: { className?: string }) {
     <img
       src={LOGO_SRC}
       alt=""
-      className={cn("size-8 shrink-0 rounded-sm object-cover outline-none", className)}
+      className={cn("size-8 shrink-0 rounded-md object-cover outline-none", className)}
       aria-hidden
     />
   );
@@ -16,9 +16,9 @@ export function Mark({ className }: { className?: string }) {
 
 export function Wordmark({ className, to = "/" }: { className?: string; to?: string }) {
   return (
-    <Link to={to} className={cn("flex items-center gap-2", className)}>
-      <Mark className="size-20" />
-      <span className="font-display text-xl font-extrabold uppercase tracking-wide text-inherit">
+    <Link to={to} className={cn("flex items-center gap-2.5", className)}>
+      <Mark className="size-10" />
+      <span className="font-display text-lg font-semibold tracking-tight text-inherit">
         PlanitService
       </span>
     </Link>

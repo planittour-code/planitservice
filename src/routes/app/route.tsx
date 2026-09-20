@@ -29,7 +29,7 @@ function AppLayout() {
   if (isPending || (user && audiencePending)) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="mx-auto max-w-6xl px-5 py-6">
+        <div className="mx-auto max-w-5xl px-5 py-6">
           <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
         </div>
       </div>
@@ -100,7 +100,7 @@ function AppLayout() {
           <UserButton tone="dark" />
         </div>
       </SignedInHeader>
-      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 sm:py-5">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         <Outlet />
       </div>
     </div>
