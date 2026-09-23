@@ -139,7 +139,7 @@ function PriceBookPage() {
         <div>
           <h1 className="font-display text-2xl font-medium tracking-tight">Materials</h1>
           <p className="mt-1 text-muted-foreground">
-            Quotes pick a work category, then one or more sub-categories. Edit the lines here. Cost
+            Quotes pick a work category, then a pre-saved template. Edit the lines here. Cost
             and sell stay in the shop — the homeowner sees the sell price.
             {!owner
               ? " Changes here stay on your page and do not change the shop owner's materials."
@@ -158,7 +158,7 @@ function PriceBookPage() {
       <div>
         <h2 className="font-display text-lg font-medium">Products</h2>
         <p className="text-sm text-muted-foreground">
-          What this shop buys and sells. Sub-category lines can set a price.
+          What this shop buys and sells. Template lines can set a price.
         </p>
       </div>
 

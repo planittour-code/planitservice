@@ -61,6 +61,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   }, [kits, categories, offeredIds]);
 
   const [editing, setEditing] = useState<WorkKit | "new" | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const save = useMutation({
     mutationFn: (input: {
@@ -69,9 +70,10 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
       name: string;
       items: DraftLine[];
     }) => saveWorkKit({ data: input }),
-    onSuccess: () => {
-      toast.success("Sub-category saved");
+    onSuccess: (saved) => {
+      toast.success("Template saved");
       setEditing(null);
+      setSelectedId(saved?.id ?? null);
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
@@ -79,7 +81,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   const remove = useMutation({
     mutationFn: (id: string) => deleteWorkKit({ data: id }),
     onSuccess: () => {
-      toast.success("Sub-category removed");
+      toast.success("Template removed");
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
@@ -87,20 +89,22 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   const seed = useMutation({
     mutationFn: (workId: string) => seedWorkKits({ data: { workId } }),
     onSuccess: () => {
-      toast.success("Starter sub-categories loaded");
+      toast.success("Starter templates loaded");
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not load starters"),
   });
 
+  const selected = kits.find((kit) => kit.id === selectedId) ?? null;
+  const selectedOpen = selected && editing !== "new" && editing?.id === selected.id;
+
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-medium">Sub-categories</h2>
+          <h2 className="font-display text-lg font-medium">Pre-Saved Templates</h2>
           <p className="text-sm text-muted-foreground">
-            Quotes pick a work category, then one or more sub-categories. Starters load for each
-            trade you offer — edit the lines any time.
+            Pick a template to see its lines. Quotes use these after the work category.
           </p>
         </div>
         {owner && (
@@ -111,7 +115,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
               </Button>
             )}
             <Button type="button" variant="outline" onClick={() => setEditing("new")}>
-              Add a sub-category
+              Add a template
             </Button>
           </div>
         )}
@@ -129,7 +133,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
       )}
 
       {(q.isLoading || !tradesReady) && (
-        <p className="text-sm text-muted-foreground">Loading sub-categories…</p>
+        <p className="text-sm text-muted-foreground">Loading templates…</p>
       )}
       {tradesReady && !q.isLoading && grouped.length === 0 && (
         <p className="rounded-xl bg-card px-4 py-6 text-sm text-muted-foreground shadow-[var(--shadow-border)]">
@@ -140,8 +144,8 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
         <div key={workId} className="space-y-2">
           <h3 className="text-xs tracking-wide text-muted-foreground uppercase">{workLabel(workId)}</h3>
           {rows.length === 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card px-4 py-4 text-sm shadow-[var(--shadow-border)]">
-              <p className="text-muted-foreground">No sub-categories yet.</p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
+              <p className="text-muted-foreground">No templates yet.</p>
               {owner && hasKitSeed(workId) ? (
                 <Button
                   type="button"
@@ -154,15 +158,15 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                 </Button>
               ) : owner ? (
                 <Button type="button" size="sm" variant="outline" onClick={() => setEditing("new")}>
-                  Add a sub-category
+                  Add a template
                 </Button>
               ) : null}
             </div>
           ) : (
-            <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            <div className="space-y-2">
               {owner && missingSeedKitNames(workId, rows.map((kit) => kit.name)).length > 0 ? (
-                <li className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
+                  <p className="text-muted-foreground">
                     {missingSeedKitNames(workId, rows.map((kit) => kit.name)).join(", ")} can be loaded as a starter.
                   </p>
                   <Button
@@ -174,81 +178,85 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                   >
                     {seed.isPending ? "Loading…" : "Load missing starters"}
                   </Button>
-                </li>
+                </div>
               ) : null}
-              {rows.map((kit) => {
-                const open = editing !== "new" && editing?.id === kit.id;
-                return (
-                <li
-                  key={kit.id}
-                  className={
-                    open
-                      ? "bg-muted/70 p-3 ring-1 ring-inset ring-ring"
-                      : "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                  }
-                >
-                  {open && owner ? (
-                    <KitForm
-                      key={kit.id}
-                      initial={kit}
-                      categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-                      pending={save.isPending}
-                      onCancel={() => setEditing(null)}
-                      onSave={(row) => save.mutate(row)}
-                    />
-                  ) : (
-                    <div className="w-full space-y-3">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="font-medium">{kit.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
-                          </p>
-                        </div>
-                        {owner && (
-                          <div className="flex gap-2">
-                            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(kit)}>
-                              Edit
-                            </Button>
-                            <Button type="button" size="sm" variant="ghost" onClick={() => remove.mutate(kit.id)}>
-                              Remove
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      <ul className="space-y-2">
-                        {kit.items.map((item) => (
-                          <li
-                            key={item.id}
-                            className="grid gap-2 rounded-lg bg-background px-3 py-2 text-sm shadow-[var(--shadow-border)] sm:grid-cols-12 sm:items-center"
-                          >
-                            <p className="font-medium sm:col-span-5">{item.name}</p>
-                            <p className="text-muted-foreground sm:col-span-2">
-                              <span className="mr-1 text-xs tracking-wide uppercase">Quantity</span>
-                              {item.qty?.trim() || "—"}
-                            </p>
-                            <p className="text-muted-foreground sm:col-span-2">
-                              <span className="mr-1 text-xs tracking-wide uppercase">Cost</span>
-                              {item.price != null ? money(item.price) : "—"}
-                            </p>
-                            <p className="tabular-nums sm:col-span-3">
-                              <span className="mr-1 text-xs tracking-wide text-muted-foreground uppercase">
-                                Amount
-                              </span>
-                              {money(kitLineTotal(item.qty, item.price))}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </li>
-                );
-              })}
-            </ul>
+              <ul className="grid w-full max-w-[16rem] grid-cols-2 gap-1.5">
+                {rows.map((kit) => {
+                  const on = selectedId === kit.id;
+                  return (
+                    <li key={kit.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedId(on ? null : kit.id);
+                          if (editing !== "new") setEditing(null);
+                        }}
+                        className={
+                          on
+                            ? "flex aspect-square w-full items-center justify-center rounded-lg bg-primary px-1.5 text-center text-xs font-medium leading-tight text-primary-foreground"
+                            : "flex aspect-square w-full items-center justify-center rounded-lg bg-card px-1.5 text-center text-xs font-medium leading-tight shadow-[var(--shadow-border)]"
+                        }
+                      >
+                        <span className="line-clamp-3">{kit.name}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
         </div>
       ))}
+
+      {selected && (
+        <div className="space-y-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]">
+          {selectedOpen && owner ? (
+            <KitForm
+              key={selected.id}
+              initial={selected}
+              categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+              pending={save.isPending}
+              onCancel={() => setEditing(null)}
+              onSave={(row) => save.mutate(row)}
+            />
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">{selected.name}</p>
+                {owner && (
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => setEditing(selected)}>
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        remove.mutate(selected.id);
+                        setSelectedId(null);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <ul className="space-y-1">
+                {selected.items.map((item) => (
+                  <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
+                    <p className="min-w-0 flex-1 font-medium">{item.name}</p>
+                    <p className="text-muted-foreground">
+                      {item.qty?.trim() || "—"} · {item.price != null ? money(item.price) : "—"} ·{" "}
+                      {money(kitLineTotal(item.qty, item.price))}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -303,7 +311,7 @@ function KitForm({
         onSave({ id: initial?.id, workId, name, items: items.filter((l) => l.name.trim()) });
       }}
     >
-      <p className="font-display text-lg font-medium">{initial ? `Editing ${initial.name}` : "New sub-category"}</p>
+      <p className="font-display text-lg font-medium">{initial ? `Editing ${initial.name}` : "New template"}</p>
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-0.5">
           <Label htmlFor="kit-work">Work category</Label>
@@ -321,7 +329,7 @@ function KitForm({
           </select>
         </div>
         <div className="space-y-0.5">
-          <Label htmlFor="kit-name">Sub-category</Label>
+          <Label htmlFor="kit-name">Template</Label>
           <Input
             id="kit-name"
             value={name}
