@@ -190,11 +190,14 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                           onClick={() => setEditing(on ? null : kit)}
                           className={
                             on
-                              ? "flex aspect-square w-full items-center justify-center rounded-lg bg-primary px-1.5 text-center text-xs font-medium leading-tight text-primary-foreground"
-                              : "flex aspect-square w-full items-center justify-center rounded-lg bg-card px-1.5 text-center text-xs font-medium leading-tight shadow-[var(--shadow-border)]"
+                              ? "flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-primary px-1.5 text-center text-xs font-medium leading-tight text-primary-foreground"
+                              : "flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-card px-1.5 text-center text-xs font-medium leading-tight shadow-[var(--shadow-border)]"
                           }
                         >
                           <span className="line-clamp-3">{kit.name}</span>
+                          <span className={on ? "text-[11px] font-normal tabular-nums opacity-90" : "text-[11px] font-normal tabular-nums text-muted-foreground"}>
+                            {money(kitTotal(kit.items))}
+                          </span>
                         </button>
                       </li>
                     );
@@ -270,6 +273,8 @@ function KitForm({
     setItems((cur) => (cur.length <= 1 ? [emptyLine()] : cur.filter((_, idx) => idx !== i)));
   }
 
+  const total = items.reduce((sum, line) => sum + kitLineTotal(line.qty, line.price), 0);
+
   return (
     <form
       className="space-y-3 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]"
@@ -318,6 +323,10 @@ function KitForm({
         <Button type="button" variant="outline" onClick={() => setItems((cur) => [...cur, emptyLine()])}>
           Add a line
         </Button>
+        <div className="flex items-baseline justify-between gap-3 pt-1">
+          <p className="text-sm font-medium">Total</p>
+          <p className="text-sm font-medium tabular-nums">{money(total)}</p>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending || !name.trim()}>
@@ -486,6 +495,10 @@ function AutoGrowTextarea({
 
 function kitLineTotal(qty: string | null | undefined, price: string | number | null | undefined) {
   return Math.round(num(qty) * num(price) * 100) / 100;
+}
+
+function kitTotal(items: { qty?: string | null; price?: string | number | null }[]) {
+  return Math.round(items.reduce((sum, item) => sum + kitLineTotal(item.qty, item.price), 0) * 100) / 100;
 }
 
 function downloadCsv(text: string) {
