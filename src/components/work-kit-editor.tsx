@@ -61,7 +61,6 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   }, [kits, categories, offeredIds]);
 
   const [editing, setEditing] = useState<WorkKit | "new" | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const save = useMutation({
     mutationFn: (input: {
@@ -70,10 +69,9 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
       name: string;
       items: DraftLine[];
     }) => saveWorkKit({ data: input }),
-    onSuccess: (saved) => {
+    onSuccess: () => {
       toast.success("Template saved");
       setEditing(null);
-      setSelectedId(saved?.id ?? null);
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
@@ -95,8 +93,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not load starters"),
   });
 
-  const selected = kits.find((kit) => kit.id === selectedId) ?? null;
-  const selectedOpen = selected && editing !== "new" && editing?.id === selected.id;
+  const selected = editing && editing !== "new" ? kits.find((kit) => kit.id === editing.id) ?? editing : null;
 
   return (
     <section className="space-y-3">
@@ -104,7 +101,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
         <div>
           <h2 className="font-display text-lg font-medium">Pre-Saved Templates</h2>
           <p className="text-sm text-muted-foreground">
-            Pick a template to see its lines. Quotes use these after the work category.
+            Pick a template to edit its lines. Quotes use these after the work category.
           </p>
         </div>
         {owner && (
@@ -140,7 +137,9 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
           No work categories yet. Add services under Shop settings, then load starters here.
         </p>
       )}
-      {tradesReady && grouped.map(([workId, rows]) => (
+      {tradesReady && grouped.map(([workId, rows]) => {
+        const openHere = selected?.work_id === workId;
+        return (
         <div key={workId} className="space-y-2">
           <h3 className="text-xs tracking-wide text-muted-foreground uppercase">{workLabel(workId)}</h3>
           {rows.length === 0 ? (
@@ -163,100 +162,66 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
               ) : null}
             </div>
           ) : (
-            <div className="space-y-2">
-              {owner && missingSeedKitNames(workId, rows.map((kit) => kit.name)).length > 0 ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
-                  <p className="text-muted-foreground">
-                    {missingSeedKitNames(workId, rows.map((kit) => kit.name)).join(", ")} can be loaded as a starter.
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={seed.isPending}
-                    onClick={() => seed.mutate(workId)}
-                  >
-                    {seed.isPending ? "Loading…" : "Load missing starters"}
-                  </Button>
-                </div>
-              ) : null}
-              <ul className="grid w-full max-w-[16rem] grid-cols-2 gap-1.5">
-                {rows.map((kit) => {
-                  const on = selectedId === kit.id;
-                  return (
-                    <li key={kit.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedId(on ? null : kit.id);
-                          if (editing !== "new") setEditing(null);
-                        }}
-                        className={
-                          on
-                            ? "flex aspect-square w-full items-center justify-center rounded-lg bg-primary px-1.5 text-center text-xs font-medium leading-tight text-primary-foreground"
-                            : "flex aspect-square w-full items-center justify-center rounded-lg bg-card px-1.5 text-center text-xs font-medium leading-tight shadow-[var(--shadow-border)]"
-                        }
-                      >
-                        <span className="line-clamp-3">{kit.name}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </div>
-      ))}
-
-      {selected && (
-        <div className="space-y-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]">
-          {selectedOpen && owner ? (
-            <KitForm
-              key={selected.id}
-              initial={selected}
-              categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-              pending={save.isPending}
-              onCancel={() => setEditing(null)}
-              onSave={(row) => save.mutate(row)}
-            />
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">{selected.name}</p>
-                {owner && (
-                  <div className="flex gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setEditing(selected)}>
-                      Edit
-                    </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="w-full max-w-[16rem] shrink-0 space-y-2">
+                {owner && missingSeedKitNames(workId, rows.map((kit) => kit.name)).length > 0 ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
+                    <p className="text-muted-foreground">
+                      {missingSeedKitNames(workId, rows.map((kit) => kit.name)).join(", ")} can be loaded as a starter.
+                    </p>
                     <Button
                       type="button"
                       size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        remove.mutate(selected.id);
-                        setSelectedId(null);
-                      }}
+                      variant="outline"
+                      disabled={seed.isPending}
+                      onClick={() => seed.mutate(workId)}
                     >
-                      Remove
+                      {seed.isPending ? "Loading…" : "Load missing starters"}
                     </Button>
                   </div>
-                )}
+                ) : null}
+                <ul className="grid grid-cols-2 gap-1.5">
+                  {rows.map((kit) => {
+                    const on = selected?.id === kit.id;
+                    return (
+                      <li key={kit.id}>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(on ? null : kit)}
+                          className={
+                            on
+                              ? "flex aspect-square w-full items-center justify-center rounded-lg bg-primary px-1.5 text-center text-xs font-medium leading-tight text-primary-foreground"
+                              : "flex aspect-square w-full items-center justify-center rounded-lg bg-card px-1.5 text-center text-xs font-medium leading-tight shadow-[var(--shadow-border)]"
+                          }
+                        >
+                          <span className="line-clamp-3">{kit.name}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-              <ul className="space-y-1">
-                {selected.items.map((item) => (
-                  <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
-                    <p className="min-w-0 flex-1 font-medium">{item.name}</p>
-                    <p className="text-muted-foreground">
-                      {item.qty?.trim() || "—"} · {item.price != null ? money(item.price) : "—"} ·{" "}
-                      {money(kitLineTotal(item.qty, item.price))}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </>
+              {openHere && owner && selected ? (
+                <div className="min-w-0 flex-1">
+                  <KitForm
+                    key={selected.id}
+                    initial={selected}
+                    categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                    pending={save.isPending}
+                    onCancel={() => setEditing(null)}
+                    onSave={(row) => save.mutate(row)}
+                    onRemove={() => {
+                      remove.mutate(selected.id);
+                      setEditing(null);
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
-      )}
+        );
+      })}
     </section>
   );
 }
@@ -267,12 +232,14 @@ function KitForm({
   pending,
   onCancel,
   onSave,
+  onRemove,
 }: {
   initial: WorkKit | null;
   categories: { id: string; name: string }[];
   pending: boolean;
   onCancel: () => void;
   onSave: (row: { id?: string; workId: string; name: string; items: DraftLine[] }) => void;
+  onRemove?: () => void;
 }) {
   const [workId, setWorkId] = useState(initial?.work_id || categories[0]?.id || "gutters");
   const workOptions =
@@ -352,13 +319,18 @@ function KitForm({
           Add a line
         </Button>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending || !name.trim()}>
           {pending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
+        {onRemove ? (
+          <Button type="button" variant="ghost" onClick={onRemove}>
+            Remove
+          </Button>
+        ) : null}
       </div>
     </form>
   );
