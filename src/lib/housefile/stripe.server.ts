@@ -34,7 +34,8 @@ const LIVE_PRICES: Record<CheckoutKind, string> = {
   pro_annual: "price_1U84k4A3tQnfBXBT8kRJMgGH",
   shop_monthly: "price_1U84ntA3tQnfBXBTLOOhheMh",
   shop_annual: "price_1U84obA3tQnfBXBTHrOLzQ6m",
-  seat_monthly: "price_1U84pZA3tQnfBXBT68DvtKj0",
+  // Extra shop seat — STRIPE_PRICE_SEAT_MONTHLY / prod_V95Ugv4ys4ZZBu, $5/month.
+  seat_monthly: "price_1U8nJaPNiO3QnmB44sb5Hjm8",
   manage_monthly: "price_1UDW4FPNiO3QnmB4qD1pdm0x",
   manage_annual: "price_1UDW5NPNiO3QnmB4d6Ze4U59",
   manage_extra_monthly: "price_1UDW7cPNiO3QnmB4sTmTb7lp",
@@ -113,6 +114,17 @@ export async function createCheckoutSessionUrl(input: {
     officeName: input.officeName ?? "",
     trades: input.trades ?? "",
   };
+  let customerId: string | undefined;
+  if (input.kind === "seat_monthly" && input.userId) {
+    const { getSql } = await import("@/lib/db");
+    const sql = await getSql();
+    const shop = await sql<{ stripe_customer_id: string | null }>`
+      select stripe_customer_id from companies
+      where user_id = ${input.userId} and id <> ${"co_household"}
+      limit 1
+    `;
+    customerId = shop[0]?.stripe_customer_id?.trim() || undefined;
+  }
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price, quantity: input.quantity && input.quantity > 1 ? input.quantity : 1 }],
@@ -121,7 +133,9 @@ export async function createCheckoutSessionUrl(input: {
     allow_promotion_codes: true,
     // 100% staff coupons can complete without a card; paid checkouts still require one.
     payment_method_collection: "if_required",
-    customer_email: input.customerEmail || undefined,
+    ...(customerId
+      ? { customer: customerId }
+      : { customer_email: input.customerEmail || undefined }),
     client_reference_id: input.userId || undefined,
     metadata,
     subscription_data: {
@@ -357,6 +371,68 @@ export async function grantManageExtraSeats(input: {
       where id = ${portfolioId}
     `;
   }
+}
+
+export async function grantShopExtraSeats(input: {
+  userId: string;
+  sessionId: string;
+  quantity: number;
+}) {
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  const rows = await sql<{ id: string; shop_paid_at: Date | string | null }>`
+    select id, shop_paid_at from companies
+    where user_id = ${input.userId} and id <> ${"co_household"}
+    limit 1
+  `;
+  const companyId = rows[0]?.id;
+  if (!companyId) throw new Error("Open a shop before adding sales seats.");
+  if (!rows[0]?.shop_paid_at) {
+    throw new Error("The shop must be paid before adding sales seats.");
+  }
+  const recorded = await sql<{ session_id: string }>`
+    insert into shop_billing_events (session_id, company_id, kind, quantity)
+    values (${input.sessionId}, ${companyId}, ${"seat_monthly"}, ${input.quantity})
+    on conflict (session_id) do nothing
+    returning session_id
+  `;
+  if (recorded[0]) {
+    await sql`
+      update companies
+      set extra_seats = extra_seats + ${input.quantity}
+      where id = ${companyId}
+    `;
+  }
+}
+
+export async function readPaidShopSeatSession(sessionId: string) {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["line_items"] });
+  const kind = session.metadata?.kind ?? "";
+  const paid =
+    session.payment_status === "paid" ||
+    session.payment_status === "no_payment_required" ||
+    session.status === "complete";
+  if (!paid || kind !== "seat_monthly") return { ok: false as const };
+  return {
+    ok: true as const,
+    userId: session.metadata?.userId?.trim() || "",
+    quantity: session.line_items?.data[0]?.quantity ?? 1,
+  };
+}
+
+export async function confirmPaidShopSeatSession(input: { sessionId: string; userId: string }) {
+  const paid = await readPaidShopSeatSession(input.sessionId);
+  if (!paid.ok) return { ok: false as const };
+  if (paid.userId && paid.userId !== input.userId) {
+    throw new Error("That checkout belongs to another account.");
+  }
+  await grantShopExtraSeats({
+    userId: input.userId,
+    sessionId: input.sessionId,
+    quantity: paid.quantity,
+  });
+  return { ok: true as const };
 }
 
 export async function confirmPaidManageSession(input: { sessionId: string; userId: string }) {

@@ -28,6 +28,7 @@ export type Company = {
   slug: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  extra_seats: number;
   created_at: string;
 };
 

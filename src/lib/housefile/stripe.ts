@@ -38,6 +38,10 @@ export function manageSeatKind(cadence: Cadence): CheckoutKind {
   return cadence === "annual" ? "manage_seat_annual" : "manage_seat_monthly";
 }
 
+export function shopSeatKind(_cadence: Cadence = "monthly"): CheckoutKind {
+  return "seat_monthly";
+}
+
 /** After the Property Record is created, send the homeowner to their houses. */
 export function homeownerCheckout(_tier: HomeownerTier, _cadence: Cadence): string {
   return "/home";

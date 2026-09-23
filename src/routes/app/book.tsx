@@ -129,6 +129,7 @@ function PriceBookPage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not import"),
   });
 
+  const canEdit = Boolean(q.data);
   const owner = q.data?.role === "owner";
   const editingId = editing && editing !== "new" ? editing.id : undefined;
 
@@ -140,16 +141,19 @@ function PriceBookPage() {
           <p className="mt-1 text-muted-foreground">
             Quotes pick a work category, then one or more sub-categories. Edit the lines here. Cost
             and sell stay in the shop — the homeowner sees the sell price.
+            {!owner
+              ? " Changes here stay on your page and do not change the shop owner's materials."
+              : ""}
           </p>
         </div>
-        {owner && (
+        {canEdit && (
           <Button type="button" onClick={() => setEditing("new")}>
             Add a product
           </Button>
         )}
       </div>
 
-      {owner && <WorkKitEditor owner={owner} />}
+      {canEdit && <WorkKitEditor owner={canEdit} />}
 
       <div>
         <h2 className="font-display text-lg font-medium">Products</h2>
@@ -186,7 +190,7 @@ function PriceBookPage() {
         onChange={(e) => setFilter(e.target.value)}
       />
 
-      {editing === "new" && owner && items.length > 0 && (
+      {editing === "new" && canEdit && items.length > 0 && (
         <BookForm
           key="new"
           initial={null}
@@ -211,7 +215,7 @@ function PriceBookPage() {
                       : "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
                   )}
                 >
-                  {editingId === item.id && owner ? (
+                  {editingId === item.id && canEdit ? (
                     <BookForm
                       key={item.id}
                       initial={item}
@@ -254,7 +258,7 @@ function PriceBookPage() {
                           ))}
                         </div>
                       </div>
-                      {owner && (
+                      {canEdit && (
                         <div className="flex flex-wrap gap-2">
                           <ProductPhotoButton
                             hasPhoto={Boolean(item.photo)}
@@ -308,12 +312,12 @@ function PriceBookPage() {
             <p className="mx-auto mt-2 max-w-sm text-muted-foreground text-sm">
               Add a product with cost and sell, or paste a CSV from the yard.
             </p>
-            {owner && editing !== "new" && (
+            {canEdit && editing !== "new" && (
               <Button type="button" className="mt-4" onClick={() => setEditing("new")}>
                 Add a product
               </Button>
             )}
-            {owner && editing === "new" && (
+            {canEdit && editing === "new" && (
               <div className="mt-4 text-left">
                 <BookForm
                   key="new"
@@ -329,7 +333,7 @@ function PriceBookPage() {
         )}
       </div>
 
-      {owner && (
+      {canEdit && (
         <section className="space-y-3">
           <h2 className="font-display text-lg font-medium">Upload a CSV</h2>
           <p className="text-sm text-muted-foreground">

@@ -120,6 +120,7 @@ function asCompany(row: Company): Company {
     slug: row.slug ?? null,
     stripe_customer_id: row.stripe_customer_id ?? null,
     stripe_subscription_id: row.stripe_subscription_id ?? null,
+    extra_seats: num(row.extra_seats),
   };
 }
 
@@ -314,10 +315,10 @@ async function shopFor(
   `;
   if (byUser[0]) {
     const { member_role, ...rest } = byUser[0];
-    return {
-      company: await ensureShopSlug(sql, asCompany(rest as Company)),
-      role: member_role === "owner" ? "owner" : "sales",
-    };
+    const company = await ensureShopSlug(sql, asCompany(rest as Company));
+    const role: ShopRole = member_role === "owner" ? "owner" : "sales";
+    if (role === "sales") await copyOwnerCatalogToSales(sql, company.id, userId);
+    return { company, role };
   }
   const normalized = email?.trim().toLowerCase() ?? "";
   if (normalized) {
@@ -331,10 +332,10 @@ async function shopFor(
     if (byEmail[0]) {
       await sql`update company_members set user_id = ${userId} where id = ${byEmail[0].member_id}`;
       const { member_id: _id, member_role, ...rest } = byEmail[0];
-      return {
-        company: await ensureShopSlug(sql, asCompany(rest as Company)),
-        role: member_role === "owner" ? "owner" : "sales",
-      };
+      const company = await ensureShopSlug(sql, asCompany(rest as Company));
+      const role: ShopRole = member_role === "owner" ? "owner" : "sales";
+      if (role === "sales") await copyOwnerCatalogToSales(sql, company.id, userId);
+      return { company, role };
     }
   }
   throw new Error("Open a shop to send estimates.");
@@ -346,6 +347,79 @@ async function requirePaidShop(sql: Sql, userId: string, email?: string | null) 
     throw new Error("Open a shop to send estimates.");
   }
   return shop;
+}
+
+/** Owner catalog is the shared shop copy. Sales catalogs are private copies. */
+function catalogOwnerId(role: ShopRole, userId: string): string | null {
+  return role === "sales" ? userId : null;
+}
+
+async function copyOwnerCatalogToSales(sql: Sql, companyId: string, salesUserId: string) {
+  const company = await sql<{ trades: string | null }>`
+    select trades from companies where id = ${companyId} limit 1
+  `;
+
+  const kits = await sql<{ c: number }>`
+    select count(*)::int as c from work_kits
+    where company_id = ${companyId} and owner_id = ${salesUserId}
+  `;
+  if (num(kits[0]?.c) === 0) {
+    const ownerKits = await sql<Omit<WorkKit, "items">>`
+      select * from work_kits
+      where company_id = ${companyId} and owner_id is null
+      order by work_id, sort_order, name
+    `;
+    if (ownerKits.length === 0) {
+      await seedStarterKits(sql, companyId, parseTradeTokens(company[0]?.trades), salesUserId);
+    } else {
+      for (const kit of ownerKits) {
+        const kitId = crypto.randomUUID();
+        await sql`
+          insert into work_kits (id, company_id, work_id, name, sort_order, owner_id)
+          values (${kitId}, ${companyId}, ${kit.work_id}, ${kit.name}, ${kit.sort_order}, ${salesUserId})
+        `;
+        const lines = await sql<Omit<WorkKitItem, "photos"> & { photos: unknown }>`
+          select * from work_kit_items where kit_id = ${kit.id} order by sort_order
+        `;
+        let order = 0;
+        for (const line of lines) {
+          await sql`
+            insert into work_kit_items (id, kit_id, sort_order, name, description, qty, unit, slot, price, photos)
+            values (
+              ${crypto.randomUUID()}, ${kitId}, ${order}, ${line.name}, ${line.description},
+              ${line.qty}, ${line.unit}, ${line.slot}, ${parseKitPrice(line.price)}, ${kitPhotosPayload(parseKitPhotos(line.photos))}
+            )
+          `;
+          order += 1;
+        }
+      }
+    }
+  }
+
+  const products = await sql<{ c: number }>`
+    select count(*)::int as c from price_book
+    where company_id = ${companyId} and owner_id = ${salesUserId}
+  `;
+  if (num(products[0]?.c) > 0) return;
+
+  const ownerBook = await sql<PriceBookItem>`
+    select * from price_book
+    where company_id = ${companyId} and owner_id is null and active = true
+  `;
+  for (const row of ownerBook) {
+    await sql`
+      insert into price_book (
+        id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
+        cost, sell, warranty_years, warranty_terms, photo, owner_id
+      ) values (
+        ${crypto.randomUUID()}, ${companyId}, ${row.trade}, ${row.slot}, ${row.manufacturer},
+        ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
+        ${row.cost == null ? null : num(row.cost)}, ${row.sell == null ? null : num(row.sell)},
+        ${row.warranty_years == null ? null : num(row.warranty_years)}, ${row.warranty_terms},
+        ${row.photo ?? null}, ${salesUserId}
+      )
+    `;
+  }
 }
 
 async function companyFor(sql: Sql, userId: string, email?: string | null): Promise<Company> {
@@ -362,7 +436,9 @@ async function ensureOwnerMember(sql: Sql, company: Company, email?: string | nu
 }
 
 async function ensureStarterBook(sql: Sql, companyId: string) {
-  const count = await sql<{ c: number }>`select count(*)::int as c from price_book where company_id = ${companyId}`;
+  const count = await sql<{ c: number }>`
+    select count(*)::int as c from price_book where company_id = ${companyId} and owner_id is null
+  `;
   if (num(count[0]?.c) > 0) return;
   for (const row of STARTER_BOOK) {
     await sql`
@@ -1299,7 +1375,8 @@ export const updateCompany = createServerFn({ method: "POST" })
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
-    const company = await companyFor(sql, context.userId, session?.email);
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can change shop settings.");
     const name = data.name.trim() || company.name;
     await sql`
       update companies
@@ -1403,7 +1480,10 @@ export const completeOnboard = createServerFn({ method: "POST" })
           onboarded_at = ${new Date().toISOString()}
       where id = ${company.id}
     `;
-    await sql`update price_book set active = false, updated_at = now() where company_id = ${company.id}`;
+    await sql`
+      update price_book set active = false, updated_at = now()
+      where company_id = ${company.id} and owner_id is null
+    `;
     const allowed = new Set(
       trades.map((id) => WORK_BY_ID[id]?.trade).filter((trade): trade is string => Boolean(trade)),
     );
@@ -1556,9 +1636,17 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       : [];
     const takeoff = data.takeoff ?? {};
     const work = workFromId(takeoff.__work) ?? (template ? workForTemplate(template.id) : undefined);
-    const bookRows = await sql<PriceBookItem>`
-      select * from price_book where company_id = ${company.id} and active = true
-    `;
+    const catalogOwner = catalogOwnerId(role, context.userId);
+    if (catalogOwner) await copyOwnerCatalogToSales(sql, company.id, catalogOwner);
+    const bookRows = catalogOwner
+      ? await sql<PriceBookItem>`
+          select * from price_book
+          where company_id = ${company.id} and active = true and owner_id = ${catalogOwner}
+        `
+      : await sql<PriceBookItem>`
+          select * from price_book
+          where company_id = ${company.id} and active = true and owner_id is null
+        `;
     const book = bookRows.map(hydrateBook);
     const estimate = parseEstimateLines(takeoff[ESTIMATE_KEY]);
     const priced = estimateReady(estimate)
@@ -2707,9 +2795,19 @@ export const listPriceBook = createServerFn({ method: "GET" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    const rows = await sql<PriceBookItem>`
-      select * from price_book where company_id = ${company.id} order by trade, slot, product_name
-    `;
+    const ownerId = catalogOwnerId(role, context.userId);
+    if (ownerId) await copyOwnerCatalogToSales(sql, company.id, ownerId);
+    const rows = ownerId
+      ? await sql<PriceBookItem>`
+          select * from price_book
+          where company_id = ${company.id} and owner_id = ${ownerId}
+          order by trade, slot, product_name
+        `
+      : await sql<PriceBookItem>`
+          select * from price_book
+          where company_id = ${company.id} and owner_id is null
+          order by trade, slot, product_name
+        `;
     return { role, items: rows.map(hydrateBook) };
   });
 
@@ -2737,7 +2835,8 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit materials.");
+    const ownerId = catalogOwnerId(role, context.userId);
+    if (ownerId) await copyOwnerCatalogToSales(sql, company.id, ownerId);
     const product = data.product_name.trim();
     if (!product) throw new Error("Product name is required");
     const cost = data.cost.trim() === "" ? null : num(data.cost);
@@ -2746,34 +2845,54 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     assertBookPrices({ slot: data.slot, product_name: product, cost, sell });
     const photo = parseBookPhoto(data.photo);
     if (data.id) {
-      await sql`
-        update price_book set
-          trade = ${data.trade},
-          slot = ${data.slot},
-          manufacturer = ${data.manufacturer.trim() || null},
-          product_name = ${product},
-          sku = ${data.sku.trim() || null},
-          color = ${data.color.trim() || null},
-          unit = ${data.unit.trim() || "ea"},
-          cost = ${cost},
-          sell = ${sell},
-          warranty_years = ${years},
-          warranty_terms = ${data.warranty_terms.trim() || null},
-          photo = ${photo},
-          updated_at = now()
-        where id = ${data.id} and company_id = ${company.id}
-      `;
+      if (ownerId) {
+        await sql`
+          update price_book set
+            trade = ${data.trade},
+            slot = ${data.slot},
+            manufacturer = ${data.manufacturer.trim() || null},
+            product_name = ${product},
+            sku = ${data.sku.trim() || null},
+            color = ${data.color.trim() || null},
+            unit = ${data.unit.trim() || "ea"},
+            cost = ${cost},
+            sell = ${sell},
+            warranty_years = ${years},
+            warranty_terms = ${data.warranty_terms.trim() || null},
+            photo = ${photo},
+            updated_at = now()
+          where id = ${data.id} and company_id = ${company.id} and owner_id = ${ownerId}
+        `;
+      } else {
+        await sql`
+          update price_book set
+            trade = ${data.trade},
+            slot = ${data.slot},
+            manufacturer = ${data.manufacturer.trim() || null},
+            product_name = ${product},
+            sku = ${data.sku.trim() || null},
+            color = ${data.color.trim() || null},
+            unit = ${data.unit.trim() || "ea"},
+            cost = ${cost},
+            sell = ${sell},
+            warranty_years = ${years},
+            warranty_terms = ${data.warranty_terms.trim() || null},
+            photo = ${photo},
+            updated_at = now()
+          where id = ${data.id} and company_id = ${company.id} and owner_id is null
+        `;
+      }
       return { id: data.id };
     }
     const id = crypto.randomUUID();
     await sql`
       insert into price_book (
         id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-        cost, sell, warranty_years, warranty_terms, photo
+        cost, sell, warranty_years, warranty_terms, photo, owner_id
       ) values (
         ${id}, ${company.id}, ${data.trade}, ${data.slot}, ${data.manufacturer.trim() || null},
         ${product}, ${data.sku.trim() || null}, ${data.color.trim() || null}, ${data.unit.trim() || "ea"},
-        ${cost}, ${sell}, ${years}, ${data.warranty_terms.trim() || null}, ${photo}
+        ${cost}, ${sell}, ${years}, ${data.warranty_terms.trim() || null}, ${photo}, ${ownerId}
       )
     `;
     return { id };
@@ -2787,8 +2906,18 @@ export const archivePriceBookItem = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit materials.");
-    await sql`update price_book set active = false, updated_at = now() where id = ${id} and company_id = ${company.id}`;
+    const ownerId = catalogOwnerId(role, context.userId);
+    if (ownerId) {
+      await sql`
+        update price_book set active = false, updated_at = now()
+        where id = ${id} and company_id = ${company.id} and owner_id = ${ownerId}
+      `;
+    } else {
+      await sql`
+        update price_book set active = false, updated_at = now()
+        where id = ${id} and company_id = ${company.id} and owner_id is null
+      `;
+    }
     return { ok: true as const };
   });
 
@@ -2800,7 +2929,8 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit materials.");
+    const ownerId = catalogOwnerId(role, context.userId);
+    if (ownerId) await copyOwnerCatalogToSales(sql, company.id, ownerId);
     const header = catalogHeaderFromCsv(csv);
     if (isCatalogCsvHeader(header)) {
       const catalog = parseCatalogCsv(csv);
@@ -2809,11 +2939,11 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
         await sql`
           insert into price_book (
             id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-            cost, sell, warranty_years, warranty_terms
+            cost, sell, warranty_years, warranty_terms, owner_id
           ) values (
             ${crypto.randomUUID()}, ${company.id}, ${row.trade}, ${row.slot}, ${row.manufacturer},
             ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
-            ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}
+            ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${ownerId}
           )
         `;
       }
@@ -2828,20 +2958,34 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
         const splitAt = key.indexOf("::");
         const workId = key.slice(0, splitAt);
         const name = key.slice(splitAt + 2);
-        const existing = await sql<{ id: string }>`
-          select id from work_kits where company_id = ${company.id} and work_id = ${workId} and name = ${name} limit 1
-        `;
+        const existing = ownerId
+          ? await sql<{ id: string }>`
+              select id from work_kits
+              where company_id = ${company.id} and work_id = ${workId} and name = ${name} and owner_id = ${ownerId}
+              limit 1
+            `
+          : await sql<{ id: string }>`
+              select id from work_kits
+              where company_id = ${company.id} and work_id = ${workId} and name = ${name} and owner_id is null
+              limit 1
+            `;
         let kitId = existing[0]?.id;
         if (kitId) {
           await sql`delete from work_kit_items where kit_id = ${kitId}`;
         } else {
-          const max = await sql<{ n: number }>`
-            select coalesce(max(sort_order), -1)::int as n from work_kits where company_id = ${company.id} and work_id = ${workId}
-          `;
+          const max = ownerId
+            ? await sql<{ n: number }>`
+                select coalesce(max(sort_order), -1)::int as n
+                from work_kits where company_id = ${company.id} and work_id = ${workId} and owner_id = ${ownerId}
+              `
+            : await sql<{ n: number }>`
+                select coalesce(max(sort_order), -1)::int as n
+                from work_kits where company_id = ${company.id} and work_id = ${workId} and owner_id is null
+              `;
           kitId = crypto.randomUUID();
           await sql`
-            insert into work_kits (id, company_id, work_id, name, sort_order)
-            values (${kitId}, ${company.id}, ${workId}, ${name}, ${(max[0]?.n ?? -1) + 1})
+            insert into work_kits (id, company_id, work_id, name, sort_order, owner_id)
+            values (${kitId}, ${company.id}, ${workId}, ${name}, ${(max[0]?.n ?? -1) + 1}, ${ownerId})
           `;
         }
         let order = 0;
@@ -2863,36 +3007,42 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
       await sql`
         insert into price_book (
           id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-          cost, sell, warranty_years, warranty_terms
+          cost, sell, warranty_years, warranty_terms, owner_id
         ) values (
           ${crypto.randomUUID()}, ${company.id}, ${row.trade}, ${row.slot}, ${row.manufacturer},
           ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
-          ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}
+          ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${ownerId}
         )
       `;
     }
     return { count: rows.length, kits: 0 };
   });
 
-async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[]) {
+async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[], ownerId: string | null = null) {
   const ids = (workIds === undefined ? Object.keys(KIT_SEEDS) : workIds).filter((id) => KIT_SEEDS[id]?.length);
   for (const workId of ids) {
     const seed = KIT_SEEDS[workId];
     if (!seed?.length) continue;
-    const existing = await sql<{ c: number }>`
-      select count(*)::int as c from work_kits where company_id = ${companyId} and work_id = ${workId}
-    `;
+    const existing = ownerId
+      ? await sql<{ c: number }>`
+          select count(*)::int as c from work_kits
+          where company_id = ${companyId} and work_id = ${workId} and owner_id = ${ownerId}
+        `
+      : await sql<{ c: number }>`
+          select count(*)::int as c from work_kits
+          where company_id = ${companyId} and work_id = ${workId} and owner_id is null
+        `;
     const already = existing[0]?.c ?? 0;
     if (already > 0) {
-      await seedMissingKits(sql, companyId, workId, seed);
+      await seedMissingKits(sql, companyId, workId, seed, ownerId);
       continue;
     }
     let order = 0;
     for (const kit of seed) {
       const kitId = crypto.randomUUID();
       await sql`
-        insert into work_kits (id, company_id, work_id, name, sort_order)
-        values (${kitId}, ${companyId}, ${workId}, ${kit.name}, ${order})
+        insert into work_kits (id, company_id, work_id, name, sort_order, owner_id)
+        values (${kitId}, ${companyId}, ${workId}, ${kit.name}, ${order}, ${ownerId})
       `;
       order += 1;
       let lineOrder = 0;
@@ -2910,23 +3060,39 @@ async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[]) 
   }
 }
 
-async function seedMissingKits(sql: Sql, companyId: string, workId: string, seed: (typeof KIT_SEEDS)[string]) {
+async function seedMissingKits(
+  sql: Sql,
+  companyId: string,
+  workId: string,
+  seed: (typeof KIT_SEEDS)[string],
+  ownerId: string | null = null,
+) {
   if (!seed?.length) return;
-  const names = await sql<{ name: string }>`
-    select name from work_kits where company_id = ${companyId} and work_id = ${workId}
-  `;
+  const names = ownerId
+    ? await sql<{ name: string }>`
+        select name from work_kits where company_id = ${companyId} and work_id = ${workId} and owner_id = ${ownerId}
+      `
+    : await sql<{ name: string }>`
+        select name from work_kits where company_id = ${companyId} and work_id = ${workId} and owner_id is null
+      `;
   const have = new Set(names.map((row) => row.name.trim().toLowerCase()));
   const missing = seed.filter((kit) => !have.has(kit.name.trim().toLowerCase()));
   if (!missing.length) return;
-  const max = await sql<{ n: number }>`
-    select coalesce(max(sort_order), -1)::int as n from work_kits where company_id = ${companyId} and work_id = ${workId}
-  `;
+  const max = ownerId
+    ? await sql<{ n: number }>`
+        select coalesce(max(sort_order), -1)::int as n
+        from work_kits where company_id = ${companyId} and work_id = ${workId} and owner_id = ${ownerId}
+      `
+    : await sql<{ n: number }>`
+        select coalesce(max(sort_order), -1)::int as n
+        from work_kits where company_id = ${companyId} and work_id = ${workId} and owner_id is null
+      `;
   let order = (max[0]?.n ?? -1) + 1;
   for (const kit of missing) {
     const kitId = crypto.randomUUID();
     await sql`
-      insert into work_kits (id, company_id, work_id, name, sort_order)
-      values (${kitId}, ${companyId}, ${workId}, ${kit.name}, ${order})
+      insert into work_kits (id, company_id, work_id, name, sort_order, owner_id)
+      values (${kitId}, ${companyId}, ${workId}, ${kit.name}, ${order}, ${ownerId})
     `;
     order += 1;
     let lineOrder = 0;
@@ -2943,30 +3109,68 @@ async function seedMissingKits(sql: Sql, companyId: string, workId: string, seed
   }
 }
 
-async function kitsForCompany(sql: Sql, companyId: string, workId?: string): Promise<WorkKit[]> {
+async function kitsForCompany(
+  sql: Sql,
+  companyId: string,
+  workId?: string,
+  ownerId: string | null = null,
+): Promise<WorkKit[]> {
   const company = await sql<{ trades: string | null }>`
     select trades from companies where id = ${companyId} limit 1
   `;
-  await seedStarterKits(sql, companyId, parseTradeTokens(company[0]?.trades));
-  await sql`
-    update work_kit_items i
-    set slot = null
-    from work_kits k
-    where i.kit_id = k.id
-      and k.company_id = ${companyId}
-      and i.slot = ${"gutter"}
-      and (
-        lower(i.name) like ${"%clean%"}
-        or lower(i.name) like ${"%downspout%"}
-      )
-  `;
-  const kits = workId
-    ? await sql<Omit<WorkKit, "items">>`
-        select * from work_kits where company_id = ${companyId} and work_id = ${workId} order by sort_order, name
-      `
-    : await sql<Omit<WorkKit, "items">>`
-        select * from work_kits where company_id = ${companyId} order by work_id, sort_order, name
-      `;
+  if (!ownerId) await seedStarterKits(sql, companyId, parseTradeTokens(company[0]?.trades));
+  if (ownerId) {
+    await sql`
+      update work_kit_items i
+      set slot = null
+      from work_kits k
+      where i.kit_id = k.id
+        and k.company_id = ${companyId}
+        and k.owner_id = ${ownerId}
+        and i.slot = ${"gutter"}
+        and (
+          lower(i.name) like ${"%clean%"}
+          or lower(i.name) like ${"%downspout%"}
+        )
+    `;
+  } else {
+    await sql`
+      update work_kit_items i
+      set slot = null
+      from work_kits k
+      where i.kit_id = k.id
+        and k.company_id = ${companyId}
+        and k.owner_id is null
+        and i.slot = ${"gutter"}
+        and (
+          lower(i.name) like ${"%clean%"}
+          or lower(i.name) like ${"%downspout%"}
+        )
+    `;
+  }
+  const kits = ownerId
+    ? workId
+      ? await sql<Omit<WorkKit, "items">>`
+          select * from work_kits
+          where company_id = ${companyId} and work_id = ${workId} and owner_id = ${ownerId}
+          order by sort_order, name
+        `
+      : await sql<Omit<WorkKit, "items">>`
+          select * from work_kits
+          where company_id = ${companyId} and owner_id = ${ownerId}
+          order by work_id, sort_order, name
+        `
+    : workId
+      ? await sql<Omit<WorkKit, "items">>`
+          select * from work_kits
+          where company_id = ${companyId} and work_id = ${workId} and owner_id is null
+          order by sort_order, name
+        `
+      : await sql<Omit<WorkKit, "items">>`
+          select * from work_kits
+          where company_id = ${companyId} and owner_id is null
+          order by work_id, sort_order, name
+        `;
   if (kits.length === 0) return [];
   const items: WorkKitItem[] = [];
   for (const kit of kits) {
@@ -2998,7 +3202,9 @@ export const listWorkKits = createServerFn({ method: "GET" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    const kits = await kitsForCompany(sql, company.id, data.workId);
+    const ownerId = catalogOwnerId(role, context.userId);
+    if (ownerId) await copyOwnerCatalogToSales(sql, company.id, ownerId);
+    const kits = await kitsForCompany(sql, company.id, data.workId, ownerId);
     return { role, kits };
   });
 
@@ -3010,10 +3216,11 @@ export const seedWorkKits = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can load starter sub-categories.");
+    const ownerId = catalogOwnerId(role, context.userId);
     const workId = data.workId.trim();
     if (!KIT_SEEDS[workId]?.length) throw new Error("No starters for that category.");
-    await seedStarterKits(sql, company.id, [workId]);
+    if (ownerId) await copyOwnerCatalogToSales(sql, company.id, ownerId);
+    await seedStarterKits(sql, company.id, [workId], ownerId);
     return { ok: true as const };
   });
 
@@ -3040,27 +3247,42 @@ export const saveWorkKit = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit work categories.");
+    const ownerId = catalogOwnerId(role, context.userId);
+    if (ownerId) await copyOwnerCatalogToSales(sql, company.id, ownerId);
     const name = data.name.trim();
     if (!name) throw new Error("Name the sub-category.");
     const workId = data.workId.trim();
     if (!workId) throw new Error("Pick a work category.");
     let kitId = data.id;
     if (kitId) {
-      const owned = await sql<{ id: string }>`
-        select id from work_kits where id = ${kitId} and company_id = ${company.id} limit 1
-      `;
+      const owned = ownerId
+        ? await sql<{ id: string }>`
+            select id from work_kits
+            where id = ${kitId} and company_id = ${company.id} and owner_id = ${ownerId}
+            limit 1
+          `
+        : await sql<{ id: string }>`
+            select id from work_kits
+            where id = ${kitId} and company_id = ${company.id} and owner_id is null
+            limit 1
+          `;
       if (!owned[0]) throw new Error("Kit not found");
       await sql`update work_kits set name = ${name}, work_id = ${workId} where id = ${kitId}`;
       await sql`delete from work_kit_items where kit_id = ${kitId}`;
     } else {
-      const max = await sql<{ n: number }>`
-        select coalesce(max(sort_order), -1)::int as n from work_kits where company_id = ${company.id} and work_id = ${workId}
-      `;
+      const max = ownerId
+        ? await sql<{ n: number }>`
+            select coalesce(max(sort_order), -1)::int as n
+            from work_kits where company_id = ${company.id} and work_id = ${workId} and owner_id = ${ownerId}
+          `
+        : await sql<{ n: number }>`
+            select coalesce(max(sort_order), -1)::int as n
+            from work_kits where company_id = ${company.id} and work_id = ${workId} and owner_id is null
+          `;
       kitId = crypto.randomUUID();
       await sql`
-        insert into work_kits (id, company_id, work_id, name, sort_order)
-        values (${kitId}, ${company.id}, ${workId}, ${name}, ${(max[0]?.n ?? -1) + 1})
+        insert into work_kits (id, company_id, work_id, name, sort_order, owner_id)
+        values (${kitId}, ${company.id}, ${workId}, ${name}, ${(max[0]?.n ?? -1) + 1}, ${ownerId})
       `;
     }
     let order = 0;
@@ -3088,8 +3310,12 @@ export const deleteWorkKit = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
-    if (role !== "owner") throw new Error("Only the owner can edit work categories.");
-    await sql`delete from work_kits where id = ${id} and company_id = ${company.id}`;
+    const ownerId = catalogOwnerId(role, context.userId);
+    if (ownerId) {
+      await sql`delete from work_kits where id = ${id} and company_id = ${company.id} and owner_id = ${ownerId}`;
+    } else {
+      await sql`delete from work_kits where id = ${id} and company_id = ${company.id} and owner_id is null`;
+    }
     return { ok: true as const };
   });
 
@@ -3101,7 +3327,14 @@ export const listTeam = createServerFn({ method: "GET" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     const members = await teamDirectoryForShop(sql, company);
-    return { role, members };
+    const salesCount = members.filter((m) => m.role === "sales").length;
+    return {
+      role,
+      members,
+      extraSeats: num(company.extra_seats),
+      seatCap: num(company.extra_seats),
+      salesCount,
+    };
   });
 
 export const addTeamMember = createServerFn({ method: "POST" })
@@ -3115,13 +3348,36 @@ export const addTeamMember = createServerFn({ method: "POST" })
     if (role !== "owner") throw new Error("Only the owner can add the sales team.");
     const email = data.email.trim().toLowerCase();
     if (!email.includes("@")) throw new Error("Need a real email");
+    const existing = await sql<{ id: string; user_id: string | null; role: string }>`
+      select id, user_id, role from company_members
+      where company_id = ${company.id} and lower(email) = ${email}
+      limit 1
+    `;
+    if (existing[0]?.role === "sales" || existing[0]?.role === "owner") {
+      return { ok: true as const, already: true as const, needSeat: false as const, emailed: false as const };
+    }
+    const sales = await sql<{ c: number }>`
+      select count(*)::int as c from company_members where company_id = ${company.id} and role = ${"sales"}
+    `;
+    if (num(sales[0]?.c) >= num(company.extra_seats)) {
+      return { ok: false as const, already: false as const, needSeat: true as const, emailed: false as const };
+    }
     const userId = await userIdForEmail(sql, email);
     await sql`
       insert into company_members (id, company_id, user_id, email, role)
-      values (${crypto.randomUUID()}, ${company.id}, ${userId}, ${email}, ${data.role === "owner" ? "owner" : "sales"})
-      on conflict (company_id, email) do update set role = excluded.role, user_id = coalesce(excluded.user_id, company_members.user_id)
+      values (${crypto.randomUUID()}, ${company.id}, ${userId}, ${email}, ${"sales"})
+      on conflict (company_id, email) do update set role = ${"sales"}, user_id = coalesce(excluded.user_id, company_members.user_id)
     `;
-    return { ok: true as const };
+    if (userId) await copyOwnerCatalogToSales(sql, company.id, userId);
+    let emailed = false;
+    try {
+      const { deliverSalesWelcomeEmail } = await import("./mail");
+      await deliverSalesWelcomeEmail({ to: email, shopName: company.name });
+      emailed = true;
+    } catch (err) {
+      console.error("[mail] sales welcome failed", err);
+    }
+    return { ok: true as const, already: false as const, needSeat: false as const, emailed };
   });
 
 export const approveProposal = createServerFn({ method: "POST" })
@@ -3146,6 +3402,7 @@ export const approveProposal = createServerFn({ method: "POST" })
             sell = coalesce(sell, ${num(item.unit_price)}),
             updated_at = now()
         where company_id = ${company.id}
+          and owner_id is null
           and product_name = ${item.product_name}
           and coalesce(manufacturer, '') = coalesce(${item.manufacturer}, '')
           and cost is null
@@ -4410,10 +4667,17 @@ export const getAudience = createServerFn({ method: "GET" })
     try {
     const sql = await getSql();
     if (context.email) {
+      const mail = context.email.trim().toLowerCase();
       await sql`
         update portfolio_members
         set user_id = ${userId}
-        where lower(email) = ${context.email.trim().toLowerCase()}
+        where lower(email) = ${mail}
+          and (user_id is null or user_id = ${userId})
+      `;
+      await sql`
+        update company_members
+        set user_id = ${userId}
+        where lower(email) = ${mail}
           and (user_id is null or user_id = ${userId})
       `;
     }
@@ -4422,7 +4686,7 @@ export const getAudience = createServerFn({ method: "GET" })
       where user_id = ${userId} and id <> ${HOUSEHOLD_COMPANY}
       limit 1
     `;
-    const member = owned[0]
+    let member = owned[0]
       ? []
       : await sql<Company>`
           select c.*
@@ -4431,6 +4695,24 @@ export const getAudience = createServerFn({ method: "GET" })
           where m.user_id = ${userId} and c.id <> ${HOUSEHOLD_COMPANY}
           limit 1
         `;
+    if (!owned[0] && !member[0] && context.email) {
+      const mail = context.email.trim().toLowerCase();
+      member = await sql<Company>`
+        select c.*
+        from company_members m
+        join companies c on c.id = m.company_id
+        where lower(m.email) = ${mail} and c.id <> ${HOUSEHOLD_COMPANY}
+        limit 1
+      `;
+      if (member[0]) {
+        await sql`
+          update company_members
+          set user_id = ${userId}
+          where company_id = ${member[0].id} and lower(email) = ${mail}
+            and (user_id is null or user_id = ${userId})
+        `;
+      }
+    }
     const shop = owned[0] ?? member[0] ?? null;
     const contractorPaying = Boolean(shop?.shop_paid_at);
     const ownedPortfolio = await sql<{ paid_at: string | null }>`

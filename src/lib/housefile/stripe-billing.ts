@@ -5,6 +5,7 @@ import {
   claimPaidManageSession,
   claimPaidShopSession,
   confirmPaidManageSession,
+  confirmPaidShopSeatSession,
   confirmPaidShopSession,
   createCheckoutSessionUrl,
   createPortalSessionUrl,
@@ -103,6 +104,13 @@ export const confirmShopCheckout = createServerFn({ method: "POST" })
   .validator((sessionId: string) => sessionId)
   .handler(async ({ context, data: sessionId }) => {
     return confirmPaidShopSession({ sessionId, userId: context.userId });
+  });
+
+export const confirmShopSeatCheckout = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((sessionId: string) => sessionId)
+  .handler(async ({ context, data: sessionId }) => {
+    return confirmPaidShopSeatSession({ sessionId, userId: context.userId });
   });
 
 export const confirmHomeownerCheckout = createServerFn({ method: "POST" })

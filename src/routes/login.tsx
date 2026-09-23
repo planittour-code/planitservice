@@ -68,7 +68,9 @@ function Login() {
       : isShopDestination(next) || isManageDestination(next) || next.startsWith("/home/add")
         ? next
         : "/login";
-  const [mode, setMode] = useState<"in" | "up">(houseInvite ? "up" : "in");
+  const invitedSales = contractor && Boolean(search.email) && !shopInvite;
+  const canCreateAccount = homeowner || invitedSales;
+  const [mode, setMode] = useState<"in" | "up">(houseInvite || invitedSales ? "up" : "in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -139,7 +141,7 @@ function Login() {
     setError(null);
     setBusy(true);
     try {
-      if (mode === "up" && homeowner) {
+      if (mode === "up" && canCreateAccount) {
         const res = await authClient.signUp.email({
           email,
           password,
@@ -170,21 +172,31 @@ function Login() {
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-8 md:grid-cols-2 md:items-center">
         <div className="space-y-4">
           <p className="text-sm font-medium tracking-wide text-secondary">
-            {homeowner ? "For the homeowner" : manager ? "For property managers" : "For contractors"}
+            {homeowner
+              ? "For the homeowner"
+              : manager
+                ? "For property managers"
+                : invitedSales
+                  ? "For the sales team"
+                  : "For contractors"}
           </p>
           <h1 className="font-display text-4xl font-semibold tracking-tight md:text-5xl">
             {homeowner
               ? "Keep the record. Call the shop back."
               : manager
                 ? "Sign in to the houses you manage."
-                : "Sign in. Quote the next visit."}
+                : invitedSales
+                  ? "Create your login. Quote from this shop."
+                  : "Sign in. Quote the next visit."}
           </h1>
           <p className="max-w-md text-muted-foreground">
             {homeowner
               ? "Jobs, warranties, known shops, and maintenance at the address. Pro is Request Estimates from shops that service this street."
               : manager
                 ? "Records, a maintenance calendar, and Request Estimates when a house needs bids. Add a house from the portfolio."
-                : "Quote onto the File so you are the known shop. Catch Request Estimates in the categories you offer and the area you work."}
+                : invitedSales
+                  ? "The shop invited this email. Create a password to open your contractor page. Your materials and quotes stay on your page."
+                  : "Quote onto the File so you are the known shop. Catch Request Estimates in the categories you offer and the area you work."}
           </p>
         </div>
         <div className="rounded-xl bg-card p-6 shadow-[var(--shadow-border)]">
@@ -231,9 +243,9 @@ function Login() {
                 </div>
               )}
               <form className="space-y-2" onSubmit={(e) => void onEmail(e)}>
-                {mode === "up" && homeowner && (
+                {mode === "up" && canCreateAccount && (
                   <div className="space-y-1">
-                    <Label htmlFor="name">{search.invite ? "Your name" : "Your name"}</Label>
+                    <Label htmlFor="name">Your name</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
                 )}
@@ -246,6 +258,7 @@ function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    readOnly={invitedSales && mode === "up"}
                   />
                 </div>
                 <div className="space-y-1">
@@ -288,20 +301,25 @@ function Login() {
                   </div>
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                {mode === "up" && homeowner && <TermsAgree id="login-agree-terms" />}
+                {mode === "up" && canCreateAccount && <TermsAgree id="login-agree-terms" />}
                 <Button type="submit" className="w-full" disabled={busy}>
-                  {busy ? "Working…" : mode === "up" && homeowner ? "Create account" : "Sign in"}
+                  {busy ? "Working…" : mode === "up" && canCreateAccount ? "Create account" : "Sign in"}
                 </Button>
               </form>
-              {homeowner ? (
+              {canCreateAccount ? (
                 <button
                   type="button"
                   className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
                   onClick={() => setMode(mode === "up" ? "in" : "up")}
                 >
-                  {mode === "up" ? "Already have an account? Sign in" : "New here? Create an account"}
+                  {mode === "up"
+                    ? "Already have an account? Sign in"
+                    : invitedSales
+                      ? "Already have a password? Sign in"
+                      : "New here? Create an account"}
                 </button>
-              ) : (
+              ) : null}
+              {!homeowner && !invitedSales ? (
                 <p className="text-center text-sm text-muted-foreground">
                   New shop?{" "}
                   <Link
@@ -321,7 +339,7 @@ function Login() {
                     Open a portfolio
                   </Link>
                 </p>
-              )}
+              ) : null}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Sign-in is disabled.</p>

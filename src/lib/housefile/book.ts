@@ -59,6 +59,7 @@ export type PriceBookItem = {
   warranty_terms: string | null;
   active: boolean;
   photo?: string | null;
+  owner_id?: string | null;
 };
 
 export function parseBookPhoto(raw: unknown): string | null {

@@ -82,6 +82,38 @@ export async function sendResendEmail(input: {
   }
 }
 
+export async function sendSalesWelcomeEmail(data: {
+  to: string;
+  shopName: string;
+  loginUrl: string;
+}) {
+  const shop = data.shopName.trim() || "the shop";
+  const first = data.to.split("@")[0] || "there";
+  const subject = `Welcome to ${shop} — your sales seat is ready`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    `Welcome to ${shop} on ${LEGAL_NAME}. You have a sales seat with your own contractor page.`,
+    "",
+    "You can create sub-categories, edit line items, send invoices, and add new lines. Those changes stay on your page — they do not change the shop owner's materials.",
+    "",
+    `Open this link with the email the shop invited: ${data.loginUrl}`,
+    "",
+    "If you do not have a password yet, create one on that page. If you already have an account, sign in.",
+    "",
+    shop,
+    LEGAL_NAME,
+    LEGAL_SITE,
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>Welcome to ${escapeHtml(shop)} on ${escapeHtml(LEGAL_NAME)}. You have a sales seat with your own contractor page.</p>
+<p>You can create sub-categories, edit line items, send invoices, and add new lines. Those changes stay on your page — they do not change the shop owner's materials.</p>
+<p><a href="${escapeHtml(data.loginUrl)}">Open your contractor page</a></p>
+<p>If you do not have a password yet, create one on that page. If you already have an account, sign in.</p>
+<p>${escapeHtml(shop)}<br>${escapeHtml(LEGAL_NAME)}<br>${escapeHtml(LEGAL_SITE)}</p>`;
+  await sendResendEmail({ to: data.to, subject, text, html, replyTo: LEGAL_EMAIL });
+}
+
 export async function sendPasswordResetEmail(data: {
   user: { email: string; name?: string | null };
   url: string;

@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Camera, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { money, num } from "@/lib/housefile/format";
 import { compressImage } from "@/lib/housefile/image";
 import {
@@ -383,17 +384,9 @@ function KitLineRow({
     <div className="space-y-2 rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
       <div className="flex items-end gap-1">
         <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-12">
-          <div className="space-y-0.5 sm:col-span-3">
+          <div className="space-y-0.5 sm:col-span-6">
             <Label>Line item</Label>
             <Input value={line.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Line item" />
-          </div>
-          <div className="space-y-0.5 sm:col-span-3">
-            <Label>Description</Label>
-            <Input
-              value={line.description}
-              onChange={(e) => onChange({ description: e.target.value })}
-              placeholder="Description"
-            />
           </div>
           <div className="space-y-0.5 sm:col-span-2">
             <Label>Quantity</Label>
@@ -454,6 +447,14 @@ function KitLineRow({
           </Button>
         </div>
       </div>
+      <div className="space-y-0.5">
+        <Label>Description</Label>
+        <AutoGrowTextarea
+          value={line.description}
+          onChange={(description) => onChange({ description })}
+          placeholder="Description"
+        />
+      </div>
       {line.photos.length > 0 && (
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
           {line.photos.map((src, i) => (
@@ -472,6 +473,34 @@ function KitLineRow({
         </div>
       )}
     </div>
+  );
+}
+
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${Math.max(el.scrollHeight, 64)}px`;
+  }, [value]);
+  return (
+    <Textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={1}
+      className="min-h-16 resize-none overflow-hidden"
+    />
   );
 }
 

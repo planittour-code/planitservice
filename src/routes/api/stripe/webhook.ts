@@ -4,6 +4,7 @@ import {
   clearPortfolioSubscription,
   getStripe,
   grantManageExtraSlots,
+  grantShopExtraSeats,
   markPortfolioPaid,
   syncPortfolioSubscription,
 } from "@/lib/housefile/stripe.server";
@@ -97,6 +98,17 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               });
               const quantity = full.line_items?.data[0]?.quantity ?? 1;
               await grantManageExtraSlots({
+                userId,
+                sessionId: session.id,
+                quantity,
+              });
+            }
+            if (userId && kind === "seat_monthly") {
+              const full = await stripe.checkout.sessions.retrieve(session.id, {
+                expand: ["line_items"],
+              });
+              const quantity = full.line_items?.data[0]?.quantity ?? 1;
+              await grantShopExtraSeats({
                 userId,
                 sessionId: session.id,
                 quantity,

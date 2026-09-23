@@ -49,6 +49,7 @@ export type WorkKit = {
   name: string;
   sort_order: number;
   created_at: string;
+  owner_id?: string | null;
   items: WorkKitItem[];
 };
 

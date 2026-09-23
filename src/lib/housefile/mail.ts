@@ -8,6 +8,18 @@ function publicUrl(path: string) {
   return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+export async function deliverSalesWelcomeEmail(input: {
+  to: string;
+  shopName: string;
+}) {
+  const { sendSalesWelcomeEmail } = await import("@/lib/auth/mail.server");
+  await sendSalesWelcomeEmail({
+    to: input.to,
+    shopName: input.shopName,
+    loginUrl: publicUrl(`/login?email=${encodeURIComponent(input.to)}&next=/app&role=contractor`),
+  });
+}
+
 /** Server-only. Import dynamically from createServerFn handlers, never from route modules. */
 export async function deliverEstimateEmail(input: {
   property: Property;
