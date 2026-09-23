@@ -221,14 +221,18 @@ function AccountPage() {
                   .
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Button asChild>
-                    <a href={BILLING_PORTAL}>Manage billing</a>
-                  </Button>
                   {isShop && (
-                    <Button asChild variant="outline">
-                      <Link to="/app/settings">Shop settings</Link>
+                    <Button asChild>
+                      <Link to="/app/settings">
+                        {data.shop?.role === "owner" ? "Shop settings" : "License"}
+                      </Link>
                     </Button>
                   )}
+                  {data.shop?.role !== "sales" && (isHome || isManage || !isShop) ? (
+                    <Button asChild variant={isShop ? "outline" : undefined}>
+                      <a href={BILLING_PORTAL}>Manage billing</a>
+                    </Button>
+                  ) : null}
                   {isManage && (
                     <>
                       <Button asChild variant="outline">

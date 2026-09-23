@@ -7,6 +7,7 @@ export type Company = {
   email: string | null;
   website: string | null;
   logo_src: string | null;
+  trade_logos: string | null;
   agreement: string | null;
   terms: string | null;
   trades: string | null;
@@ -270,6 +271,7 @@ export type HouseCompany = {
   state: string | null;
   zip: string | null;
   logo_src: string | null;
+  trade_logos: string | null;
   agreement: string | null;
   terms: string | null;
   payment_terms: string | null;

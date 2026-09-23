@@ -34,6 +34,7 @@ import {
   upsertProposalItem,
 } from "@/lib/housefile/server";
 import { sundayOfWeek } from "@/lib/housefile/maintain";
+import { estimateBrandLogo, parseTradeLogos } from "@/lib/housefile/quote";
 import type { ProposalBundle, ProposalItem } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,12 @@ export function ProposalDoc({
 }) {
   const navigate = useNavigate();
   const { proposal, items, property, company, house, salesReps } = bundle;
+  const brandLogo = estimateBrandLogo({
+    tradeLogos: parseTradeLogos(company.trade_logos),
+    templateId: proposal.template_id,
+    title: proposal.title,
+    shopLogo: company.logo_src,
+  });
   const payHref = normalizePaymentLink(proposal.payment_link || company.payment_link);
   const locked = proposal.status === "completed" || mode === "accepted";
   const editMode: "homeowner" | "contractor" = mode === "contractor" ? "contractor" : "homeowner";
@@ -151,9 +158,9 @@ export function ProposalDoc({
         <EstimateHero bundle={bundle} />
 
         <div className="flex items-center gap-3">
-          {company.logo_src ? (
+          {brandLogo ? (
             <img
-              src={company.logo_src}
+              src={brandLogo}
               alt=""
               className="size-14 shrink-0 rounded-lg object-contain shadow-[var(--shadow-border)]"
             />

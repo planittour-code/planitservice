@@ -75,7 +75,9 @@ function AppLayout() {
               <AppNavLink to="/app/campaign">Customers</AppNavLink>
               <AppNavLink to="/app/properties">Jobs</AppNavLink>
               <AppNavLink to="/app/book">Materials</AppNavLink>
-              <AppNavLink to="/app/settings">Settings</AppNavLink>
+              <AppNavLink to="/app/settings">
+                {dash.data?.role === "owner" ? "Settings" : "License"}
+              </AppNavLink>
             </nav>
           )
         }
@@ -89,7 +91,9 @@ function AppLayout() {
             <AppNavLink to="/app/campaign">Customers</AppNavLink>
             <AppNavLink to="/app/properties">Jobs</AppNavLink>
             <AppNavLink to="/app/book">Materials</AppNavLink>
-            <AppNavLink to="/app/settings">Shop settings</AppNavLink>
+            <AppNavLink to="/app/settings">
+              {dash.data?.role === "owner" ? "Shop settings" : "License"}
+            </AppNavLink>
           </nav>
         )}
         {!onboardPath && (

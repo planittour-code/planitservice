@@ -135,6 +135,9 @@ export const startBillingPortal = createServerFn({ method: "POST" })
       where user_id = ${context.userId} and id <> ${"co_household"}
       limit 1
     `;
+    if (preferShop && !shop[0]) {
+      throw new Error("Only the shop owner can manage the subscription.");
+    }
     const portfolio = await sql<{ stripe_customer_id: string | null }>`
       select stripe_customer_id from portfolios where user_id = ${context.userId} limit 1
     `;

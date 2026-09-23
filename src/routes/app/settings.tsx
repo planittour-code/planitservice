@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
 import { PAYMENT_TERM_LABELS, PAYMENT_TERMS, asPaymentTerms } from "@/lib/housefile/payment";
 import { SEAT_MONTHLY, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
-import { parseTradeTokens, workTypesFor } from "@/lib/housefile/quote";
+import { parseTradeLogos, parseTradeTokens, workTypesFor, type WorkType } from "@/lib/housefile/quote";
 import {
   addTeamMember,
   getDashboard,
@@ -42,6 +42,7 @@ function SettingsPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [logo, setLogo] = useState<string | null>(null);
+  const [tradeLogos, setTradeLogos] = useState<Record<string, string>>({});
   const [agreement, setAgreement] = useState("");
   const [terms, setTerms] = useState("");
   const [paymentTerms, setPaymentTerms] = useState<(typeof PAYMENT_TERMS)[number]>("due_completion");
@@ -55,6 +56,7 @@ function SettingsPage() {
     setPhone(q.data.company.phone ?? "");
     setEmail(q.data.company.email ?? "");
     setLogo(q.data.company.logo_src ?? null);
+    setTradeLogos(parseTradeLogos(q.data.company.trade_logos));
     setAgreement(q.data.company.agreement ?? "");
     setTerms(q.data.company.terms ?? "");
     setPaymentTerms(asPaymentTerms(q.data.company.payment_terms));
@@ -70,6 +72,7 @@ function SettingsPage() {
           phone,
           email,
           logo_src: logo,
+          trade_logos: tradeLogos,
           agreement,
           terms,
           payment_terms: paymentTerms,
@@ -81,6 +84,26 @@ function SettingsPage() {
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
+  });
+  const saveLogos = useMutation({
+    mutationFn: (next: Record<string, string>) => {
+      const company = q.data?.company;
+      if (!company) throw new Error("Shop not loaded");
+      return updateCompany({
+        data: {
+          name: company.name,
+          trade: company.trade,
+          phone: company.phone ?? "",
+          email: company.email ?? "",
+          trade_logos: next,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Estimate logo saved");
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save logo"),
   });
   const saveTrades = useMutation({
     mutationFn: (ids: string[]) => {
@@ -111,17 +134,36 @@ function SettingsPage() {
   const trades = workTypesFor(company.trades);
   const tradeIds = parseTradeTokens(company.trades);
   const publicUrl = company.slug ? `https://planitservice.com/s/${company.slug}` : "";
+  const licenseLabel = owner ? "Shop owner" : "Sales seat";
 
   return (
     <div className="space-y-2">
       <div>
-        <h1 className="font-display text-2xl font-medium tracking-tight">Shop settings</h1>
+        <h1 className="font-display text-2xl font-medium tracking-tight">
+          {owner ? "Shop settings" : "License"}
+        </h1>
         <p className="text-muted-foreground">
           {owner
-            ? "This name appears on proposals and invitations."
-            : "Your sales page uses this shop. Materials and quotes you edit stay on your page."}
+            ? "Your license, services, and the shop the team quotes from."
+            : "Your sales seat on this shop. Materials and quotes you edit stay on your page."}
         </p>
       </div>
+      <section className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
+        <p className="text-xs tracking-wide text-muted-foreground uppercase">License</p>
+        <p className="font-display text-lg font-medium">{licenseLabel}</p>
+        <p className="text-sm text-muted-foreground">
+          {company.name}
+          {trades.length
+            ? ` · ${trades.length} ${trades.length === 1 ? "category" : "categories"} · $${dollars(trades.length * SHOP_MONTHLY)}/month`
+            : " · no categories yet"}
+          {owner ? ` · extra seats ${dollars(SEAT_MONTHLY)}/month each` : ""}.
+        </p>
+        {!owner ? (
+          <p className="text-sm text-muted-foreground">
+            Shop billing, team, and company details stay with the owner.
+          </p>
+        ) : null}
+      </section>
       {owner ? (
       <>
       <section className="space-y-2">
@@ -129,7 +171,8 @@ function SettingsPage() {
           <h2 className="font-display text-lg font-medium">Services Offered</h2>
           <p className="text-sm text-muted-foreground">
             ${dollars(SHOP_MONTHLY)}/month per category. These are the only trades this shop quotes,
-            and the only Request Estimates you receive.
+            and the only Request Estimates you receive. Add a category, then give it a logo for
+            estimates in that trade.
           </p>
         </div>
         {trades.length === 0 ? (
@@ -167,6 +210,17 @@ function SettingsPage() {
           </p>
         ) : null}
       </section>
+      {trades.length > 0 ? (
+        <ServiceLogos
+          trades={trades}
+          logos={tradeLogos}
+          shopLogo={logo}
+          onChange={(next) => {
+            setTradeLogos(next);
+            saveLogos.mutate(next);
+          }}
+        />
+      ) : null}
       <TradeSelectDialog
         open={pickingTrades}
         selected={tradeIds}
@@ -297,6 +351,7 @@ function SettingsPage() {
       </form>
       </>
       ) : null}
+      {owner ? (
       <section className="space-y-2 border-t border-border pt-4">
         <div>
           <h2 className="font-display text-lg font-medium tracking-tight">Materials</h2>
@@ -308,9 +363,87 @@ function SettingsPage() {
           <Link to="/app/book">Open materials</Link>
         </Button>
       </section>
+      ) : null}
       {owner ? <TeamSection /> : null}
       {owner ? <BillingSection /> : null}
     </div>
+  );
+}
+
+function ServiceLogos({
+  trades,
+  logos,
+  shopLogo,
+  onChange,
+}: {
+  trades: WorkType[];
+  logos: Record<string, string>;
+  shopLogo: string | null;
+  onChange: (next: Record<string, string>) => void;
+}) {
+  return (
+    <section className="space-y-2">
+      <div>
+        <h2 className="font-display text-lg font-medium">Estimate logos</h2>
+        <p className="text-sm text-muted-foreground">
+          Each ${dollars(SHOP_MONTHLY)} category can have its own logo on estimates for that work.
+          If a category has no logo, the shop logo is used.
+        </p>
+      </div>
+      <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+        {trades.map((work) => {
+          const src = logos[work.id] || shopLogo;
+          return (
+            <li key={work.id} className="flex flex-wrap items-center gap-3 px-4 py-2">
+              {src ? (
+                <img src={src} alt="" className="size-10 shrink-0 rounded-md object-contain" />
+              ) : (
+                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
+                  {work.name.slice(0, 1)}
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{work.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {logos[work.id] ? "Used on estimates in this category" : "Using shop logo until you add one"}
+                </p>
+              </div>
+              <label className="inline-flex h-7 cursor-pointer items-center rounded-md border border-border bg-background px-2 text-xs">
+                {logos[work.id] ? "Change logo" : "Add logo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file) return;
+                    void compressImage(file, 600)
+                      .then((data) => onChange({ ...logos, [work.id]: data }))
+                      .catch((err) =>
+                        toast.error(err instanceof Error ? err.message : "Could not read logo"),
+                      );
+                  }}
+                />
+              </label>
+              {logos[work.id] ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const next = { ...logos };
+                    delete next[work.id];
+                    onChange(next);
+                  }}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -351,7 +484,7 @@ function BillingSection() {
         disabled={portal.isPending}
         onClick={() => portal.mutate()}
       >
-        {portal.isPending ? "Opening…" : "Cancel or manage subscription"}
+        {portal.isPending ? "Opening…" : "Open Stripe billing"}
       </Button>
     </section>
   );

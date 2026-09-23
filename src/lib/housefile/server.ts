@@ -39,7 +39,9 @@ import {
   buildQuote,
   customWorkId,
   factsFromTakeoff,
+  parseTradeLogos,
   parseTradeTokens,
+  serializeTradeLogos,
   workForTemplate,
   workFromId,
   workTypesFor,
@@ -109,6 +111,7 @@ function asCompany(row: Company): Company {
   return {
     ...row,
     logo_src: row.logo_src ?? null,
+    trade_logos: row.trade_logos ?? null,
     agreement: row.agreement ?? null,
     terms: row.terms ?? null,
     trades: row.trades ?? null,
@@ -159,6 +162,7 @@ function publicCompany(c: Company): HouseCompany {
     state: c.state ?? null,
     zip: c.zip ?? null,
     logo_src: c.logo_src ?? null,
+    trade_logos: c.trade_logos ?? null,
     agreement: c.agreement ?? null,
     terms: c.terms ?? null,
     payment_terms: c.payment_terms ?? null,
@@ -1369,6 +1373,7 @@ export const updateCompany = createServerFn({ method: "POST" })
       phone: string;
       email: string;
       logo_src?: string | null;
+      trade_logos?: Record<string, string> | null;
       agreement?: string | null;
       terms?: string | null;
       trades?: string | null;
@@ -1383,6 +1388,22 @@ export const updateCompany = createServerFn({ method: "POST" })
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can change shop settings.");
     const name = data.name.trim() || company.name;
+    const nextTrades = data.trades === undefined ? company.trades : data.trades;
+    const offered = new Set(parseTradeTokens(nextTrades));
+    let nextLogos = company.trade_logos;
+    if (data.trade_logos !== undefined) {
+      const kept: Record<string, string> = {};
+      for (const [id, src] of Object.entries(data.trade_logos ?? {})) {
+        if (offered.has(id)) kept[id] = src;
+      }
+      nextLogos = serializeTradeLogos(kept);
+    } else if (data.trades !== undefined) {
+      const kept: Record<string, string> = {};
+      for (const [id, src] of Object.entries(parseTradeLogos(company.trade_logos))) {
+        if (offered.has(id)) kept[id] = src;
+      }
+      nextLogos = serializeTradeLogos(kept);
+    }
     await sql`
       update companies
       set name = ${name},
@@ -1390,9 +1411,10 @@ export const updateCompany = createServerFn({ method: "POST" })
           phone = ${data.phone.trim() || null},
           email = ${data.email.trim() || company.email},
           logo_src = ${data.logo_src === undefined ? company.logo_src : data.logo_src},
+          trade_logos = ${nextLogos},
           agreement = ${data.agreement === undefined ? company.agreement : data.agreement},
           terms = ${data.terms === undefined ? company.terms : data.terms},
-          trades = ${data.trades === undefined ? company.trades : data.trades},
+          trades = ${nextTrades},
           payment_terms = ${data.payment_terms === undefined ? company.payment_terms : asPaymentTerms(data.payment_terms)},
           payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)}
       where id = ${company.id}
@@ -1441,6 +1463,7 @@ export const completeOnboard = createServerFn({ method: "POST" })
       trades: string[];
       book: "homedepot" | "lowes" | "starter";
       logo?: string;
+      tradeLogos?: Record<string, string>;
       agreement: string;
       terms: string;
       street?: string;
@@ -1464,12 +1487,18 @@ export const completeOnboard = createServerFn({ method: "POST" })
     const trades = data.trades.filter(Boolean);
     if (trades.length === 0) throw new Error("Pick at least one service.");
     const tradeLabel = trades.join(", ");
+    const offered = new Set(trades);
+    const keptLogos: Record<string, string> = {};
+    for (const [id, src] of Object.entries(data.tradeLogos ?? {})) {
+      if (offered.has(id)) keptLogos[id] = src;
+    }
     await sql`
       update companies
       set name = ${data.name.trim() || company.name},
           trade = ${tradeLabel},
           trades = ${trades.join(",")},
           logo_src = ${data.logo?.trim() || company.logo_src},
+          trade_logos = ${serializeTradeLogos(keptLogos)},
           agreement = ${data.agreement.trim() || null},
           terms = ${data.terms.trim() || null},
           street = ${data.street?.trim() || null},

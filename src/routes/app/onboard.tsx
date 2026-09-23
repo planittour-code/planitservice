@@ -43,6 +43,7 @@ function Onboard() {
   const [addingWork, setAddingWork] = useState(false);
   const [book, setBook] = useState<"homedepot" | "lowes" | "starter">("homedepot");
   const [logo, setLogo] = useState<string | null>(null);
+  const [tradeLogos, setTradeLogos] = useState<Record<string, string>>({});
   const [agreement, setAgreement] = useState(DEFAULT_AGREEMENT);
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [street, setStreet] = useState("");
@@ -65,6 +66,7 @@ function Onboard() {
           trades,
           book,
           logo: logo ?? undefined,
+          tradeLogos,
           agreement,
           terms,
           street,
@@ -385,6 +387,57 @@ function Onboard() {
               />
             </label>
           </div>
+          {trades.length > 0 ? (
+            <div className="space-y-2">
+              <Label>Estimate logos by service</Label>
+              <p className="text-sm text-muted-foreground">
+                ${dollars(SHOP_MONTHLY)}/month per category. Optional — a logo here prints on
+                estimates for that work. Without one, the shop logo is used.
+              </p>
+              <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+                {trades.map((id) => {
+                  const work = workFromId(id);
+                  if (!work) return null;
+                  const src = tradeLogos[id] || logo;
+                  return (
+                    <li key={id} className="flex flex-wrap items-center gap-3 px-4 py-2">
+                      {src ? (
+                        <img src={src} alt="" className="size-10 shrink-0 rounded-md object-contain" />
+                      ) : (
+                        <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
+                          {work.name.slice(0, 1)}
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{work.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {tradeLogos[id] ? "On estimates in this category" : "Shop logo until you add one"}
+                        </p>
+                      </div>
+                      <label className="inline-flex h-7 cursor-pointer items-center rounded-md border border-border bg-background px-2 text-xs">
+                        {tradeLogos[id] ? "Change logo" : "Add logo"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (!file) return;
+                            void compressImage(file, 600)
+                              .then((data) => setTradeLogos((cur) => ({ ...cur, [id]: data })))
+                              .catch((err) =>
+                                toast.error(err instanceof Error ? err.message : "Could not read logo"),
+                              );
+                          }}
+                        />
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
           <div className="space-y-0.5">
             <Label htmlFor="ag">Language on the estimate</Label>
             <Textarea

@@ -467,6 +467,53 @@ export function workForTemplate(templateId: string): WorkType | undefined {
   return WORK_TYPES.find((w) => w.templateId === templateId);
 }
 
+/** Per-category logos the shop owner sets for estimates. JSON map of work id → data URL. */
+export function parseTradeLogos(raw: string | null | undefined): Record<string, string> {
+  if (!raw?.trim()) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Record<string, string> = {};
+    for (const [id, src] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof src === "string" && src.startsWith("data:image/") && src.length < 500_000) {
+        out[id] = src;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function serializeTradeLogos(logos: Record<string, string>): string | null {
+  const clean: Record<string, string> = {};
+  for (const [id, src] of Object.entries(logos)) {
+    if (id && src.startsWith("data:image/")) clean[id] = src;
+  }
+  return Object.keys(clean).length ? JSON.stringify(clean) : null;
+}
+
+/** Logo printed on an estimate for this job’s category; falls back to the shop logo. */
+export function estimateBrandLogo(opts: {
+  tradeLogos: Record<string, string>;
+  templateId: string | null | undefined;
+  title: string;
+  shopLogo: string | null;
+}): string | null {
+  const fromTemplate = opts.templateId ? workForTemplate(opts.templateId) : undefined;
+  if (fromTemplate && opts.tradeLogos[fromTemplate.id]) return opts.tradeLogos[fromTemplate.id];
+  const title = opts.title.trim().toLowerCase();
+  if (title) {
+    for (const [id, src] of Object.entries(opts.tradeLogos)) {
+      const work = workFromId(id);
+      if (!work) continue;
+      const name = work.name.toLowerCase();
+      if (title.includes(name)) return src;
+    }
+  }
+  return opts.shopLogo;
+}
+
 export function templateFor(work: WorkType, inputs: Record<string, string>) {
   if (work.id === "paint" && inputs.paint_scope === "exterior") return "tmpl_ext_paint";
   return work.templateId;
