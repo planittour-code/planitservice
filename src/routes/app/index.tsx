@@ -22,7 +22,7 @@ function ShopHome() {
   if (q.error || !q.data) {
     return <p className="text-destructive">Could not load the shop.</p>;
   }
-  const { company, properties, proposals, pending, role, schedule } = q.data;
+  const { company, properties, proposals, pending, role, schedule, salesAssigned, salesSeats } = q.data;
   const clients = q.data.clients ?? [];
   const namedInvites = q.data.namedInvites ?? [];
   const propertyCount = properties.length;
@@ -43,9 +43,19 @@ function ShopHome() {
             ) : null}
             <h1 className="font-display text-2xl font-medium tracking-tight md:text-3xl">{company.name}</h1>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/app/book">Materials</Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {role === "owner" ? (
+              <Button asChild variant="outline">
+                <Link to="/app/settings">
+                  {salesAssigned ?? 0} of {salesSeats ?? 0}{" "}
+                  {(salesSeats ?? 0) === 1 ? "seat" : "seats"} assigned
+                </Link>
+              </Button>
+            ) : null}
+            <Button asChild variant="outline">
+              <Link to="/app/book">Materials</Link>
+            </Button>
+          </div>
         </div>
       </div>
 

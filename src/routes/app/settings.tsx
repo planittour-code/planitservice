@@ -314,7 +314,16 @@ function SettingsPage() {
   );
 }
 
+function seatAssignedCopy(assigned: number, paid: number) {
+  const seatWord = paid === 1 ? "seat" : "seats";
+  const open = Math.max(0, paid - assigned);
+  if (paid === 0) return "0 of 0 seats assigned. Buy a sales seat to invite someone.";
+  if (open === 0) return `${assigned} of ${paid} ${seatWord} assigned. None open.`;
+  return `${assigned} of ${paid} ${seatWord} assigned. ${open} open.`;
+}
+
 function BillingSection() {
+  const team = useQuery({ queryKey: ["team"], queryFn: () => listTeam() });
   const portal = useMutation({
     mutationFn: () => startBillingPortal({ data: { returnPath: "/app/settings" } }),
     onSuccess: ({ url }) => {
@@ -322,6 +331,8 @@ function BillingSection() {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not open billing"),
   });
+  const assigned = team.data?.salesCount ?? 0;
+  const paid = team.data?.seatCap ?? 0;
 
   return (
     <section className="space-y-2 border-t border-border pt-4">
@@ -332,6 +343,7 @@ function BillingSection() {
           per sales seat. Adding or removing a category updates the subscription. Cancel anytime —
           access continues through the paid period.
         </p>
+        <p className="text-sm font-medium">{seatAssignedCopy(assigned, paid)}</p>
       </div>
       <Button
         type="button"
@@ -426,6 +438,7 @@ function TeamSection() {
     onSuccess: () => {
       toast.success("Seat is free. You can invite someone else.");
       setEditingId(null);
+      setNeedSeat(false);
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
@@ -450,18 +463,18 @@ function TeamSection() {
   const members = q.data?.members ?? [];
   const cap = q.data?.seatCap ?? 0;
   const salesCount = q.data?.salesCount ?? members.filter((m) => m.role === "sales").length;
+  const openSeats = Math.max(0, cap - salesCount);
+  const outOfSeats = needSeat || (owner && openSeats === 0);
   return (
     <section className="space-y-2 border-t border-border pt-4">
       <div>
         <h2 className="font-display text-lg font-medium tracking-tight">Sales team</h2>
+        <p className="text-sm font-medium">{seatAssignedCopy(salesCount, cap)}</p>
         <p className="text-sm text-muted-foreground">
           ${dollars(SEAT_MONTHLY)}/month per sales seat. Each salesperson gets a copy of the
           contractor page — their sub-categories, line items, and invoices stay on their page and do
           not change yours. Invite, resend the welcome email, change their email, or free the seat
           for someone else.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {salesCount} of {cap} {cap === 1 ? "sales seat" : "sales seats"} paid.
         </p>
       </div>
       <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
@@ -540,12 +553,12 @@ function TeamSection() {
           );
         })}
       </ul>
-      {owner && needSeat ? (
+      {owner && outOfSeats ? (
         <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-          <p className="font-medium">This shop is out of sales seats.</p>
+          <p className="font-medium">{seatAssignedCopy(salesCount, cap)}</p>
           <p className="text-sm text-muted-foreground">
-            Pay ${dollars(SEAT_MONTHLY)}/month for one seat, then add their email. Card details stay
-            on Stripe.
+            Pay ${dollars(SEAT_MONTHLY)}/month for one more seat, then add their email. Card details
+            stay on Stripe. Free a seat above to reuse one you already pay for.
           </p>
           <Button type="button" disabled={extra.isPending} onClick={() => extra.mutate()}>
             {extra.isPending ? "Opening…" : `Add a $${dollars(SEAT_MONTHLY)} sales seat`}

@@ -1044,6 +1044,9 @@ export const getDashboard = createServerFn({ method: "GET" })
     }));
     const namedInvites = await namedWorkForShop(sql, company, session?.email);
     const schedule = await shopScheduleFor(sql, company.id);
+    const sales = await sql<{ c: number }>`
+      select count(*)::int as c from company_members where company_id = ${company.id} and role = ${"sales"}
+    `;
     return {
       company,
       role,
@@ -1054,6 +1057,8 @@ export const getDashboard = createServerFn({ method: "GET" })
       namedInvites,
       schedule,
       templateCount: num(templates[0]?.c),
+      salesAssigned: num(sales[0]?.c),
+      salesSeats: num(company.extra_seats),
     };
   });
 
