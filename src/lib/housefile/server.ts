@@ -3369,15 +3369,98 @@ export const addTeamMember = createServerFn({ method: "POST" })
       on conflict (company_id, email) do update set role = ${"sales"}, user_id = coalesce(excluded.user_id, company_members.user_id)
     `;
     if (userId) await copyOwnerCatalogToSales(sql, company.id, userId);
-    let emailed = false;
-    try {
-      const { deliverSalesWelcomeEmail } = await import("./mail");
-      await deliverSalesWelcomeEmail({ to: email, shopName: company.name });
-      emailed = true;
-    } catch (err) {
-      console.error("[mail] sales welcome failed", err);
-    }
+    const emailed = await sendSalesInvite(email, company.name);
     return { ok: true as const, already: false as const, needSeat: false as const, emailed };
+  });
+
+async function requireOwnedSalesMember(
+  sql: Sql,
+  companyId: string,
+  memberId: string,
+): Promise<{ id: string; email: string; user_id: string | null }> {
+  const rows = await sql<{ id: string; email: string; user_id: string | null }>`
+    select id, email, user_id from company_members
+    where id = ${memberId} and company_id = ${companyId} and role = ${"sales"}
+    limit 1
+  `;
+  if (!rows[0]) throw new Error("That salesperson is not on this shop.");
+  return rows[0];
+}
+
+async function sendSalesInvite(email: string, shopName: string): Promise<boolean> {
+  try {
+    const { deliverSalesWelcomeEmail } = await import("./mail");
+    await deliverSalesWelcomeEmail({ to: email, shopName });
+    return true;
+  } catch (err) {
+    console.error("[mail] sales welcome failed", err);
+    return false;
+  }
+}
+
+export const resendTeamInvite = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { memberId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can resend sales invites.");
+    const member = await requireOwnedSalesMember(sql, company.id, data.memberId);
+    const emailed = await sendSalesInvite(member.email, company.name);
+    if (!emailed) throw new Error("The invite did not send. Try again.");
+    return { ok: true as const, emailed: true as const };
+  });
+
+export const updateTeamMemberEmail = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { memberId: string; email: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can change a sales seat email.");
+    const member = await requireOwnedSalesMember(sql, company.id, data.memberId);
+    const email = data.email.trim().toLowerCase();
+    if (!isMail(email)) throw new Error("Need a real email");
+    if (email === member.email.trim().toLowerCase()) {
+      const emailed = await sendSalesInvite(email, company.name);
+      return { ok: true as const, emailed, unchanged: true as const };
+    }
+    const taken = await sql<{ id: string }>`
+      select id from company_members
+      where company_id = ${company.id} and lower(email) = ${email} and id <> ${member.id}
+      limit 1
+    `;
+    if (taken[0]) throw new Error("That email already has a seat on this shop.");
+    const userId = await userIdForEmail(sql, email);
+    await sql`
+      update company_members
+      set email = ${email}, user_id = ${userId}
+      where id = ${member.id} and company_id = ${company.id} and role = ${"sales"}
+    `;
+    if (userId) await copyOwnerCatalogToSales(sql, company.id, userId);
+    const emailed = await sendSalesInvite(email, company.name);
+    return { ok: true as const, emailed, unchanged: false as const };
+  });
+
+export const removeTeamMember = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { memberId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
+    if (role !== "owner") throw new Error("Only the owner can remove a sales seat.");
+    const member = await requireOwnedSalesMember(sql, company.id, data.memberId);
+    await sql`
+      delete from company_members
+      where id = ${member.id} and company_id = ${company.id} and role = ${"sales"}
+    `;
+    return { ok: true as const };
   });
 
 export const approveProposal = createServerFn({ method: "POST" })

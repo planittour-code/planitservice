@@ -13,7 +13,15 @@ import { compressImage } from "@/lib/housefile/image";
 import { PAYMENT_TERM_LABELS, PAYMENT_TERMS, asPaymentTerms } from "@/lib/housefile/payment";
 import { SEAT_MONTHLY, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { parseTradeTokens, workTypesFor } from "@/lib/housefile/quote";
-import { addTeamMember, getDashboard, listTeam, updateCompany } from "@/lib/housefile/server";
+import {
+  addTeamMember,
+  getDashboard,
+  listTeam,
+  removeTeamMember,
+  resendTeamInvite,
+  updateCompany,
+  updateTeamMemberEmail,
+} from "@/lib/housefile/server";
 import { shopSeatKind } from "@/lib/housefile/stripe";
 import { confirmShopSeatCheckout, startBillingPortal, startCheckout } from "@/lib/housefile/stripe-billing";
 import { cn } from "@/lib/utils";
@@ -344,6 +352,8 @@ function TeamSection() {
   const q = useQuery({ queryKey: ["team"], queryFn: () => listTeam() });
   const [email, setEmail] = useState("");
   const [needSeat, setNeedSeat] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState("");
 
   useEffect(() => {
     if (!sessionId) return;
@@ -387,6 +397,39 @@ function TeamSection() {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
   });
+  const resend = useMutation({
+    mutationFn: (memberId: string) => resendTeamInvite({ data: { memberId } }),
+    onSuccess: () => toast.success("Invite sent. They can create a password from that email."),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send invite"),
+  });
+  const changeEmail = useMutation({
+    mutationFn: () =>
+      updateTeamMemberEmail({ data: { memberId: editingId ?? "", email: editEmail } }),
+    onSuccess: (res) => {
+      toast.success(
+        res.unchanged
+          ? res.emailed
+            ? "Invite sent to the same email."
+            : "Email is already that address."
+          : res.emailed
+            ? "Email updated and invite sent."
+            : "Email updated. The invite did not send — use Resend.",
+      );
+      setEditingId(null);
+      setEditEmail("");
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not change email"),
+  });
+  const remove = useMutation({
+    mutationFn: (memberId: string) => removeTeamMember({ data: { memberId } }),
+    onSuccess: () => {
+      toast.success("Seat is free. You can invite someone else.");
+      setEditingId(null);
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
+  });
   const extra = useMutation({
     mutationFn: () =>
       startCheckout({
@@ -414,19 +457,88 @@ function TeamSection() {
         <p className="text-sm text-muted-foreground">
           ${dollars(SEAT_MONTHLY)}/month per sales seat. Each salesperson gets a copy of the
           contractor page — their sub-categories, line items, and invoices stay on their page and do
-          not change yours. We email them a welcome letter with a login link.
+          not change yours. Invite, resend the welcome email, change their email, or free the seat
+          for someone else.
         </p>
         <p className="text-sm text-muted-foreground">
           {salesCount} of {cap} {cap === 1 ? "sales seat" : "sales seats"} paid.
         </p>
       </div>
       <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
-        {members.map((m) => (
-          <li key={m.id} className="flex min-h-12 items-center justify-between px-4 py-2 text-sm">
-            <span>{m.email}</span>
-            <span className="text-muted-foreground">{m.role === "owner" ? "Owner" : "Sales"}</span>
-          </li>
-        ))}
+        {members.map((m) => {
+          const sales = m.role === "sales";
+          const pending = sales && !m.user_id;
+          const editing = editingId === m.id;
+          return (
+            <li key={m.id} className="space-y-2 px-4 py-2 text-sm">
+              <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p>{m.email}</p>
+                  <p className="text-muted-foreground">
+                    {m.role === "owner" ? "Owner" : pending ? "Sales · invite not claimed" : "Sales"}
+                  </p>
+                </div>
+                {owner && sales ? (
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={resend.isPending}
+                      onClick={() => resend.mutate(m.id)}
+                    >
+                      {resend.isPending && resend.variables === m.id ? "Sending…" : "Resend invite"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingId(editing ? null : m.id);
+                        setEditEmail(m.email);
+                      }}
+                    >
+                      {editing ? "Cancel" : "Change email"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={remove.isPending}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Remove ${m.email} from this shop? The paid seat stays. You can invite someone else.`,
+                          )
+                        ) {
+                          remove.mutate(m.id);
+                        }
+                      }}
+                    >
+                      {remove.isPending && remove.variables === m.id ? "Removing…" : "Free seat"}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+              {owner && sales && editing ? (
+                <form
+                  className="flex flex-col gap-2 sm:flex-row"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    changeEmail.mutate();
+                  }}
+                >
+                  <Input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    required
+                  />
+                  <Button type="submit" disabled={changeEmail.isPending || !editEmail.trim()}>
+                    {changeEmail.isPending ? "Saving…" : "Save and invite"}
+                  </Button>
+                </form>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
       {owner && needSeat ? (
         <div className="space-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
