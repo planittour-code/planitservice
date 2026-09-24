@@ -789,8 +789,8 @@ function NewQuote() {
       {shownStep === 3 && (
         <div className="space-y-3">
           <p className="text-muted-foreground">
-            Photos, then measurements, then line items from this shop’s materials. Work category is
-            optional.
+            Photos, then measurements, then the job from this category’s pre-saved templates. Work
+            category is optional.
           </p>
           {workKits.length > 0 && work ? (
             <KitPicker

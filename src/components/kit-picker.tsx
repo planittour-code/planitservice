@@ -21,10 +21,10 @@ export function KitPicker({
   return (
     <div className="space-y-3">
       <div>
-        <p className="font-display text-xl font-medium">Sub-category</p>
+        <p className="font-display text-xl font-medium">Pre-Saved Templates</p>
         <p className="text-sm text-muted-foreground">
-          Select one or more. The quote starts with those bundles combined. Every line stays
-          editable.
+          Select one or more for this category. The job starts with those subcategories combined.
+          Every line stays editable.
         </p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">

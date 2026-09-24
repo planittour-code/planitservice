@@ -70,7 +70,7 @@ export function EstimateSheet({
       <div>
         <h2 className="font-display text-2xl font-medium tracking-tight">Line items</h2>
         <p className="text-sm text-muted-foreground">
-          Search this shop’s Materials book. A name that is not in the list stays on the quote.
+          Pick a line from this category’s pre-saved templates. A name that is not in the list stays on the quote.
           Amount is quantity × price.
         </p>
       </div>
@@ -284,14 +284,17 @@ function ItemSearch({
   const wrap = useRef<HTMLDivElement>(null);
   const matches = useMemo(() => {
     const q = value.trim().toLowerCase();
+    const templates = catalog.filter((row) => row.kitName);
+    const pool = templates.length > 0 ? templates : catalog.filter((row) => !row.bookId);
     const list = q
-      ? catalog.filter(
+      ? pool.filter(
           (row) =>
             row.name.toLowerCase().includes(q) ||
-            row.description.toLowerCase().includes(q),
+            row.description.toLowerCase().includes(q) ||
+            (row.kitName ?? "").toLowerCase().includes(q),
         )
-      : catalog;
-    return list.slice(0, 12);
+      : pool;
+    return list.slice(0, 24);
   }, [catalog, value]);
 
   useEffect(() => {
@@ -317,7 +320,7 @@ function ItemSearch({
         id={id}
         value={value}
         autoComplete="off"
-        placeholder="Search materials"
+        placeholder="Search pre-saved templates"
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           onChange(e.target.value);
@@ -360,7 +363,7 @@ function ItemSearch({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choose(row)}
               >
-                <span className="font-medium">{row.name}</span>
+                <span className="font-medium">{row.kitName ? `${row.kitName} — ${row.name}` : row.name}</span>
                 {row.description ? (
                   <span className="line-clamp-1 text-xs text-muted-foreground">{row.description}</span>
                 ) : null}

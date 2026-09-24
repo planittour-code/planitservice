@@ -402,13 +402,9 @@ export function lineShowsQuantity(name: string) {
   return true;
 }
 
-function starterToLine(row: Starter, book: PriceBookItem[], kitPrice?: number | null): EstimateLine {
-  const item =
-    row.slot && lineShowsInstalledProduct(row.item)
-      ? book.find((b) => b.active !== false && b.slot === row.slot)
-      : undefined;
+function starterToLine(row: Starter, _book: PriceBookItem[], kitPrice?: number | null): EstimateLine {
   const price = kitPrice != null && Number.isFinite(kitPrice) ? String(kitPrice) : "";
-  const base: EstimateLine = {
+  return {
     id: crypto.randomUUID(),
     bookId: "",
     item: row.item,
@@ -419,9 +415,6 @@ function starterToLine(row: Starter, book: PriceBookItem[], kitPrice?: number | 
     photos: [],
     unit: row.unit,
   };
-  if (!item) return base;
-  const filled = applyBookToLine({ ...base, description: row.description }, item);
-  return kitPrice != null && Number.isFinite(kitPrice) ? { ...filled, price } : filled;
 }
 
 export function selectedKitIds(raw: string | undefined): string[] {
@@ -594,10 +587,13 @@ export type CatalogLine = {
   slot?: string | null;
   price?: number | null;
   bookId?: string;
+  /** Pre-Saved Template this line belongs to. */
+  kitName?: string;
 };
 
 type CatalogKit = {
   work_id: string;
+  name?: string;
   items: {
     name: string;
     description?: string | null;
@@ -615,15 +611,17 @@ export function catalogLinesForWork(
 ): CatalogLine[] {
   const fromKits = kits
     .filter((kit) => kit.work_id === workId)
-    .flatMap((kit) => kit.items)
-    .map((row) => ({
-      name: row.name.trim(),
-      description: row.description ?? "",
-      qty: row.qty ?? "",
-      unit: row.unit ?? undefined,
-      slot: row.slot ?? null,
-      price: row.price,
-    }))
+    .flatMap((kit) =>
+      (kit.items ?? []).map((row) => ({
+        kitName: kit.name?.trim() || "",
+        name: row.name.trim(),
+        description: row.description ?? "",
+        qty: row.qty ?? "",
+        unit: row.unit ?? undefined,
+        slot: row.slot ?? null,
+        price: row.price,
+      })),
+    )
     .filter((row) => row.name);
   const source =
     fromKits.length > 0
@@ -638,7 +636,7 @@ export function catalogLinesForWork(
   const seen = new Set<string>();
   const unique: CatalogLine[] = [];
   for (const row of source) {
-    const key = row.name.toLowerCase();
+    const key = `${"kitName" in row ? row.kitName : ""}\0${row.name}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(row);
