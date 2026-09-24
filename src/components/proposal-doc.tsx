@@ -79,8 +79,6 @@ export function ProposalDoc({
   const locked = proposal.status === "completed" || mode === "accepted";
   const editMode: "homeowner" | "contractor" = mode === "contractor" ? "contractor" : "homeowner";
   const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
-  const openLines = items.filter((i) => i.included && !lineSettled(i));
-  const readyToStart = openLines.length === 0 && items.some((i) => i.included);
   const showInvoice = isDrainageInvoice(proposal.title);
 
   if (showInvoice) {
@@ -102,11 +100,6 @@ export function ProposalDoc({
               data-preview-ok
               onClick={async () => {
                 try {
-                  for (const item of openLines) {
-                    await reviseProposalPublic({
-                      data: { token: proposal.share_token, itemId: item.id, reviewStatus: "accepted" },
-                    });
-                  }
                   if (proposal.status !== "accepted" && proposal.status !== "completed") {
                     await acceptProposalPublic({ data: { token: proposal.share_token } });
                   }
@@ -119,7 +112,7 @@ export function ProposalDoc({
                 });
               }}
             >
-              Start Work
+              Accept proposal
             </Button>
           </div>
         ) : null}
@@ -245,16 +238,8 @@ export function ProposalDoc({
         <ContractorMeta bundle={bundle} onChanged={onChanged} />
       )}
 
-      {mode === "homeowner" && !locked && openLines.length > 0 && (
-        <AcceptAllBar
-          token={proposal.share_token}
-          items={openLines}
-          onChanged={onChanged}
-        />
-      )}
-
       <ul className="space-y-3">
-        {items.filter((item) => !item.option_id && !lineSettled(item)).map((item) => (
+        {items.filter((item) => !item.option_id).map((item) => (
           <ProposalLine
             key={item.id}
             item={item}
@@ -266,24 +251,6 @@ export function ProposalDoc({
           />
         ))}
       </ul>
-      {items.some((item) => !item.option_id && lineSettled(item)) ? (
-        <div className="space-y-3">
-          <h2 className="font-display text-xl font-medium">Accepted lines</h2>
-          <ul className="space-y-3">
-            {items.filter((item) => !item.option_id && lineSettled(item)).map((item) => (
-              <ProposalLine
-                key={item.id}
-                item={item}
-                mode={editMode}
-                token={proposal.share_token}
-                proposalId={proposal.id}
-                locked={locked}
-                onChanged={onChanged}
-              />
-            ))}
-          </ul>
-        </div>
-      ) : null}
       <OptionGroups
         items={items}
         mode={editMode}
@@ -293,14 +260,6 @@ export function ProposalDoc({
       />
 
       {mode === "contractor" && !locked && <AddLine proposalId={proposal.id} onChanged={onChanged} />}
-
-      {mode === "homeowner" && !locked && openLines.length > 0 && (
-        <AcceptAllBar
-          token={proposal.share_token}
-          items={openLines}
-          onChanged={onChanged}
-        />
-      )}
 
       <ProposalTotals items={items} />
 
@@ -319,19 +278,15 @@ export function ProposalDoc({
             <div>
               <p className="text-sm tracking-wide text-muted-foreground uppercase">Agreement</p>
               <p className="text-sm text-muted-foreground">
-                {readyToStart
-                  ? "Every line is accepted. Start work to sign the estimate."
-                  : `${openLines.length} line${openLines.length === 1 ? "" : "s"} still need Accept.`}
+                Accept this estimate to start work.
               </p>
             </div>
             <p className="font-display text-2xl font-medium tabular-nums">{money(includedTotal)}</p>
           </div>
           <Button
             className="min-h-12 w-full"
-            disabled={!readyToStart}
             data-preview-ok
             onClick={async () => {
-              if (!readyToStart) return;
               try {
                 if (proposal.status !== "accepted" && proposal.status !== "completed") {
                   await acceptProposalPublic({ data: { token: proposal.share_token } });
@@ -345,7 +300,7 @@ export function ProposalDoc({
               });
             }}
           >
-            Start Work
+            Accept proposal
           </Button>
         </div>
       )}
@@ -679,10 +634,6 @@ function OptionGroup({
   );
 }
 
-function lineSettled(item: ProposalItem) {
-  return item.review_status === "accepted" || item.review_status === "change_accepted";
-}
-
 function SoldHoldBar({
   proposalId,
   acceptedAt,
@@ -790,53 +741,9 @@ function NotifyReviewBar({
   );
 }
 
-function AcceptAllBar({
-  token,
-  items,
-  onChanged,
-}: {
-  token: string;
-  items: ProposalItem[];
-  onChanged: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
-        {items.length} line{items.length === 1 ? "" : "s"} still open.
-      </p>
-      <Button
-        type="button"
-        className="w-full sm:w-auto"
-        disabled={busy}
-        data-preview-ok
-        onClick={async () => {
-          setBusy(true);
-          try {
-            for (const item of items) {
-              await reviseProposalPublic({
-                data: { token, itemId: item.id, reviewStatus: "accepted" },
-              });
-            }
-            toast.success("All lines accepted");
-            onChanged();
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Could not accept all");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {busy ? "Accepting…" : "Accept all"}
-      </Button>
-    </div>
-  );
-}
-
 function reviewTag(status?: string | null) {
   if (status === "change_review") return "Change Request in Review";
   if (status === "change_accepted") return "Change Request Accepted";
-  if (status === "accepted") return "Accepted";
   return null;
 }
 
@@ -868,14 +775,6 @@ function ProposalLine({
   const [price, setPrice] = useState(String(item.unit_price));
   const line = item.qty * item.unit_price;
   const tag = reviewTag(item.review_status);
-
-  async function acceptLine() {
-    await reviseProposalPublic({
-      data: { token, itemId: item.id, reviewStatus: "accepted" },
-    });
-    toast.success("Line accepted");
-    onChanged();
-  }
 
   async function saveNote() {
     await reviseProposalPublic({
@@ -968,7 +867,7 @@ function ProposalLine({
         <p className="font-medium tabular-nums">{money(line)}</p>
       </div>
 
-      {mode === "homeowner" && !locked && !lineSettled(item) && (
+      {mode === "homeowner" && !locked && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           {item.optional && !hideInclude && (
             <label className="flex h-7 items-center gap-2 text-xs">
@@ -997,19 +896,9 @@ function ProposalLine({
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button type="button" className="flex-1" onClick={() => void acceptLine()}>
-                Accept
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setNoteOpen(true)}
-              >
-                Add Note
-              </Button>
-            </div>
+            <Button type="button" variant="outline" onClick={() => setNoteOpen(true)}>
+              Add Note
+            </Button>
           )}
         </div>
       )}

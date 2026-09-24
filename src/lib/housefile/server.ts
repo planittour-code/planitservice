@@ -2692,6 +2692,11 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
             scheduled_on = coalesce(scheduled_on, ${hold}::date)
         where id = ${rows[0].id}
       `;
+      await sql`
+        update proposal_items
+        set review_status = ${"accepted"}
+        where proposal_id = ${rows[0].id} and included = true
+      `;
     }
     const proposal = (await sql<Proposal>`select * from proposals where id = ${rows[0].id}`)[0]!;
     await writeAcceptedWorkToFiles(sql, proposal);
