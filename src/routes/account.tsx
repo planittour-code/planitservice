@@ -54,7 +54,16 @@ function AccountPage() {
       </div>
     );
   }
-  if (!user || justSignedOut()) return <Navigate to="/login" />;
+  if (justSignedOut()) {
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto max-w-3xl px-5 py-8">
+          <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
+        </div>
+      </main>
+    );
+  }
+  if (!user) return <Navigate to="/login" />;
 
   const data = q.data;
   const isShop = Boolean(data?.shop);

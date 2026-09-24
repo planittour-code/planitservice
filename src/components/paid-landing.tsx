@@ -5,8 +5,9 @@ import { useAudience } from "@/lib/housefile/use-audience";
 /** Paying customers skip marketing and land on their dashboard. */
 export function PaidLanding({ prefer }: { prefer?: "homeowner" | "contractor" | "manager" }) {
   const { audience, isPending } = useAudience();
+  const signedOut = justSignedOut();
   useEffect(() => {
-    if (justSignedOut()) return;
+    if (signedOut) return;
     if (isPending || !audience.paying) return;
     let to = audience.homePath;
     if (prefer === "homeowner") {
@@ -21,6 +22,6 @@ export function PaidLanding({ prefer }: { prefer?: "homeowner" | "contractor" | 
     }
     if (window.location.pathname === to) return;
     window.location.replace(to);
-  }, [audience, isPending, prefer]);
+  }, [audience, isPending, prefer, signedOut]);
   return null;
 }

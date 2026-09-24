@@ -6,6 +6,7 @@ import { PaidLanding } from "@/components/paid-landing";
 import { AddressLookup, TeaseCard } from "@/components/address-lookup";
 import { TradeCarousel } from "@/components/trade-carousel";
 import { Button } from "@/components/ui/button";
+import { justSignedOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useAudience } from "@/lib/housefile/use-audience";
 import {
@@ -29,7 +30,7 @@ function HomePage() {
   const [tease, setTease] = useState<AddressTease | null>(null);
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <PaidLanding prefer="contractor" />
+      {justSignedOut() ? null : <PaidLanding prefer="contractor" />}
       <PublicHeader path="contractor">
         <AuthSlot />
       </PublicHeader>

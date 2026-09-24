@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PaidLanding } from "@/components/paid-landing";
+import { justSignedOut } from "@/lib/auth/client";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/")({ component: WelcomeSite });
 function WelcomeSite() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <PaidLanding />
+      {justSignedOut() ? null : <PaidLanding />}
       <PublicHeader path="choose" />
 
       <main>

@@ -23,7 +23,16 @@ function HomeLayout() {
       </div>
     );
   }
-  if (!user || justSignedOut()) return <Navigate to="/login" search={{ role: "homeowner", next: "/home" }} />;
+  if (justSignedOut()) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-5xl px-5 py-6">
+          <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
+        </div>
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/login" search={{ role: "homeowner", next: "/home" }} />;
   if (audience.hats.contractor && !audience.hats.homeowner) {
     return <Navigate to="/app" />;
   }

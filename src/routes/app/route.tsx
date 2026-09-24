@@ -23,7 +23,13 @@ function AppLayout() {
   });
 
   if (justSignedOut()) {
-    return <Navigate to="/shop" />;
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto w-full max-w-5xl px-3 py-3">
+          <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
+        </div>
+      </div>
+    );
   }
 
   if (isPending || (user && audiencePending)) {

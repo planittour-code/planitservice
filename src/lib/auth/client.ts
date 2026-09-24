@@ -253,17 +253,19 @@ export function justSignedOut(): boolean {
 export async function signOut(redirectTo = "/"): Promise<void> {
   markSignedOut();
   setBearerToken(null);
-  let left = false;
-  const leave = () => {
-    if (left) return;
-    left = true;
-    window.location.replace(redirectTo);
-  };
-  window.setTimeout(leave, 800);
-  try {
-    await authClient.signOut();
-  } catch {
-    // Cookie clear may have failed — still leave the signed-in shell.
-  }
-  leave();
+  const target = new URL(redirectTo, window.location.origin).href;
+  // Clear the cookie in the background. A hung /sign-out must not freeze the page.
+  const controller = new AbortController();
+  window.setTimeout(() => controller.abort(), 1500);
+  void fetch("/api/auth/sign-out", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+    keepalive: true,
+    signal: controller.signal,
+  }).catch(() => {
+    /* Cookie clear may fail — the next page still treats this visit as signed out. */
+  });
+  window.location.replace(target);
 }
