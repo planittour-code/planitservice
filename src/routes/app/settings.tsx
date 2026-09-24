@@ -36,6 +36,7 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function SettingsPage() {
+  const queryClient = useQueryClient();
   const q = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
   const [name, setName] = useState("");
   const [trade, setTrade] = useState("");
@@ -79,9 +80,12 @@ function SettingsPage() {
           payment_link: paymentLink,
         },
       }),
-    onSuccess: () => {
+    onSuccess: async (company) => {
       toast.success("Shop updated");
-      void q.refetch();
+      queryClient.setQueryData(["dashboard"], (prev: { company: typeof company } | undefined) =>
+        prev ? { ...prev, company } : prev,
+      );
+      await q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
@@ -310,6 +314,9 @@ function SettingsPage() {
               <a className="underline underline-offset-4" href={`/s/${company.slug}`} target="_blank" rel="noreferrer">
                 {publicUrl}
               </a>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Saving a corrected name updates this link. The old spelling still opens the shop.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -1391,17 +1391,29 @@ export const updateCompany = createServerFn({ method: "POST" })
     if (role !== "owner") throw new Error("Only the owner can change shop settings.");
     const name = data.name.trim() || company.name;
     let nextSlug = company.slug;
-    if (name !== company.name) {
+    if (name !== company.name || !company.slug) {
       const root = shopSlugFromName(name);
       let candidate = root;
       for (let i = 1; i < 20; i++) {
         const taken = await sql<{ id: string }>`
           select id from companies where slug = ${candidate} and id <> ${company.id} limit 1
         `;
-        if (!taken[0]) break;
+        const aliased = await sql<{ company_id: string }>`
+          select company_id from shop_slug_aliases
+          where slug = ${candidate} and company_id <> ${company.id}
+          limit 1
+        `;
+        if (!taken[0] && !aliased[0]) break;
         candidate = `${root}-${i + 1}`;
       }
       nextSlug = candidate;
+    }
+    if (company.slug && nextSlug && company.slug !== nextSlug) {
+      await sql`
+        insert into shop_slug_aliases (slug, company_id)
+        values (${company.slug}, ${company.id})
+        on conflict (slug) do update set company_id = excluded.company_id
+      `;
     }
     const nextTrades = data.trades === undefined ? company.trades : parseTradeTokens(data.trades).join(",");
     const offered = new Set(parseTradeTokens(nextTrades));
@@ -2438,7 +2450,15 @@ export const getPublicShop = createServerFn({ method: "GET" })
       where slug = ${needle} and shop_paid_at is not null and id <> ${HOUSEHOLD_COMPANY}
       limit 1
     `;
-    const company = rows[0];
+    const aliased = rows[0]
+      ? []
+      : await sql<Company>`
+          select c.* from shop_slug_aliases a
+          join companies c on c.id = a.company_id
+          where a.slug = ${needle} and c.shop_paid_at is not null and c.id <> ${HOUSEHOLD_COMPANY}
+          limit 1
+        `;
+    const company = rows[0] ?? aliased[0];
     if (!company) throw new Error("Shop not found");
     const hydrated = asCompany(company);
     return {
@@ -4624,7 +4644,10 @@ async function uniqueProfileSlug(sql: Sql, base: string, userId: string) {
     const taken = await sql<{ user_id: string }>`
       select user_id from user_profiles where slug = ${slug} and user_id <> ${userId} limit 1
     `;
-    if (!taken[0]) return slug;
+    const aliased = await sql<{ user_id: string }>`
+      select user_id from profile_slug_aliases where slug = ${slug} and user_id <> ${userId} limit 1
+    `;
+    if (!taken[0] && !aliased[0]) return slug;
   }
   return `${root}-${slugToken().slice(0, 6)}`;
 }
@@ -4718,7 +4741,18 @@ export const updateUserProfile = createServerFn({ method: "POST" })
     const existing = (
       await sql<UserProfileRow>`select * from user_profiles where user_id = ${context.userId} limit 1`
     )[0];
-    const slug = existing?.slug || (await uniqueProfileSlug(sql, name, context.userId));
+    const nextSlug = await uniqueProfileSlug(sql, name, context.userId);
+    const slug =
+      existing?.slug && profileSlugFromName(existing.display_name || "") === nextSlug
+        ? existing.slug
+        : nextSlug;
+    if (existing?.slug && existing.slug !== slug) {
+      await sql`
+        insert into profile_slug_aliases (slug, user_id)
+        values (${existing.slug}, ${context.userId})
+        on conflict (slug) do update set user_id = excluded.user_id
+      `;
+    }
     const photoSrc = photo === undefined ? (existing?.photo_src ?? null) : photo;
     await sql`
       insert into user_profiles (
@@ -4772,9 +4806,20 @@ export const getPublicProfile = createServerFn({ method: "GET" })
     const sql = await getSql();
     const needle = slug.trim().toLowerCase();
     if (!needle) throw new Error("Profile not found");
-    const row = (
+    const direct = (
       await sql<UserProfileRow>`select * from user_profiles where slug = ${needle} limit 1`
     )[0];
+    const aliased = direct
+      ? undefined
+      : (
+          await sql<UserProfileRow>`
+            select p.* from profile_slug_aliases a
+            join user_profiles p on p.user_id = a.user_id
+            where a.slug = ${needle}
+            limit 1
+          `
+        )[0];
+    const row = direct ?? aliased;
     if (!row?.slug) throw new Error("Profile not found");
     const hats = await hatsForUser(sql, row.user_id);
     const authUser = (

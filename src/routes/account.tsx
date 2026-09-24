@@ -473,6 +473,7 @@ function ProfileCard({ profile }: { profile: UserProfile }) {
                   <Link to="/u/$slug" params={{ slug: profile.slug! }} className="underline underline-offset-2">
                     planitservice.com{sharePath}
                   </Link>
+                  . Saving a corrected name updates this link. The old spelling still opens your page.
                 </p>
                 <Button
                   type="button"
