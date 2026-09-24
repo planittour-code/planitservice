@@ -259,7 +259,7 @@ function SettingsPage() {
         </form>
         <div className="flex flex-wrap items-center gap-3">
           {logo ? (
-            <img src={logo} alt="" className="h-10 w-auto max-w-[9rem] object-contain" />
+            <img src={logo} alt="" className="h-14 w-auto max-w-[12rem] object-contain sm:h-16" />
           ) : (
             <span className="text-sm text-muted-foreground">No shop logo yet.</span>
           )}
@@ -367,7 +367,7 @@ function SettingsPage() {
         <div className="space-y-2">
           <Label>Logo</Label>
           {logo ? (
-            <img src={logo} alt="" className="h-10 w-auto max-w-[9rem] object-contain" />
+            <img src={logo} alt="" className="h-14 w-auto max-w-[12rem] object-contain sm:h-16" />
           ) : null}
           <label className="inline-flex h-7 cursor-pointer items-center rounded-md bg-card px-2 text-xs shadow-[var(--shadow-border)]">
             {logo ? "Change logo" : "Upload logo"}
@@ -476,11 +476,11 @@ function ServiceLogos({
         {trades.map((work) => {
           const src = logos[work.id] || shopLogo;
           return (
-            <li key={work.id} className="flex flex-wrap items-center gap-3 px-4 py-2">
+            <li key={work.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               {src ? (
-                <img src={src} alt="" className="size-10 shrink-0 rounded-md object-contain" />
+                <img src={src} alt="" className="h-14 w-auto max-w-[12rem] shrink-0 object-contain sm:h-16" />
               ) : (
-                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
+                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-muted text-sm font-medium text-muted-foreground sm:h-16 sm:w-16">
                   {work.name.slice(0, 1)}
                 </span>
               )}
