@@ -95,6 +95,10 @@ function Login() {
     if (houseInvite) {
       return <Navigate to="/invite/$token" params={{ token: houseInvite }} />;
     }
+    const proposalId = next.match(/^\/app\/proposals\/([^/?#]+)$/)?.[1];
+    if (proposalId) {
+      return <Navigate to="/app/proposals/$id" params={{ id: proposalId }} />;
+    }
     if (next.startsWith("/app/new")) {
       const params = new URLSearchParams(next.split("?")[1] ?? "");
       return (

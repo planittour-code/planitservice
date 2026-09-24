@@ -51,6 +51,15 @@ function AppLayout() {
         />
       );
     }
+    const proposal = pathname.match(/^\/app\/proposals\/([^/]+)$/);
+    if (proposal) {
+      return (
+        <Navigate
+          to="/login"
+          search={{ next: pathname, role: "contractor" }}
+        />
+      );
+    }
     return <Navigate to="/shop" />;
   }
 

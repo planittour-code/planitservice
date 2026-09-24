@@ -737,7 +737,7 @@ async function notifyEstimateReview(
     seenTo.add(party.to);
     targets.push({ ...party, url });
   };
-  const shopUrl = `${origin}/app/proposals/${proposal.id}`;
+  const shopUrl = `${origin}/p/${proposal.share_token}`;
   const fileUrl = `${origin}/p/${proposal.share_token}`;
   if (audience === "file" || audience === "all") {
     for (const party of parties.file) {
