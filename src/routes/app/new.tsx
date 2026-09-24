@@ -62,7 +62,7 @@ import {
   listWorkKits,
   standardizeAddress,
 } from "@/lib/housefile/server";
-import { normalizePaymentLink } from "@/lib/housefile/payment";
+import { normalizePaymentLink, shopPaymentLinkForWork } from "@/lib/housefile/payment";
 
 const queryString = z.preprocess(
   (v) => (v == null || v === "" ? undefined : String(v)),
@@ -151,6 +151,7 @@ function NewQuote() {
   const [localCustom, setLocalCustom] = useState<string[]>([]);
   const [salesEmails, setSalesEmails] = useState<string[]>([]);
   const [paymentLink, setPaymentLink] = useState("");
+  const [paymentTouched, setPaymentTouched] = useState(false);
   const salesSeeded = useRef(false);
 
   const offered = user
@@ -165,9 +166,11 @@ function NewQuote() {
       ];
   const work = workFromId(workId);
   useEffect(() => {
+    if (!paymentTouched) {
+      const shop = dash.data?.company;
+      if (shop) setPaymentLink(shopPaymentLinkForWork(workId, shop) ?? "");
+    }
     if (salesSeeded.current) return;
-    const shopLink = dash.data?.company.payment_link;
-    if (shopLink && !paymentLink) setPaymentLink(shopLink);
     const members = teamQ.data?.members ?? [];
     if (!members.length) return;
     const mine = (user?.primaryEmail ?? "").trim().toLowerCase();
@@ -182,7 +185,7 @@ function NewQuote() {
       setSalesEmails([first]);
       salesSeeded.current = true;
     }
-  }, [dash.data?.company.payment_link, teamQ.data?.members, user?.primaryEmail, paymentLink]);
+  }, [dash.data?.company, paymentTouched, teamQ.data?.members, user?.primaryEmail, workId]);
   const addWork = useMutation({
     mutationFn: (name: string) => addCustomWork({ data: { name } }),
     onSuccess: (res) => {
@@ -404,7 +407,7 @@ function NewQuote() {
         sent_at: null,
         accepted_at: null,
         created_at: new Date().toISOString(),
-        payment_link: normalizePaymentLink(paymentLink) || shop?.payment_link || null,
+        payment_link: normalizePaymentLink(paymentLink) || shopPaymentLinkForWork(work?.id, shop ?? {}) || null,
       },
       items: billed.map((line, i) => ({
         id: `preview-${i}`,
@@ -441,7 +444,7 @@ function NewQuote() {
         agreement: shop?.agreement ?? null,
         terms: shop?.terms ?? null,
         payment_terms: shop?.payment_terms ?? null,
-        payment_link: normalizePaymentLink(paymentLink) || shop?.payment_link || null,
+        payment_link: normalizePaymentLink(paymentLink) || shopPaymentLinkForWork(work?.id, shop ?? {}) || null,
       },
       salesRep: invoiceSalesFromTeam(teamQ.data?.members ?? [], salesEmails, user)[0] ?? null,
       salesReps: invoiceSalesFromTeam(teamQ.data?.members ?? [], salesEmails, user),
@@ -894,10 +897,15 @@ function NewQuote() {
                   inputMode="url"
                   placeholder="https://pay.example.com/your-shop"
                   value={paymentLink}
-                  onChange={(e) => setPaymentLink(e.target.value)}
+                  onChange={(e) => {
+                    setPaymentTouched(true);
+                    setPaymentLink(e.target.value);
+                  }}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Prints on the estimate and invoice. Defaults to the shop payment link.
+                  {workId === "gutters"
+                    ? "Gutters use the gutters payment link."
+                    : "This service bills as Painting Plus."}
                 </p>
               </div>
               <SalesSeatPicker

@@ -48,6 +48,7 @@ function SettingsPage() {
   const [terms, setTerms] = useState("");
   const [paymentTerms, setPaymentTerms] = useState<(typeof PAYMENT_TERMS)[number]>("due_completion");
   const [paymentLink, setPaymentLink] = useState("");
+  const [paintPaymentLink, setPaintPaymentLink] = useState("");
   const [pickingTrades, setPickingTrades] = useState(false);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ function SettingsPage() {
     setTerms(q.data.company.terms ?? "");
     setPaymentTerms(asPaymentTerms(q.data.company.payment_terms));
     setPaymentLink(q.data.company.payment_link ?? "");
+    setPaintPaymentLink(q.data.company.paint_payment_link ?? "");
   }, [q.data]);
 
   const save = useMutation({
@@ -78,6 +80,7 @@ function SettingsPage() {
           terms,
           payment_terms: paymentTerms,
           payment_link: paymentLink,
+          paint_payment_link: paintPaymentLink,
         },
       }),
     onSuccess: async (company) => {
@@ -422,16 +425,29 @@ function SettingsPage() {
           </div>
         </fieldset>
         <div className="space-y-0.5">
-          <Label htmlFor="pay">Payment link</Label>
+          <Label htmlFor="pay">Gutters payment link</Label>
           <Input
             id="pay"
             inputMode="url"
-            placeholder="https://pay.example.com/your-shop"
+            placeholder="https://pay.example.com/gutters"
             value={paymentLink}
             onChange={(e) => setPaymentLink(e.target.value)}
           />
           <p className="text-sm text-muted-foreground">
-            Venmo, PayPal, Square, or any URL you already use. Homeowners get this after they accept.
+            Used only on gutter estimates. Homeowners get this after they accept.
+          </p>
+        </div>
+        <div className="space-y-0.5">
+          <Label htmlFor="paint-pay">Painting Plus payment link</Label>
+          <Input
+            id="paint-pay"
+            inputMode="url"
+            placeholder="https://pay.example.com/painting-plus"
+            value={paintPaymentLink}
+            onChange={(e) => setPaintPaymentLink(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            Used on every other selected service. Paint, decks, drainage, and the rest bill as Painting Plus.
           </p>
         </div>
         <Button type="submit" disabled={save.isPending}>

@@ -41,3 +41,12 @@ export function normalizePaymentLink(value: string | null | undefined) {
   if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return raw;
   return `https://${raw}`;
 }
+
+/** Gutters keep the shop payment link. Every other service uses the Painting Plus link. */
+export function shopPaymentLinkForWork(
+  workId: string | null | undefined,
+  shop: { payment_link?: string | null; paint_payment_link?: string | null },
+) {
+  if (workId === "gutters") return shop.payment_link ?? null;
+  return shop.paint_payment_link || shop.payment_link || null;
+}

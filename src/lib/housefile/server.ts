@@ -26,7 +26,7 @@ import {
   type ProfileHat,
   type UserProfile,
 } from "./profile";
-import { asPaymentTerms, normalizePaymentLink } from "./payment";
+import { asPaymentTerms, normalizePaymentLink, shopPaymentLinkForWork } from "./payment";
 import { geocodeLine, parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
   ESTIMATE_KEY,
@@ -120,6 +120,7 @@ function asCompany(row: Company): Company {
     shop_paid_at: row.shop_paid_at ?? null,
     payment_terms: row.payment_terms ?? null,
     payment_link: row.payment_link ?? null,
+    paint_payment_link: row.paint_payment_link ?? null,
     kits_seeded_at: row.kits_seeded_at ?? null,
     slug: row.slug ?? null,
     stripe_customer_id: row.stripe_customer_id ?? null,
@@ -1381,6 +1382,7 @@ export const updateCompany = createServerFn({ method: "POST" })
       trades?: string | null;
       payment_terms?: string | null;
       payment_link?: string | null;
+      paint_payment_link?: string | null;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -1446,7 +1448,8 @@ export const updateCompany = createServerFn({ method: "POST" })
           trades = ${nextTrades},
           slug = ${nextSlug},
           payment_terms = ${data.payment_terms === undefined ? company.payment_terms : asPaymentTerms(data.payment_terms)},
-          payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)}
+          payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)},
+          paint_payment_link = ${data.paint_payment_link === undefined ? company.paint_payment_link : normalizePaymentLink(data.paint_payment_link)}
       where id = ${company.id}
     `;
     if (data.trades !== undefined) {
@@ -1777,7 +1780,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     if (picked.length === 0 && isMail(sessionMail) && allowed.has(sessionMail)) picked.push(sessionMail);
     if (picked.length === 0 && allowed.size) picked.push([...allowed][0]!);
     const paymentLink = data.paymentLink === undefined
-      ? company.payment_link
+      ? shopPaymentLinkForWork(work?.id, company)
       : normalizePaymentLink(data.paymentLink);
     await sql`
       insert into proposals (

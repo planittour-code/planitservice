@@ -25,6 +25,7 @@ export type Company = {
   review_other: string | null;
   payment_terms: string | null;
   payment_link: string | null;
+  paint_payment_link: string | null;
   kits_seeded_at: string | null;
   slug: string | null;
   stripe_customer_id: string | null;
