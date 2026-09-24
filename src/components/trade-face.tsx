@@ -12,6 +12,7 @@ import {
   Plus,
   Trees,
   Waves,
+  Waypoints,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ export const TRADE_FACE: Record<string, { icon: LucideIcon; surface: string }> =
   roof: { icon: House, surface: "bg-trade-roof text-primary-foreground" },
   windows: { icon: AppWindow, surface: "bg-trade-windows text-primary-foreground" },
   gutters: { icon: Droplets, surface: "bg-trade-gutters text-primary-foreground" },
+  drainage: { icon: Waypoints, surface: "bg-trade-gutters text-primary-foreground" },
   siding: { icon: Layers, surface: "bg-trade-siding text-primary-foreground" },
   deck: { icon: Fence, surface: "bg-trade-deck text-primary-foreground" },
   porch: { icon: Columns2, surface: "bg-trade-porch text-primary-foreground" },

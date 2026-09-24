@@ -53,6 +53,13 @@ const WINDOWS: Starter[] = [
   { item: "Window units", description: "New units from materials.", slot: "window", qty: "" },
 ];
 
+const DRAINAGE: Starter[] = [
+  { item: "Exterior drainage", description: "Grade, splash, and surface runoff at the downspouts.", qty: "1" },
+  { item: "Underground drain", description: "Leaders into buried pipe away from the foundation.", qty: "" },
+  { item: "Above-ground drain", description: "Above-grade extensions and splash away from the house.", qty: "" },
+  { item: "Site protection and haul-off", description: "Beds, walks, and debris from the drainage run.", qty: "1" },
+];
+
 const GUTTERS: Starter[] = [
   { item: "Remove existing gutters", description: "Pull and haul old gutters.", qty: "" },
   { item: "Gutters", description: "New gutter run from materials.", slot: "gutter", qty: "" },
@@ -111,6 +118,8 @@ export function startersFor(workId: string, paintScope?: string): Starter[] {
       return WINDOWS;
     case "gutters":
       return GUTTERS;
+    case "drainage":
+      return DRAINAGE;
     case "siding":
       return SIDING;
     case "deck":
@@ -251,6 +260,22 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
       },
     ];
   }
+  if (workId === "drainage") {
+    return [
+      {
+        id: "popups",
+        label: "Pop-up emitters",
+        hint: "Where buried pipe daylights in the yard.",
+        lines: [{ item: "Pop-up emitters", description: "Daylight the buried run.", qty: "" }],
+      },
+      {
+        id: "catch",
+        label: "Catch basin",
+        hint: "A basin where surface water collects.",
+        lines: [{ item: "Catch basin", description: "Set and tie into the drain run.", qty: "" }],
+      },
+    ];
+  }
   if (workId === "gutters") {
     return [
       {
@@ -340,7 +365,7 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
 
 export function optionLabel(id: string, fallback?: string): string {
   if (id === CUSTOM_OPTION_ID) return fallback?.trim() || "Optional work";
-  for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "flooring"]) {
+  for (const workId of ["paint", "roof", "windows", "gutters", "drainage", "siding", "deck", "flooring"]) {
     for (const scope of ["interior", "exterior"]) {
       const hit = optionsFor(workId, scope).find((o) => o.id === id);
       if (hit) return hit.label;

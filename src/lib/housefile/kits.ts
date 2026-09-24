@@ -96,6 +96,32 @@ const ls = (name: string, description: string): SeedLine => ({
 
 export const GUTTERS_PLUS_DRAINAGE_KIT = "Gutters Plus Drainage";
 
+const DRAINAGE_LINES: SeedLine[] = [
+  {
+    name: "Exterior drainage",
+    description: "Grade, splash, and surface runoff at the downspouts.",
+    unit: "ls",
+    qty: "1",
+  },
+  {
+    name: "Underground drain",
+    description: "Leaders into buried pipe away from the foundation.",
+    unit: "lf",
+  },
+  {
+    name: "Above-ground drain",
+    description: "Above-grade extensions and splash away from the house.",
+    unit: "ea",
+  },
+  {
+    name: "Mix — underground and above ground",
+    description: "Tie some leaders below grade and leave others above grade.",
+    unit: "ls",
+    qty: "1",
+  },
+  ls("Site protection and haul-off", "Beds, walks, and debris from the drainage run."),
+];
+
 export const GUTTER_KIT_SEED: KitSeed[] = [
   { name: "5-Inch New Install", lines: gutterNew("5-Inch") },
   { name: "5-Inch Replacement", lines: gutterReplace("5-Inch") },
@@ -103,31 +129,7 @@ export const GUTTER_KIT_SEED: KitSeed[] = [
   { name: "6-Inch Replacement", lines: gutterReplace("6-Inch") },
   {
     name: GUTTERS_PLUS_DRAINAGE_KIT,
-    lines: [
-      {
-        name: "Exterior drainage",
-        description: "Grade, splash, and surface runoff at the downspouts.",
-        unit: "ls",
-        qty: "1",
-      },
-      {
-        name: "Underground drain",
-        description: "Leaders into buried pipe away from the foundation.",
-        unit: "lf",
-      },
-      {
-        name: "Above-ground drain",
-        description: "Above-grade extensions and splash away from the house.",
-        unit: "ea",
-      },
-      {
-        name: "Mix — underground and above ground",
-        description: "Tie some leaders below grade and leave others above grade.",
-        unit: "ls",
-        qty: "1",
-      },
-      ls("Site protection and haul-off", "Beds, walks, and debris from the drainage run."),
-    ],
+    lines: DRAINAGE_LINES,
   },
   {
     name: "Maintenance Plan",
@@ -146,6 +148,12 @@ export const GUTTER_KIT_SEED: KitSeed[] = [
       },
     ],
   },
+];
+
+const DRAINAGE_KIT_SEED: KitSeed[] = [
+  { name: "Underground drain", lines: DRAINAGE_LINES.filter((line) => line.name !== "Above-ground drain" && line.name !== "Mix — underground and above ground") },
+  { name: "Above-ground drain", lines: DRAINAGE_LINES.filter((line) => line.name !== "Underground drain" && line.name !== "Mix — underground and above ground") },
+  { name: "Mix — underground and above ground", lines: DRAINAGE_LINES },
 ];
 
 const PAINT_KIT_SEED: KitSeed[] = [
@@ -467,6 +475,7 @@ const LAWN_KIT_SEED: KitSeed[] = [
 
 export const KIT_SEEDS: Record<string, KitSeed[]> = {
   gutters: GUTTER_KIT_SEED,
+  drainage: DRAINAGE_KIT_SEED,
   paint: PAINT_KIT_SEED,
   roof: ROOF_KIT_SEED,
   windows: WINDOW_KIT_SEED,
@@ -492,6 +501,9 @@ export function missingSeedKitNames(workId: string, existingNames: string[]) {
 
 const WORK_ALIASES: Record<string, string> = {
   gutter: "gutters",
+  drainage: "drainage",
+  "french drain": "drainage",
+  "downspout drain": "drainage",
   roofing: "roof",
   window: "windows",
   painting: "paint",

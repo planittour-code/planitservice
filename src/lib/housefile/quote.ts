@@ -203,6 +203,26 @@ export const WORK_TYPES: WorkType[] = [
     ],
   },
   {
+    id: "drainage",
+    templateId: "tmpl_drainage",
+    trade: "drainage",
+    name: "Drainage",
+    blurb: "Downspout leaders, buried pipe, and splash away from the foundation.",
+    fields: [
+      f("drainage_type", "Drainage type", "select", "Where the water leaves the house.", {
+        options: [
+          { value: "underground", label: "Underground" },
+          { value: "above", label: "Above ground" },
+          { value: "exterior", label: "Exterior / grade" },
+          { value: "mix", label: "Mix — underground and above ground" },
+        ],
+      }),
+      f("drain_lf", "Drain run", "number", "Buried pipe and surface leaders.", { unit: "lf", required: true }),
+      f("downspout_count", "Downspouts tied in", "number", "Leaders this job catches.", { unit: "ea", placeholder: "4" }),
+      f("drainage_note", "Where it daylights", "text", "Yard, street, or an existing drain."),
+    ],
+  },
+  {
     id: "siding",
     templateId: "tmpl_siding",
     trade: "siding",
@@ -634,6 +654,10 @@ export function defaultsFor(work: WorkType, facts: Record<string, string> = {}):
   if (work.id === "deck" && !out.include_rail) out.include_rail = "yes";
   if (work.id === "flooring" && !out.include_base) out.include_base = "yes";
   if (work.id === "gutters" && !out.downspout_count) out.downspout_count = "4";
+  if (work.id === "drainage") {
+    if (!out.drainage_type) out.drainage_type = "underground";
+    if (!out.downspout_count) out.downspout_count = "4";
+  }
   if (work.id === "roof" && !out.roof_layers) out.roof_layers = "1";
   if (work.id === "roof" && !out.roof_pitch) out.roof_pitch = "6/12";
   return out;
@@ -649,6 +673,8 @@ export function buildQuote(workId: string, inputs: Record<string, string>): Quot
       return quoteWindows(inputs);
     case "gutters":
       return quoteGutters(inputs);
+    case "drainage":
+      return quoteDrainage(inputs);
     case "siding":
       return quoteSiding(inputs);
     case "deck":
@@ -1093,6 +1119,74 @@ function quoteSiding(inputs: Record<string, string>): QuoteLine[] {
       color,
     }),
   ].filter((l) => l.qty > 0);
+}
+
+function quoteDrainage(inputs: Record<string, string>): QuoteLine[] {
+  const kind = inputs.drainage_type || "underground";
+  const lf = nInput(inputs, "drain_lf");
+  const leaders = nInput(inputs, "downspout_count", 4);
+  const note = inputs.drainage_note || "Away from the foundation.";
+  const underground = kind === "underground" || kind === "mix";
+  const above = kind === "above" || kind === "mix" || kind === "exterior";
+  const lines: QuoteLine[] = [
+    line({
+      name: "Site protection and haul-off",
+      description: "Beds, walks, and debris from the drainage run.",
+      qty: 1,
+      unit: "ls",
+      unit_price: 180,
+      category: "prep",
+    }),
+  ];
+  if (kind === "exterior" || kind === "mix") {
+    lines.push(
+      line({
+        name: "Exterior drainage",
+        description: `Grade, splash, and surface runoff. ${note}`,
+        qty: 1,
+        unit: "ls",
+        unit_price: 240,
+        category: "drainage",
+      }),
+    );
+  }
+  if (underground) {
+    lines.push(
+      line({
+        name: "Underground drain",
+        description: "Leaders into buried pipe away from the foundation.",
+        qty: Math.max(lf, leaders * 10),
+        unit: "lf",
+        unit_price: 18,
+        category: "drainage",
+      }),
+    );
+  }
+  if (above) {
+    lines.push(
+      line({
+        name: "Above-ground drain",
+        description: "Above-grade extensions and splash away from the house.",
+        qty: Math.max(1, leaders),
+        unit: "ea",
+        unit_price: 45,
+        category: "drainage",
+      }),
+    );
+  }
+  if (kind === "mix") {
+    lines.push(
+      line({
+        name: "Mix — underground and above ground",
+        description: "Tie some leaders below grade and leave others above grade.",
+        qty: 1,
+        unit: "ls",
+        unit_price: 160,
+        category: "drainage",
+      }),
+    );
+  }
+  return lines.filter((l) => l.qty > 0);
 }
 
 function quotePorch(inputs: Record<string, string>): QuoteLine[] {

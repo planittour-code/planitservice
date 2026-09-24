@@ -110,6 +110,29 @@ export const MEASURE_GUIDES: MeasureGuide[] = [
     tip: "A long tape along the foundation under each eave is close enough for an estimate. The shop will still check corners on site.",
   },
   {
+    id: "drainage",
+    name: "Drainage",
+    photo: CATEGORY_PHOTO.drainage,
+    chip: "Leaders and pipe",
+    what: "Drainage is the run that takes water off the downspouts and away from the foundation — buried pipe, above-grade extensions, or both.",
+    tools: "Tape along the path the water should take. One photo at each downspout, one where it should daylight.",
+    steps: [
+      {
+        title: "Downspouts",
+        body: "Count the leaders this job catches. Note which ones pond against the house.",
+      },
+      {
+        title: "The run",
+        body: "Measure from each outlet to where the water should leave — yard, street, or an existing drain. Add the runs.",
+      },
+      {
+        title: "Above or below grade",
+        body: "Say underground, above ground, exterior grade, or a mix. A pop-up in the yard is still an underground run.",
+      },
+    ],
+    tip: "A photo of standing water after rain, plus the path you want it to take, is enough for a first number.",
+  },
+  {
     id: "siding",
     name: "Siding",
     photo: CATEGORY_PHOTO.siding,

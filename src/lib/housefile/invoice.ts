@@ -27,7 +27,7 @@ export function isDrainageInvoice(title: string | null | undefined) {
   const value = title?.trim() ?? "";
   if (!value) return false;
   if (value.toLowerCase().includes(GUTTERS_PLUS_DRAINAGE_KIT.toLowerCase())) return true;
-  return /drainage/i.test(value) && /gutter/i.test(value);
+  return /drainage/i.test(value);
 }
 
 export function invoiceNumber(proposal: Pick<Proposal, "id">) {

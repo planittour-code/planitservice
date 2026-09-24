@@ -14,6 +14,7 @@ const TRADE_LABEL: Record<string, string> = {
   decks: "Decks",
   porches: "Porches",
   flooring: "Flooring",
+  drainage: "Drainage",
 };
 
 export function HomeownerHeader({

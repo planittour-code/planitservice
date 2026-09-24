@@ -113,6 +113,7 @@ export const CATEGORY_PHOTO: Record<string, string> = {
   hvac: "/houses/cat-systems.jpg",
   pool: "/houses/cat-house.jpg",
   lawn: "/houses/cat-house.jpg",
+  drainage: "/houses/cat-gutters.jpg",
 };
 
 /** Homeowner “The house” quote helpers — shown first, and this helps quote. */
