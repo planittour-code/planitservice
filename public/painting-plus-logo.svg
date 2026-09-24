@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" role="img" aria-label="Painting Plus">
+  <rect width="640" height="160" rx="16" fill="#0b3a6a"/>
+  <rect x="28" y="28" width="104" height="104" rx="14" fill="#32d74b"/>
+  <path fill="#052e16" d="M62 46h22l28 68h-18l-5-14H57l-5 14H34l28-68zm8 40h14l-7-20-7 20z"/>
+  <path fill="#052e16" d="M108 42h10v8h-10zM96 58h28v8H96z"/>
+  <text x="152" y="78" fill="#ffffff" font-family="Georgia, 'Source Serif 4', serif" font-size="42" font-weight="600">Painting</text>
+  <text x="152" y="122" fill="#32d74b" font-family="Georgia, 'Source Serif 4', serif" font-size="42" font-weight="600">Plus</text>
+</svg>

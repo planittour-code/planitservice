@@ -85,6 +85,26 @@ function SettingsPage() {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
+  const saveLogo = useMutation({
+    mutationFn: (next: string) => {
+      const company = q.data?.company;
+      if (!company) throw new Error("Shop not loaded");
+      return updateCompany({
+        data: {
+          name: name.trim() || company.name,
+          trade: company.trade,
+          phone: company.phone ?? "",
+          email: company.email ?? "",
+          logo_src: next,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Shop logo saved");
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save logo"),
+  });
   const saveLogos = useMutation({
     mutationFn: (next: Record<string, string>) => {
       const company = q.data?.company;
@@ -210,6 +230,60 @@ function SettingsPage() {
           </p>
         ) : null}
       </section>
+      <section className="space-y-2">
+        <div>
+          <h2 className="font-display text-lg font-medium">Company name</h2>
+          <p className="text-sm text-muted-foreground">
+            The name on the shop, estimates, and the public page.
+          </p>
+        </div>
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate();
+          }}
+        >
+          <div className="min-w-[16rem] flex-1 space-y-0.5">
+            <Label htmlFor="company-name">Change company name</Label>
+            <Input
+              id="company-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="organization"
+            />
+          </div>
+          <Button type="submit" disabled={save.isPending || !name.trim()}>
+            {save.isPending ? "Saving…" : "Save name"}
+          </Button>
+        </form>
+        <div className="flex flex-wrap items-center gap-3">
+          {logo ? (
+            <img src={logo} alt="" className="h-10 w-auto max-w-[9rem] object-contain" />
+          ) : (
+            <span className="text-sm text-muted-foreground">No shop logo yet.</span>
+          )}
+          <label className="inline-flex h-7 cursor-pointer items-center rounded-md bg-card px-2 text-xs shadow-[var(--shadow-border)]">
+            {logo ? "Change logo" : "Upload logo"}
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                void compressImage(file, 600)
+                  .then((data) => {
+                    setLogo(data);
+                    saveLogo.mutate(data);
+                  })
+                  .catch((err) => toast.error(err instanceof Error ? err.message : "Could not read logo"));
+              }}
+            />
+          </label>
+        </div>
+      </section>
       {trades.length > 0 ? (
         <ServiceLogos
           trades={trades}
@@ -268,7 +342,15 @@ function SettingsPage() {
       >
         <div className="space-y-0.5">
           <Label htmlFor="cn">Company</Label>
-          <Input id="cn" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input
+            id="cn"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="organization"
+          />
+          <p className="text-sm text-muted-foreground">
+            Same as Change company name above. Saving either field updates the shop name.
+          </p>
         </div>
         <div className="space-y-0.5">
           <Label htmlFor="tr">Trade</Label>

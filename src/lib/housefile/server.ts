@@ -1390,6 +1390,19 @@ export const updateCompany = createServerFn({ method: "POST" })
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can change shop settings.");
     const name = data.name.trim() || company.name;
+    let nextSlug = company.slug;
+    if (name !== company.name) {
+      const root = shopSlugFromName(name);
+      let candidate = root;
+      for (let i = 1; i < 20; i++) {
+        const taken = await sql<{ id: string }>`
+          select id from companies where slug = ${candidate} and id <> ${company.id} limit 1
+        `;
+        if (!taken[0]) break;
+        candidate = `${root}-${i + 1}`;
+      }
+      nextSlug = candidate;
+    }
     const nextTrades = data.trades === undefined ? company.trades : parseTradeTokens(data.trades).join(",");
     const offered = new Set(parseTradeTokens(nextTrades));
     let nextLogos = company.trade_logos;
@@ -1419,6 +1432,7 @@ export const updateCompany = createServerFn({ method: "POST" })
           agreement = ${data.agreement === undefined ? company.agreement : data.agreement},
           terms = ${data.terms === undefined ? company.terms : data.terms},
           trades = ${nextTrades},
+          slug = ${nextSlug},
           payment_terms = ${data.payment_terms === undefined ? company.payment_terms : asPaymentTerms(data.payment_terms)},
           payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)}
       where id = ${company.id}
