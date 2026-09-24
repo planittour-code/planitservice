@@ -237,23 +237,14 @@ export const WORK_TYPES: WorkType[] = [
     id: "deck",
     templateId: "tmpl_deck",
     trade: "decks",
-    name: "Decks",
-    blurb: "Board area, repairs, and the stain that stays with the house.",
+    name: "Decks and porches",
+    blurb: "Board area, porch floor, repairs, and the finish that stays with the house.",
     fields: [
       f("deck_sf", "Deck square feet", "number", "Walking surface only.", { unit: "sf", required: true }),
       f("board_repair_count", "Boards to replace", "number", "Failed decking, each.", { unit: "ea", placeholder: "8" }),
       f("include_rail", "Stain the rail", "toggle", "Pickets and cap, same product."),
       f("stain_color", "Stain color", "text", "The next coat has to match.", { placeholder: "Dark Walnut" }),
-    ],
-  },
-  {
-    id: "porch",
-    templateId: "tmpl_porch",
-    trade: "porches",
-    name: "Porches",
-    blurb: "Floor, ceiling, screens, and rail — priced from the porch, not the house.",
-    fields: [
-      f("porch_sf", "Porch square feet", "number", "Floor of this porch.", { unit: "sf", required: true }),
+      f("porch_sf", "Porch square feet", "number", "Floor of this porch.", { unit: "sf" }),
       f("porch_type", "Porch type", "select", "Open, covered, or screened changes the assembly.", {
         options: [
           { value: "open", label: "Open — floor and rail" },
@@ -262,8 +253,6 @@ export const WORK_TYPES: WorkType[] = [
         ],
       }),
       f("stories", "Stories", "number", "A second-story porch is a different staging job."),
-      f("include_rail", "Work the rail", "toggle", "Pickets, cap, and posts."),
-      f("stain_color", "Floor finish", "text", "Stain or paint on the boards.", { placeholder: "Dark Walnut" }),
       f("exterior_trim_paint", "Trim / ceiling color", "text", "Beadboard and posts."),
     ],
   },
@@ -438,16 +427,36 @@ export function customWorkType(name: string): WorkType {
   };
 }
 
+/** Porches used to be its own billed category. It now lives on Decks and porches. */
+const TRADE_ALIASES: Record<string, string> = {
+  porch: "deck",
+  porches: "deck",
+  decks: "deck",
+};
+
+export function canonicalTradeId(id: string) {
+  const key = id.trim().toLowerCase();
+  return TRADE_ALIASES[key] ?? id.trim();
+}
+
 export function parseTradeTokens(trades: string | null | undefined) {
-  return (trades ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of (trades ?? "").split(",")) {
+    const id = canonicalTradeId(raw);
+    if (!id) continue;
+    const key = id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(id);
+  }
+  return out;
 }
 
 export function workFromId(id: string | undefined | null): WorkType | undefined {
   if (!id) return undefined;
-  if (WORK_BY_ID[id]) return WORK_BY_ID[id];
+  const canonical = canonicalTradeId(id);
+  if (WORK_BY_ID[canonical]) return WORK_BY_ID[canonical];
   if (isCustomWorkId(id)) {
     const name = customWorkName(id);
     if (name) return customWorkType(name);
@@ -463,6 +472,7 @@ export function workTypesFor(trades: string | null | undefined) {
 
 export function workForTemplate(templateId: string): WorkType | undefined {
   if (templateId === "tmpl_int_paint" || templateId === "tmpl_ext_paint") return WORK_BY_ID.paint;
+  if (templateId === "tmpl_porch" || templateId === "tmpl_deck") return WORK_BY_ID.deck;
   if (templateId === CUSTOM_TEMPLATE_ID) return undefined;
   return WORK_TYPES.find((w) => w.templateId === templateId);
 }
@@ -501,14 +511,19 @@ export function estimateBrandLogo(opts: {
   shopLogo: string | null;
 }): string | null {
   const fromTemplate = opts.templateId ? workForTemplate(opts.templateId) : undefined;
-  if (fromTemplate && opts.tradeLogos[fromTemplate.id]) return opts.tradeLogos[fromTemplate.id];
+  if (fromTemplate) {
+    const logo = opts.tradeLogos[fromTemplate.id] ?? opts.tradeLogos[canonicalTradeId(fromTemplate.id)];
+    if (logo) return logo;
+  }
   const title = opts.title.trim().toLowerCase();
   if (title) {
     for (const [id, src] of Object.entries(opts.tradeLogos)) {
       const work = workFromId(id);
       if (!work) continue;
       const name = work.name.toLowerCase();
-      if (title.includes(name)) return src;
+      if (title.includes(name) || (work.id === "deck" && (title.includes("deck") || title.includes("porch")))) {
+        return src;
+      }
     }
   }
   return opts.shopLogo;
@@ -616,7 +631,7 @@ export function defaultsFor(work: WorkType, facts: Record<string, string> = {}):
     if (!out.include_interior_trim) out.include_interior_trim = "yes";
   }
   if (work.id === "siding" && !out.include_wrap) out.include_wrap = "yes";
-  if (work.id === "porch" && !out.include_rail) out.include_rail = "yes";
+  if (work.id === "deck" && !out.include_rail) out.include_rail = "yes";
   if (work.id === "flooring" && !out.include_base) out.include_base = "yes";
   if (work.id === "gutters" && !out.downspout_count) out.downspout_count = "4";
   if (work.id === "roof" && !out.roof_layers) out.roof_layers = "1";
@@ -637,9 +652,8 @@ export function buildQuote(workId: string, inputs: Record<string, string>): Quot
     case "siding":
       return quoteSiding(inputs);
     case "deck":
-      return quoteDeck(inputs);
     case "porch":
-      return quotePorch(inputs);
+      return [...quoteDeck(inputs), ...quotePorch(inputs)];
     case "flooring":
       return quoteFlooring(inputs);
     case "plumbing":
@@ -1083,6 +1097,7 @@ function quoteSiding(inputs: Record<string, string>): QuoteLine[] {
 
 function quotePorch(inputs: Record<string, string>): QuoteLine[] {
   const sf = nInput(inputs, "porch_sf");
+  if (sf <= 0) return [];
   const kind = inputs.porch_type || "open";
   const color = inputs.stain_color || "Dark Walnut";
   const trim = inputs.exterior_trim_paint || "SW Extra White";

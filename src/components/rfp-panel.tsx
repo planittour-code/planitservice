@@ -9,12 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { shortDate } from "@/lib/housefile/format";
-import { WORK_TYPES } from "@/lib/housefile/quote";
+import { WORK_TYPES, workFromId } from "@/lib/housefile/quote";
 import { closeRfp, createRfp, getHomeownerAccount } from "@/lib/housefile/server";
 import type { Rfp } from "@/lib/housefile/types";
 
 export function workLabel(id: string) {
-  return WORK_TYPES.find((w) => w.id === id)?.name ?? id;
+  return workFromId(id)?.name ?? id.replace(/^custom:/, "");
 }
 
 export function RfpForm({

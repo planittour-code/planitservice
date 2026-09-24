@@ -114,9 +114,8 @@ export function startersFor(workId: string, paintScope?: string): Starter[] {
     case "siding":
       return SIDING;
     case "deck":
-      return DECK;
     case "porch":
-      return PORCH;
+      return [...DECK, ...PORCH];
     case "flooring":
       return FLOORING;
     case "plumbing":
@@ -290,7 +289,7 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
       },
     ];
   }
-  if (workId === "deck") {
+  if (workId === "deck" || workId === "porch") {
     return [
       {
         id: "rail",
@@ -305,16 +304,6 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
         lines: [
           { item: "Replace failed boards", description: "Pull and replace failed decking.", qty: "" },
         ],
-      },
-    ];
-  }
-  if (workId === "porch") {
-    return [
-      {
-        id: "rail",
-        label: "Work the rail",
-        hint: "Pickets, cap, and posts.",
-        lines: [{ item: "Rail and pickets", description: "Paint or stain the rail.", qty: "" }],
       },
       {
         id: "ceiling",
@@ -351,7 +340,7 @@ export function optionsFor(workId: string, paintScope?: string): EstimateOption[
 
 export function optionLabel(id: string, fallback?: string): string {
   if (id === CUSTOM_OPTION_ID) return fallback?.trim() || "Optional work";
-  for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "porch", "flooring"]) {
+  for (const workId of ["paint", "roof", "windows", "gutters", "siding", "deck", "flooring"]) {
     for (const scope of ["interior", "exterior"]) {
       const hit = optionsFor(workId, scope).find((o) => o.id === id);
       if (hit) return hit.label;

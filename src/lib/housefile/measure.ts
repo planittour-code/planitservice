@@ -134,7 +134,7 @@ export const MEASURE_GUIDES: MeasureGuide[] = [
   },
   {
     id: "deck",
-    name: "Decks",
+    name: "Decks and porches",
     photo: CATEGORY_PHOTO.deck,
     chip: "Walking surface",
     what: "Deck work is the walking surface in square feet — length × width of the boards you stand on, not the lot.",
@@ -204,5 +204,6 @@ export const MEASURE_GUIDES: MeasureGuide[] = [
 ];
 
 export function measureGuideFor(workId: string) {
-  return MEASURE_GUIDES.find((g) => g.id === workId) ?? MEASURE_GUIDES[0]!;
+  const id = workId === "porch" ? "deck" : workId;
+  return MEASURE_GUIDES.find((g) => g.id === id) ?? MEASURE_GUIDES[0]!;
 }

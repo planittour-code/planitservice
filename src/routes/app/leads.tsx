@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { workLabel } from "@/components/rfp-panel";
+import { workFromId } from "@/lib/housefile/quote";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/housefile/format";
@@ -23,7 +24,10 @@ function LeadsPage() {
         <p className="text-sm tracking-wide text-muted-foreground uppercase">Request Estimates</p>
         <h1 className="font-display text-2xl font-medium tracking-tight">Leads in your area</h1>
         <p className="mt-1 text-muted-foreground">
-          Open requests for {trades.length ? trades.join(", ") : "the categories you offer"}
+          Open requests for{" "}
+          {trades.length
+            ? trades.map((id) => workFromId(id)?.name ?? id).join(", ")
+            : "the categories you offer"}
           {place ? ` near ${place}` : ""}. Only jobs in those categories, in this shop’s service
           area.
         </p>

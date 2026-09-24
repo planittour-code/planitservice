@@ -39,6 +39,7 @@ import {
   buildQuote,
   customWorkId,
   factsFromTakeoff,
+  canonicalTradeId,
   parseTradeLogos,
   parseTradeTokens,
   serializeTradeLogos,
@@ -1051,6 +1052,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     const sales = await sql<{ c: number }>`
       select count(*)::int as c from company_members where company_id = ${company.id} and role = ${"sales"}
     `;
+    await foldMergedTrades(sql, company);
     return {
       company,
       role,
@@ -1388,19 +1390,21 @@ export const updateCompany = createServerFn({ method: "POST" })
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can change shop settings.");
     const name = data.name.trim() || company.name;
-    const nextTrades = data.trades === undefined ? company.trades : data.trades;
+    const nextTrades = data.trades === undefined ? company.trades : parseTradeTokens(data.trades).join(",");
     const offered = new Set(parseTradeTokens(nextTrades));
     let nextLogos = company.trade_logos;
     if (data.trade_logos !== undefined) {
       const kept: Record<string, string> = {};
       for (const [id, src] of Object.entries(data.trade_logos ?? {})) {
-        if (offered.has(id)) kept[id] = src;
+        const canonical = canonicalTradeId(id);
+        if (offered.has(canonical) && !kept[canonical]) kept[canonical] = src;
       }
       nextLogos = serializeTradeLogos(kept);
     } else if (data.trades !== undefined) {
       const kept: Record<string, string> = {};
       for (const [id, src] of Object.entries(parseTradeLogos(company.trade_logos))) {
-        if (offered.has(id)) kept[id] = src;
+        const canonical = canonicalTradeId(id);
+        if (offered.has(canonical) && !kept[canonical]) kept[canonical] = src;
       }
       nextLogos = serializeTradeLogos(kept);
     }
@@ -1484,13 +1488,14 @@ export const completeOnboard = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner sets up the shop.");
-    const trades = data.trades.filter(Boolean);
+    const trades = parseTradeTokens(data.trades.join(","));
     if (trades.length === 0) throw new Error("Pick at least one service.");
     const tradeLabel = trades.join(", ");
     const offered = new Set(trades);
     const keptLogos: Record<string, string> = {};
     for (const [id, src] of Object.entries(data.tradeLogos ?? {})) {
-      if (offered.has(id)) keptLogos[id] = src;
+      const canonical = canonicalTradeId(id);
+      if (offered.has(canonical) && !keptLogos[canonical]) keptLogos[canonical] = src;
     }
     await sql`
       update companies
@@ -3052,6 +3057,33 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
     return { count: rows.length, kits: 0 };
   });
 
+/** Collapse retired trade ids (porch → deck) and sync the billed category count. */
+async function foldMergedTrades(sql: Sql, company: Company) {
+  const raw = (company.trades ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const folded = parseTradeTokens(company.trades);
+  if (raw.join(",") === folded.join(",")) return;
+  const logos = parseTradeLogos(company.trade_logos);
+  const kept: Record<string, string> = {};
+  for (const [id, src] of Object.entries(logos)) {
+    const canonical = canonicalTradeId(id);
+    if (folded.includes(canonical) && !kept[canonical]) kept[canonical] = src;
+  }
+  const nextLogos = serializeTradeLogos(kept);
+  await sql`
+    update companies
+    set trades = ${folded.join(",")},
+        trade_logos = ${nextLogos}
+    where id = ${company.id}
+  `;
+  company.trades = folded.join(",");
+  company.trade_logos = nextLogos;
+  const { syncShopCategoryQuantity } = await import("@/lib/housefile/stripe-shop.server");
+  await syncShopCategoryQuantity(company.stripe_subscription_id, folded.length);
+}
+
 async function seedStarterKits(sql: Sql, companyId: string, workIds?: string[], ownerId: string | null = null) {
   const ids = (workIds === undefined ? Object.keys(KIT_SEEDS) : workIds).filter((id) => KIT_SEEDS[id]?.length);
   for (const workId of ids) {
@@ -3984,10 +4016,11 @@ export const listMarketRfps = createServerFn({ method: "GET" })
     if (trades.length === 0) {
       return { rfps: [], trades, area: { city: company.city, zip: company.zip } };
     }
+    const offered = new Set(trades.map((id) => canonicalTradeId(id)));
     const rows = await sql<Rfp>`
       select * from rfps where status = ${"open"} order by created_at desc limit 80
     `;
-    const byTrade = rows.filter((r) => trades.includes(r.work_id));
+    const byTrade = rows.filter((r) => offered.has(canonicalTradeId(r.work_id)));
     const matched = byTrade.filter((r) =>
       shopCoversAddress(company, { city: r.city, state: r.state, zip: r.zip }),
     );

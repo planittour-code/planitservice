@@ -471,8 +471,7 @@ export const KIT_SEEDS: Record<string, KitSeed[]> = {
   roof: ROOF_KIT_SEED,
   windows: WINDOW_KIT_SEED,
   siding: SIDING_KIT_SEED,
-  deck: DECK_KIT_SEED,
-  porch: PORCH_KIT_SEED,
+  deck: [...DECK_KIT_SEED, ...PORCH_KIT_SEED],
   flooring: FLOORING_KIT_SEED,
   plumbing: PLUMBING_KIT_SEED,
   hvac: HVAC_KIT_SEED,
@@ -497,7 +496,9 @@ const WORK_ALIASES: Record<string, string> = {
   window: "windows",
   painting: "paint",
   decks: "deck",
-  porches: "porch",
+  "decks and porches": "deck",
+  porch: "deck",
+  porches: "deck",
   floors: "flooring",
   floor: "flooring",
   plumber: "plumbing",
@@ -524,7 +525,7 @@ export function workIdFromLabel(raw: string) {
 }
 
 export function workLabel(workId: string) {
-  return WORK_BY_ID[workId]?.name ?? (workId.replace(/^custom:/, "") || workId);
+  return WORK_BY_ID[workId]?.name ?? WORK_BY_ID[WORK_ALIASES[workId.trim().toLowerCase()] ?? ""]?.name ?? (workId.replace(/^custom:/, "") || workId);
 }
 
 export type CatalogCsvProduct = {
