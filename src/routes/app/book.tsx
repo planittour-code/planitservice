@@ -134,16 +134,13 @@ function PriceBookPage() {
   const editingId = editing && editing !== "new" ? editing.id : undefined;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-medium tracking-tight">Materials</h1>
-          <p className="mt-1 text-muted-foreground">
-            Quotes pick a work category, then a pre-saved template. Edit the lines here. Cost
-            and sell stay in the shop — the homeowner sees the sell price.
-            {!owner
-              ? " Changes here stay on your page and do not change the shop owner's materials."
-              : ""}
+          <p className="mt-1 text-sm text-muted-foreground">
+            Quotes pick a work category, then a pre-saved template. Cost and sell stay in the shop.
+            {!owner ? " Your changes stay on your page." : ""}
           </p>
         </div>
         {canEdit && (

@@ -57,7 +57,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
       if (!list) continue;
       list.push(kit);
     }
-    return pairTemplateCategories([...map.entries()]);
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [kits, categories, offeredIds]);
 
   const [editing, setEditing] = useState<WorkKit | "new" | null>(null);
@@ -96,13 +96,11 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   const selected = editing && editing !== "new" ? kits.find((kit) => kit.id === editing.id) ?? editing : null;
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-2">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-medium">Pre-Saved Templates</h2>
-          <p className="text-sm text-muted-foreground">
-            Pick a template to edit its lines. Quotes use these after the work category.
-          </p>
+          <p className="text-sm text-muted-foreground">Pick a square to edit its lines.</p>
         </div>
         {owner && (
           <div className="flex flex-wrap gap-2">
@@ -137,14 +135,14 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
           No work categories yet. Add services under Shop settings, then load starters here.
         </p>
       )}
-      {tradesReady && grouped.map((column) => (
-        <div key={column.map(([workId]) => workId).join("-")} className="grid gap-4 lg:grid-cols-2 lg:items-start">
-          {column.map(([workId, rows]) => {
+      {tradesReady && (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(13.25rem,1fr))] items-start gap-x-3 gap-y-2">
+          {grouped.map(([workId, rows]) => {
         const openHere = selected?.work_id === workId;
         return (
-        <div key={workId} className="min-w-0 space-y-2">
+        <div key={workId} className="min-w-0 space-y-1">
           <h3 className="text-xs tracking-wide text-muted-foreground uppercase">{workLabel(workId)}</h3>
-          {rows.length === 0 ? (
+          {rows.length === 0 && !openHere ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
               <p className="text-muted-foreground">No templates yet.</p>
               {owner && hasKitSeed(workId) ? (
@@ -164,8 +162,8 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
               ) : null}
             </div>
           ) : (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-              <div className="w-fit shrink-0 space-y-2">
+            <div className="flex flex-col gap-2">
+              <div className="w-fit space-y-1">
                 {owner && missingSeedKitNames(workId, rows.map((kit) => kit.name)).length > 0 ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
                     <p className="text-muted-foreground">
@@ -192,12 +190,12 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                           onClick={() => setEditing(on ? null : kit)}
                           className={
                             on
-                              ? "flex size-16 flex-col items-center justify-center gap-0.5 rounded-md bg-primary px-1 text-center text-[10px] font-medium leading-tight text-primary-foreground"
-                              : "flex size-16 flex-col items-center justify-center gap-0.5 rounded-md bg-card px-1 text-center text-[10px] font-medium leading-tight shadow-[var(--shadow-border)]"
+                              ? "flex size-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-primary px-1.5 text-center text-[11px] font-medium leading-tight text-primary-foreground"
+                              : "flex size-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-card px-1.5 text-center text-[11px] font-medium leading-tight shadow-[var(--shadow-border)]"
                           }
                         >
-                          <span className="line-clamp-2">{kit.name}</span>
-                          <span className={on ? "text-[9px] font-normal tabular-nums opacity-90" : "text-[9px] font-normal tabular-nums text-muted-foreground"}>
+                          <span className="line-clamp-3">{kit.name}</span>
+                          <span className={on ? "text-[10px] font-normal tabular-nums opacity-90" : "text-[10px] font-normal tabular-nums text-muted-foreground"}>
                             {money(kitTotal(kit.items))}
                           </span>
                         </button>
@@ -206,49 +204,29 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                   })}
                 </ul>
               </div>
-              {openHere && owner && selected ? (
-                <div className="min-w-0 flex-1">
-                  <KitForm
-                    key={selected.id}
-                    initial={selected}
-                    categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-                    pending={save.isPending}
-                    onCancel={() => setEditing(null)}
-                    onSave={(row) => save.mutate(row)}
-                    onRemove={() => {
-                      remove.mutate(selected.id);
-                      setEditing(null);
-                    }}
-                  />
-                </div>
-              ) : null}
             </div>
           )}
         </div>
           );
           })}
         </div>
-      ))}
+      )}
+      {selected && owner ? (
+        <KitForm
+          key={selected.id}
+          initial={selected}
+          categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+          pending={save.isPending}
+          onCancel={() => setEditing(null)}
+          onSave={(row) => save.mutate(row)}
+          onRemove={() => {
+            remove.mutate(selected.id);
+            setEditing(null);
+          }}
+        />
+      ) : null}
     </section>
   );
-}
-
-/** Windows sits beside Gutters. Roof sits in the right column so the list scrolls less. */
-function pairTemplateCategories(groups: [string, WorkKit[]][]) {
-  const left: [string, WorkKit[]][] = [];
-  const right: [string, WorkKit[]][] = [];
-  for (const group of groups) {
-    const id = group[0];
-    if (id === "windows" || id === "roof") right.push(group);
-    else left.push(group);
-  }
-  const rows: [string, WorkKit[]][][] = [];
-  const count = Math.max(left.length, right.length);
-  for (let i = 0; i < count; i++) {
-    const row = [left[i], right[i]].filter((group): group is [string, WorkKit[]] => Boolean(group));
-    if (row.length) rows.push(row);
-  }
-  return rows;
 }
 
 function KitForm({
