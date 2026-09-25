@@ -74,7 +74,7 @@ export function PublicHeader({
           compact ? "max-w-3xl py-2.5" : "max-w-5xl py-2.5 sm:py-3",
         )}
       >
-        <Wordmark to="/" className="text-secondary-foreground" />
+        <Wordmark to="/" plate />
         <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2">
           {lane === "choose" &&
             (isPending ? (
@@ -297,7 +297,7 @@ export function SignedInHeader({
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-secondary text-secondary-foreground">
       <div className={cn("mx-auto flex flex-wrap items-center gap-1.5 px-3 py-1.5 sm:px-4", max)}>
-        <Wordmark to={to} className="text-secondary-foreground" />
+        <Wordmark to={to} plate />
         {children}
       </div>
       {mobileNav}

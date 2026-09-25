@@ -29,9 +29,12 @@ export function HomeownerHeader({
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-secondary text-secondary-foreground">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
-        <Link to="/" className="flex items-center gap-2.5">
-          <Mark className="size-10" />
-          <span className="font-display text-lg font-semibold tracking-tight text-secondary-foreground">
+        <Link
+          to="/"
+          className="flex items-center gap-2.5 rounded-md bg-white px-2 py-1 text-[#0b3a6a] shadow-[var(--shadow-border)]"
+        >
+          <Mark className="size-10 bg-white" />
+          <span className="font-display text-lg font-semibold tracking-tight">
             PlanitService
           </span>
         </Link>

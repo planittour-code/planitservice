@@ -14,10 +14,26 @@ export function Mark({ className }: { className?: string }) {
   );
 }
 
-export function Wordmark({ className, to = "/" }: { className?: string; to?: string }) {
+export function Wordmark({
+  className,
+  to = "/",
+  plate = false,
+}: {
+  className?: string;
+  to?: string;
+  /** White chip so the dark mark stays readable on the navy header. */
+  plate?: boolean;
+}) {
   return (
-    <Link to={to} className={cn("flex items-center gap-2.5", className)}>
-      <Mark className="size-10" />
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center gap-2.5",
+        plate && "rounded-md bg-white px-2 py-1 text-[#0b3a6a] shadow-[var(--shadow-border)]",
+        className,
+      )}
+    >
+      <Mark className={cn("size-10", plate && "bg-white")} />
       <span className="font-display text-lg font-semibold tracking-tight text-inherit">
         PlanitService
       </span>
