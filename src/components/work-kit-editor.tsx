@@ -94,6 +94,11 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
   });
 
   const selected = editing && editing !== "new" ? kits.find((kit) => kit.id === editing.id) ?? editing : null;
+  const editRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!editing) return;
+    editRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [editing]);
 
   return (
     <section className="space-y-2">
@@ -117,6 +122,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
       </div>
 
       {editing === "new" && owner && (
+        <div ref={editRef} className="scroll-mt-4">
         <KitForm
           key="new"
           initial={null}
@@ -125,6 +131,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
           onCancel={() => setEditing(null)}
           onSave={(row) => save.mutate(row)}
         />
+        </div>
       )}
 
       {(q.isLoading || !tradesReady) && (
@@ -212,6 +219,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
         </div>
       )}
       {selected && owner ? (
+        <div ref={editRef} className="scroll-mt-4">
         <KitForm
           key={selected.id}
           initial={selected}
@@ -224,6 +232,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
             setEditing(null);
           }}
         />
+        </div>
       ) : null}
     </section>
   );
