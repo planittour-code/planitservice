@@ -136,12 +136,12 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
         </p>
       )}
       {tradesReady && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(13.25rem,1fr))] items-start gap-x-3 gap-y-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(14.5rem,1fr))] items-start gap-4">
           {grouped.map(([workId, rows]) => {
         const openHere = selected?.work_id === workId;
         return (
-        <div key={workId} className="min-w-0 space-y-1">
-          <h3 className="text-xs tracking-wide text-muted-foreground uppercase">{workLabel(workId)}</h3>
+        <div key={workId} className="min-w-0 space-y-2 rounded-xl bg-muted/70 p-2">
+          <h3 className="px-1 text-xs font-semibold tracking-wide text-foreground uppercase">{workLabel(workId)}</h3>
           {rows.length === 0 && !openHere ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
               <p className="text-muted-foreground">No templates yet.</p>
@@ -180,7 +180,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                     </Button>
                   </div>
                 ) : null}
-                <ul className="grid w-fit grid-cols-2 gap-1">
+                <ul className="grid w-fit grid-cols-2 gap-1.5">
                   {rows.map((kit) => {
                     const on = selected?.id === kit.id;
                     return (
