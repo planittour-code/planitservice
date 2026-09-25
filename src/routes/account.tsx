@@ -352,37 +352,48 @@ function ProfileCard({ profile }: { profile: UserProfile }) {
       </div>
 
       <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-        <div className="bg-ink px-5 pb-14 pt-6">
-          <p className="font-display text-2xl font-medium tracking-tight text-primary-foreground">
+        <div className="bg-secondary px-5 py-5 text-secondary-foreground">
+          <p className="text-xs font-medium tracking-wide text-white/75 uppercase">Account</p>
+          <p className="mt-1 font-display text-2xl font-medium tracking-tight text-white">
             {name.trim() || "Your name"}
           </p>
+          {profile.email ? (
+            <p className="mt-1 text-sm text-white/85">{profile.email}</p>
+          ) : null}
         </div>
         <form
-          className="space-y-5 px-5 pb-6"
+          className="space-y-5 px-5 py-5"
           onSubmit={(e) => {
             e.preventDefault();
             save.mutate();
           }}
         >
-          <div className="-mt-12">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => photoRef.current?.click()}
-              className="relative shrink-0 rounded-full outline outline-4 outline-card"
+              className="relative size-24 shrink-0 overflow-hidden rounded-full border-0 bg-muted p-0 shadow-[var(--shadow-border)]"
               aria-label="Change profile photo"
             >
               {photo ? (
-                <img src={photo} alt="" className="size-24 rounded-full object-cover" />
+                <img src={photo} alt="" className="size-full object-cover" />
               ) : (
-                <span className="grid size-24 place-items-center rounded-full bg-muted font-display text-3xl font-medium text-muted-foreground">
+                <span className="grid size-full place-items-center font-display text-3xl font-medium text-muted-foreground">
                   {initialsFrom(name || "You")}
                 </span>
               )}
-              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 rounded-b-full bg-ink/70 py-1 text-center text-[10px] font-medium tracking-wide text-primary-foreground uppercase">
-                <Camera className="size-3" aria-hidden />
-                Photo
-              </span>
             </button>
+            <div className="min-w-0 space-y-2">
+              <button
+                type="button"
+                onClick={() => photoRef.current?.click()}
+                className="inline-flex h-7 items-center gap-1 rounded-md border border-primary bg-card px-2 text-xs font-medium text-foreground"
+              >
+                <Camera className="size-3" aria-hidden />
+                Change photo
+              </button>
+              {profile.hats.length ? <ProfileHatBadges hats={profile.hats} /> : null}
+            </div>
             <input
               ref={photoRef}
               type="file"
@@ -397,12 +408,6 @@ function ProfileCard({ profile }: { profile: UserProfile }) {
                   .catch((err) => toast.error(err instanceof Error ? err.message : "Could not read the photo"));
               }}
             />
-            {profile.email ? <p className="mt-3 text-sm text-muted-foreground">{profile.email}</p> : null}
-            {profile.hats.length ? (
-              <div className="mt-2">
-                <ProfileHatBadges hats={profile.hats} />
-              </div>
-            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

@@ -65,28 +65,29 @@ function PublicProfilePage() {
       <PublicHeader path="choose" />
       <main className="mx-auto max-w-xl px-5 py-12">
         <article className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-          <div className="bg-ink px-6 pb-14 pt-6">
-            <h1 className="font-display text-3xl font-medium tracking-tight text-primary-foreground">
+          <div className="bg-secondary px-6 py-6 text-secondary-foreground">
+            <p className="text-xs font-medium tracking-wide text-white/75 uppercase">Account</p>
+            <h1 className="mt-1 font-display text-3xl font-medium tracking-tight text-white">
               {profile.displayName}
             </h1>
+            {profile.email ? (
+              <p className="mt-1 text-sm text-white/85">{profile.email}</p>
+            ) : null}
           </div>
-          <div className="px-6 pb-8">
-            <div className="-mt-12">
+          <div className="px-6 py-6">
+            <div>
               {profile.photoSrc ? (
                 <img
                   src={profile.photoSrc}
                   alt=""
-                  className="size-24 rounded-full object-cover shadow-[var(--shadow-border)] outline outline-4 outline-card"
+                  className="size-24 rounded-full object-cover shadow-[var(--shadow-border)]"
                 />
               ) : (
-                <div className="grid size-24 place-items-center rounded-full bg-muted font-display text-3xl font-medium text-muted-foreground shadow-[var(--shadow-border)] outline outline-4 outline-card">
+                <div className="grid size-24 place-items-center rounded-full bg-muted font-display text-3xl font-medium text-muted-foreground shadow-[var(--shadow-border)]">
                   {initialsFrom(profile.displayName)}
                 </div>
               )}
             </div>
-            {profile.email ? (
-              <p className="mt-3 text-sm text-muted-foreground">{profile.email}</p>
-            ) : null}
             {profile.hats.length ? (
               <div className="mt-2">
                 <ProfileHatBadges hats={profile.hats} />
