@@ -180,18 +180,18 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                     </Button>
                   </div>
                 ) : null}
-                <ul className="grid w-fit grid-cols-2 gap-1.5">
+                <ul className="grid w-full grid-cols-2 gap-1.5">
                   {rows.map((kit) => {
                     const on = selected?.id === kit.id;
                     return (
-                      <li key={kit.id}>
+                      <li key={kit.id} className="min-w-0">
                         <button
                           type="button"
                           onClick={() => setEditing(on ? null : kit)}
                           className={
                             on
-                              ? "flex size-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-primary px-1.5 text-center text-[11px] font-medium leading-tight text-primary-foreground"
-                              : "flex size-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-card px-1.5 text-center text-[11px] font-medium leading-tight shadow-[var(--shadow-border)]"
+                              ? "flex aspect-square w-full max-w-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-primary px-1 text-center text-[11px] font-medium leading-tight text-primary-foreground"
+                              : "flex aspect-square w-full max-w-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-card px-1 text-center text-[11px] font-medium leading-tight shadow-[var(--shadow-border)]"
                           }
                         >
                           <span className="line-clamp-3">{kit.name}</span>
