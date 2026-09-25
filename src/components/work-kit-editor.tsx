@@ -57,7 +57,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
       if (!list) continue;
       list.push(kit);
     }
-    return [...map.entries()];
+    return pairTemplateCategories([...map.entries()]);
   }, [kits, categories, offeredIds]);
 
   const [editing, setEditing] = useState<WorkKit | "new" | null>(null);
@@ -137,10 +137,12 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
           No work categories yet. Add services under Shop settings, then load starters here.
         </p>
       )}
-      {tradesReady && grouped.map(([workId, rows]) => {
+      {tradesReady && grouped.map((column) => (
+        <div key={column.map(([workId]) => workId).join("-")} className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          {column.map(([workId, rows]) => {
         const openHere = selected?.work_id === workId;
         return (
-        <div key={workId} className="space-y-2">
+        <div key={workId} className="min-w-0 space-y-2">
           <h3 className="text-xs tracking-wide text-muted-foreground uppercase">{workLabel(workId)}</h3>
           {rows.length === 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
@@ -163,7 +165,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
             </div>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-              <div className="w-full max-w-[16rem] shrink-0 space-y-2">
+              <div className="w-fit shrink-0 space-y-2">
                 {owner && missingSeedKitNames(workId, rows.map((kit) => kit.name)).length > 0 ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
                     <p className="text-muted-foreground">
@@ -180,7 +182,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                     </Button>
                   </div>
                 ) : null}
-                <ul className="grid grid-cols-2 gap-1.5">
+                <ul className="grid w-fit grid-cols-2 gap-1">
                   {rows.map((kit) => {
                     const on = selected?.id === kit.id;
                     return (
@@ -190,12 +192,12 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                           onClick={() => setEditing(on ? null : kit)}
                           className={
                             on
-                              ? "flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-primary px-1.5 text-center text-xs font-medium leading-tight text-primary-foreground"
-                              : "flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-card px-1.5 text-center text-xs font-medium leading-tight shadow-[var(--shadow-border)]"
+                              ? "flex size-16 flex-col items-center justify-center gap-0.5 rounded-md bg-primary px-1 text-center text-[10px] font-medium leading-tight text-primary-foreground"
+                              : "flex size-16 flex-col items-center justify-center gap-0.5 rounded-md bg-card px-1 text-center text-[10px] font-medium leading-tight shadow-[var(--shadow-border)]"
                           }
                         >
-                          <span className="line-clamp-3">{kit.name}</span>
-                          <span className={on ? "text-[11px] font-normal tabular-nums opacity-90" : "text-[11px] font-normal tabular-nums text-muted-foreground"}>
+                          <span className="line-clamp-2">{kit.name}</span>
+                          <span className={on ? "text-[9px] font-normal tabular-nums opacity-90" : "text-[9px] font-normal tabular-nums text-muted-foreground"}>
                             {money(kitTotal(kit.items))}
                           </span>
                         </button>
@@ -223,10 +225,30 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
             </div>
           )}
         </div>
-        );
-      })}
+          );
+          })}
+        </div>
+      ))}
     </section>
   );
+}
+
+/** Windows sits beside Gutters. Roof sits in the right column so the list scrolls less. */
+function pairTemplateCategories(groups: [string, WorkKit[]][]) {
+  const left: [string, WorkKit[]][] = [];
+  const right: [string, WorkKit[]][] = [];
+  for (const group of groups) {
+    const id = group[0];
+    if (id === "windows" || id === "roof") right.push(group);
+    else left.push(group);
+  }
+  const rows: [string, WorkKit[]][][] = [];
+  const count = Math.max(left.length, right.length);
+  for (let i = 0; i < count; i++) {
+    const row = [left[i], right[i]].filter((group): group is [string, WorkKit[]] => Boolean(group));
+    if (row.length) rows.push(row);
+  }
+  return rows;
 }
 
 function KitForm({
