@@ -231,6 +231,7 @@ export type ShopWorkRow = {
 
 export type ShopScheduleItem = {
   id: string;
+  kind?: "sold" | "booked";
   title: string;
   address_line: string;
   city: string;
@@ -240,6 +241,8 @@ export type ShopScheduleItem = {
   accepted_at: string;
   scheduled_on: string;
   scheduled_note: string | null;
+  confirmation_code?: string | null;
+  source?: string | null;
 };
 
 export type ShopClientRow = {

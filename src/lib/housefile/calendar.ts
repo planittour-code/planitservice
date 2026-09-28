@@ -93,6 +93,12 @@ export function addDays(year: number, month: number, day: number, days: number) 
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
 
+/** Calendar day in America/New_York for a booked slot. */
+export function slotDay(startIso: string) {
+  const parts = nyParts(new Date(startIso));
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+}
+
 export function slotLabel(startIso: string) {
   const d = new Date(startIso);
   return new Intl.DateTimeFormat("en-US", {

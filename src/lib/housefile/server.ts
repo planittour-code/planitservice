@@ -1051,7 +1051,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     const namedInvites = await namedWorkForShop(sql, company, session?.email);
     const schedule = await shopScheduleFor(sql, company.id);
     const { listShopBookings } = await import("./booking");
-    const bookings = await listShopBookings(company.id);
+    const bookings = await listShopBookings(company.id, company.email);
     const sales = await sql<{ c: number }>`
       select count(*)::int as c from company_members where company_id = ${company.id} and role = ${"sales"}
     `;
@@ -1136,7 +1136,7 @@ export const cancelShopBooking = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company } = await requirePaidShop(sql, context.userId, session?.email);
     const { cancelBooking } = await import("./booking");
-    return cancelBooking(company.id, data.bookingId);
+    return cancelBooking(company.id, data.bookingId, company.email);
   });
 
 export const listShopIndex = createServerFn({ method: "GET" })

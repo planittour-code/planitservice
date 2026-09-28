@@ -305,11 +305,17 @@ export async function moveBooking(input: {
   return { ok: true as const, when };
 }
 
-export async function cancelBooking(companyId: string, bookingId: string) {
+export async function cancelBooking(companyId: string, bookingId: string, shopEmail?: string | null) {
   const sql = await getSql();
+  const email = shopEmail?.trim().toLowerCase() || "";
   const rows = await sql<BookingRow>`
     select * from shop_bookings
-    where id = ${bookingId} and company_id = ${companyId} and status = ${"booked"}
+    where id = ${bookingId}
+      and status = ${"booked"}
+      and (
+        company_id = ${companyId}
+        or (${email} <> '' and lower(shop_email) = ${email})
+      )
     limit 1
   `;
   const row = rows[0];
@@ -319,11 +325,17 @@ export async function cancelBooking(companyId: string, bookingId: string) {
   return { ok: true as const };
 }
 
-export async function listShopBookings(companyId: string) {
+export async function listShopBookings(companyId: string, shopEmail?: string | null) {
   const sql = await getSql();
+  const email = shopEmail?.trim().toLowerCase() || "";
   return sql<BookingRow>`
     select * from shop_bookings
-    where company_id = ${companyId} and status = ${"booked"} and slot_start >= now() - interval '1 day'
+    where status = ${"booked"}
+      and slot_start >= now() - interval '1 day'
+      and (
+        company_id = ${companyId}
+        or (${email} <> '' and lower(shop_email) = ${email})
+      )
     order by slot_start
   `;
 }

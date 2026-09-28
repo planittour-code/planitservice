@@ -17,9 +17,10 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { slotLabel } from "@/lib/housefile/calendar";
 import { shortDate } from "@/lib/housefile/format";
 import { addDaysIso, sundayOfWeek } from "@/lib/housefile/maintain";
-import { scheduleSoldEstimate } from "@/lib/housefile/server";
+import { cancelShopBooking, scheduleSoldEstimate } from "@/lib/housefile/server";
 import type { ShopScheduleItem } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
 
@@ -55,13 +56,13 @@ export function ShopScheduleBoard({ items }: { items: ShopScheduleItem[] }) {
       <div>
         <h2 className="font-display text-xl font-medium">Sold week calendar</h2>
         <p className="text-sm text-muted-foreground">
-          Accepted work lands on Sunday of the week it sold. Move the date if weather or the crew
-          needs the following week.
+          Accepted work lands on Sunday of the week it sold. A visit booked from the shop page or
+          the phone lands on the day it was scheduled.
         </p>
       </div>
       {items.length === 0 ? (
         <p className="rounded-xl bg-card px-4 py-8 text-center text-sm text-muted-foreground shadow-[var(--shadow-border)]">
-          Sold estimates appear here on Sunday of that week.
+          Sold jobs and booked visits appear here.
         </p>
       ) : (
         <>
@@ -83,10 +84,10 @@ export function ShopScheduleBoard({ items }: { items: ShopScheduleItem[] }) {
             heading={
               pickedDay
                 ? format(new Date(`${pickedDay}T12:00:00`), "EEEE, MMMM d")
-                : "Sold jobs"
+                : "On the calendar"
             }
             items={pickedDay ? selected : upcoming}
-            empty={pickedDay ? "Nothing on this Sunday yet." : "No sold jobs on the calendar."}
+            empty={pickedDay ? "Nothing on this day." : "Nothing on the calendar yet."}
           />
         </>
       )}
@@ -173,6 +174,36 @@ function CalendarPane({
   );
 }
 
+function BookedVisit({ item }: { item: ShopScheduleItem }) {
+  const queryClient = useQueryClient();
+  const cancel = useMutation({
+    mutationFn: () => cancelShopBooking({ data: { bookingId: item.id } }),
+    onSuccess: () => {
+      toast.success("Canceled. That time is open again.");
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not cancel"),
+  });
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <p className="font-medium">
+          {slotLabel(item.accepted_at)} · {item.title}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {item.homeowner_name}
+          {item.address_line ? ` · ${item.address_line}` : ""}
+          {item.confirmation_code ? ` · ${item.confirmation_code}` : ""}
+          {item.source ? ` · ${item.source}` : ""}
+        </p>
+      </div>
+      <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+        Cancel
+      </Button>
+    </div>
+  );
+}
+
 function DayJobs({
   heading,
   items,
@@ -190,23 +221,29 @@ function DayJobs({
       ) : (
         <ul className="mt-3 space-y-4">
           {items.map((item) => (
-            <li key={item.id} className="space-y-2 border-t border-border pt-3 first:border-t-0 first:pt-0">
-              <Link
-                to="/app/proposals/$id"
-                params={{ id: item.id }}
-                className="flex min-h-7 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {item.homeowner_name} · {item.address_line}
-                    {item.city ? `, ${item.city}` : ""}
-                    {` · sold ${shortDate(item.accepted_at)}`}
-                  </p>
-                </div>
-                <StatusBadge status="accepted" />
-              </Link>
-              <SoldDateMover item={item} />
+            <li key={`${item.kind ?? "sold"}-${item.id}`} className="space-y-2 border-t border-border pt-3 first:border-t-0 first:pt-0">
+              {item.kind === "booked" ? (
+                <BookedVisit item={item} />
+              ) : (
+                <>
+                  <Link
+                    to="/app/proposals/$id"
+                    params={{ id: item.id }}
+                    className="flex min-h-7 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.homeowner_name} · {item.address_line}
+                        {item.city ? `, ${item.city}` : ""}
+                        {` · sold ${shortDate(item.accepted_at)}`}
+                      </p>
+                    </div>
+                    <StatusBadge status="accepted" />
+                  </Link>
+                  <SoldDateMover item={item} />
+                </>
+              )}
             </li>
           ))}
         </ul>

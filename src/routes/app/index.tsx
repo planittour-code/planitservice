@@ -1,14 +1,45 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShopBookings } from "@/components/shop-bookings";
 import { ShopScheduleBoard } from "@/components/shop-schedule";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { slotDay } from "@/lib/housefile/calendar";
 import { getDashboard } from "@/lib/housefile/server";
+import type { ShopScheduleItem } from "@/lib/housefile/types";
 
 export const Route = createFileRoute("/app/")({ component: ShopHome });
+
+function calendarItems(
+  sold: ShopScheduleItem[],
+  bookings: {
+    id: string;
+    slot_start: string;
+    service: string;
+    name: string;
+    address_line: string | null;
+    confirmation_code: string;
+    source: string;
+  }[],
+): ShopScheduleItem[] {
+  const booked: ShopScheduleItem[] = bookings.map((row) => ({
+    id: row.id,
+    kind: "booked",
+    title: row.service,
+    address_line: row.address_line ?? "",
+    city: "",
+    state: "",
+    zip: "",
+    homeowner_name: row.name,
+    accepted_at: row.slot_start,
+    scheduled_on: slotDay(row.slot_start),
+    scheduled_note: null,
+    confirmation_code: row.confirmation_code,
+    source: row.source,
+  }));
+  return [...sold.map((row) => ({ ...row, kind: "sold" as const })), ...booked];
+}
 
 function ShopHome() {
   const q = useQuery({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
@@ -108,8 +139,7 @@ function ShopHome() {
         </section>
       )}
 
-      <ShopBookings items={bookings ?? []} />
-      <ShopScheduleBoard items={schedule ?? []} />
+      <ShopScheduleBoard items={calendarItems(schedule ?? [], bookings ?? [])} />
 
       {role === "owner" && (pending?.length ?? 0) > 0 && (
         <section className="space-y-2">
