@@ -4,6 +4,7 @@ import { workLabel } from "@/components/rfp-panel";
 import { workFromId } from "@/lib/housefile/quote";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/status-badge";
 import { shortDate } from "@/lib/housefile/format";
 import { listMarketRfps } from "@/lib/housefile/server";
 
@@ -16,6 +17,7 @@ function LeadsPage() {
     return <p className="text-destructive">Could not load Request Estimates.</p>;
   }
   const { rfps, trades, area } = q.data;
+  const leads = q.data.leads ?? [];
   const place = [area?.city, area?.zip].filter(Boolean).join(" ");
 
   return (
@@ -29,13 +31,41 @@ function LeadsPage() {
           {trades.length
             ? trades.map((id) => workFromId(id)?.name ?? id).join(", ")
             : "the categories you offer"}
-          {place ? ` near ${place}` : ""}. Repeat-customer campaigns sit beside them.
+          {place ? ` near ${place}` : ""}. Leads from your own customers stay with this shop.
         </p>
         </div>
         <Button asChild variant="outline">
           <Link to="/app/campaign">Schedule the next visit</Link>
         </Button>
       </div>
+      {leads.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Leads</h2>
+          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            {leads.map((row) => (
+              <li key={row.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium">{row.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {row.homeowner_name} · {row.address_line}
+                    {row.city ? `, ${row.city}` : ""} {row.zip} · {shortDate(row.created_at)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">This shop only.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={row.status} />
+                  <Button asChild size="sm">
+                    <Link to="/app/new" search={{ invite: row.invite_token ?? undefined }}>
+                      Quote this job
+                    </Link>
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Request Estimates</h2>
       {rfps.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {trades.length === 0

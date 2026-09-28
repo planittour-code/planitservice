@@ -4125,8 +4125,9 @@ export const listMarketRfps = createServerFn({ method: "GET" })
     const session = await getSessionUser();
     const { company } = await requirePaidShop(sql, context.userId, session?.email);
     const trades = parseTradeTokens(company.trades);
+    const named = await namedWorkForShop(sql, company, session?.email);
     if (trades.length === 0) {
-      return { rfps: [], trades, area: { city: company.city, zip: company.zip } };
+      return { rfps: [], leads: named, trades, area: { city: company.city, zip: company.zip } };
     }
     const offered = new Set(trades.map((id) => canonicalTradeId(id)));
     const rows = await sql<Rfp>`
@@ -4136,7 +4137,7 @@ export const listMarketRfps = createServerFn({ method: "GET" })
     const matched = byTrade.filter((r) =>
       shopCoversAddress(company, { city: r.city, state: r.state, zip: r.zip }),
     );
-    return { rfps: matched, trades, area: { city: company.city, zip: company.zip } };
+    return { rfps: matched, leads: named, trades, area: { city: company.city, zip: company.zip } };
   });
 
 export const getRfpByToken = createServerFn({ method: "GET" })

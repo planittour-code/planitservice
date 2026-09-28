@@ -674,12 +674,12 @@ function NewQuote() {
         </h1>
         {inviteQ.data ? (
           <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
-            Named job at this address. Photos on the File. Quote from your materials.
+            Lead at this address. Photos on the File. Quote from your materials. This request stays with this shop.
             {inviteQ.data.invite.body ? ` ${inviteQ.data.invite.body}` : ""}
           </p>
         ) : search.invite && inviteQ.isError ? (
           <p className="text-sm text-destructive">
-            {inviteQ.error instanceof Error ? inviteQ.error.message : "Could not open this named job."}
+            {inviteQ.error instanceof Error ? inviteQ.error.message : "Could not open this lead."}
           </p>
         ) : null}
         <QuoteHouseBanner

@@ -87,7 +87,7 @@ function PropertiesPage() {
         <div>
           <h1 className="font-display text-2xl font-medium tracking-tight">Jobs</h1>
           <p className="mt-1 text-muted-foreground">
-            New requests, estimates already sent, and the houses on file. Search any of those.
+            Leads waiting on a quote, estimates already sent, and the houses on file. Search any of those.
           </p>
         </div>
         <Button asChild>
@@ -171,7 +171,7 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
   if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        {query.trim() ? "No jobs match that search." : "No new requests, open estimates, or completed jobs yet."}
+        {query.trim() ? "No jobs match that search." : "No leads, open estimates, or completed jobs yet."}
       </p>
     );
   }
@@ -183,7 +183,7 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
     <div className="space-y-2">
       {incoming.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">New</h2>
+          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Leads</h2>
           <WorkRows rows={incoming} />
         </section>
       )}

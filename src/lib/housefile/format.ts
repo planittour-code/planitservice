@@ -77,7 +77,7 @@ export function statusLabel(status: string) {
     case "current":
       return "Current";
     case "open":
-      return "New";
+      return "Lead";
     default:
       return status;
   }

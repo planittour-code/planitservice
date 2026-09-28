@@ -108,9 +108,9 @@ function ShopHome() {
       {namedInvites.length > 0 && (
         <section className="space-y-2">
           <div>
-            <h2 className="font-display text-lg font-medium">Named jobs</h2>
+            <h2 className="font-display text-lg font-medium">Leads</h2>
             <p className="text-sm text-muted-foreground">
-              Work sent to this shop from a Property Record. Quote from Materials.
+              Requests sent to this shop. They stay here until you quote them.
             </p>
           </div>
           <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
