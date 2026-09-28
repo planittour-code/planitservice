@@ -20,9 +20,11 @@ import { invoiceSalesReps, type InvoiceView } from "@/lib/housefile/invoice";
 export function InvoiceDoc({
   bundle,
   showLinePrices = false,
+  showPay = false,
 }: {
   bundle: InvoiceView;
   showLinePrices?: boolean;
+  showPay?: boolean;
 }) {
   const { proposal, items, property, company } = bundle;
   const reps = invoiceSalesReps(bundle);
@@ -188,10 +190,10 @@ export function InvoiceDoc({
           })}
         </p>
         <p className="text-sm">{invoiceThankYou(reps)}</p>
-        {portal ? (
+        {showPay && portal ? (
           <Button asChild className="min-h-12 w-full sm:w-auto">
             <a href={portal} target="_blank" rel="noreferrer">
-              Payment Portal
+              Pay {company.name}
             </a>
           </Button>
         ) : null}

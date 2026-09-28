@@ -156,7 +156,7 @@ async function estimatePdf(input: {
   if (payHref) {
     y -= 4;
     write("Pay", { size: 12, weight: "bold" });
-    write(payHref, { size: 10 });
+    write("Use the Pay button on the accepted estimate.", { size: 10 });
   }
   if (input.company.terms?.trim()) {
     y -= 8;
@@ -297,8 +297,8 @@ async function invoiceReceiptPdf(input: {
   });
   if (pay) {
     y -= 4;
-    write("Payment Portal", { size: 11, weight: "bold" });
-    write(pay, { size: 10 });
+    write("Pay", { size: 11, weight: "bold" });
+    write("Use the Pay button on the accepted estimate.", { size: 10 });
   }
   y -= 8;
   write("Special Instructions", { size: 12, weight: "bold" });

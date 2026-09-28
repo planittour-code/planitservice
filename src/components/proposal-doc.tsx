@@ -107,7 +107,7 @@ export function ProposalDoc({
     return (
       <article className="space-y-8">
         {mode === "contractor" && !locked ? <ContractorMeta bundle={bundle} onChanged={onChanged} /> : null}
-        <InvoiceDoc bundle={bundle} showLinePrices={mode === "contractor"} />
+        <InvoiceDoc bundle={bundle} showLinePrices={mode === "contractor"} showPay={mode !== "contractor"} />
         {notesOpen ? (
           <p className="rounded-lg bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
             Notes are still open. The estimate stays in review until they are accepted.
@@ -199,7 +199,7 @@ export function ProposalDoc({
           <p className="max-w-2xl whitespace-pre-wrap text-base leading-relaxed">{proposal.cover_note}</p>
         ) : null}
 
-        {(salesReps ?? []).length || payHref ? (
+        {(salesReps ?? []).length ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {(salesReps ?? []).length ? (
               <div className="space-y-1">
@@ -219,14 +219,6 @@ export function ProposalDoc({
                     ) : null}
                   </p>
                 ))}
-              </div>
-            ) : null}
-            {payHref ? (
-              <div className="space-y-1">
-                <p className="text-xs tracking-wide text-muted-foreground uppercase">Payment</p>
-                <a className="text-sm underline underline-offset-4 break-all" href={payHref} target="_blank" rel="noreferrer">
-                  {payHref}
-                </a>
               </div>
             ) : null}
           </div>
