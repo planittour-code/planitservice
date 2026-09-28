@@ -17,7 +17,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { slotLabel } from "@/lib/housefile/calendar";
+import { slotTime } from "@/lib/housefile/calendar";
 import { shortDate } from "@/lib/housefile/format";
 import { addDaysIso, sundayOfWeek } from "@/lib/housefile/maintain";
 import { cancelShopBooking, scheduleSoldEstimate } from "@/lib/housefile/server";
@@ -161,11 +161,17 @@ function CalendarPane({
               <span className={cn("tabular-nums", iso === today && !on && "underline underline-offset-4")}>
                 {format(day, "d")}
               </span>
-              {count > 0 ? (
+              {(byDay.get(iso) ?? [])
+                .filter((item) => item.kind === "booked")
+                .slice(0, 2)
+                .map((item) => (
+                  <span key={item.id} className="max-w-full truncate text-[10px] leading-tight">
+                    {lastName(item.homeowner_name)} {slotTime(item.accepted_at)}
+                  </span>
+                ))}
+              {count > 0 && (byDay.get(iso) ?? []).every((item) => item.kind !== "booked") ? (
                 <span className={cn("size-1.5 rounded-full", on ? "bg-secondary-foreground" : "bg-primary")} />
-              ) : (
-                <span className="h-1.5" />
-              )}
+              ) : null}
             </button>
           );
         })}
@@ -184,24 +190,44 @@ function BookedVisit({ item }: { item: ShopScheduleItem }) {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not cancel"),
   });
+  const destination = [item.address_line, item.city, item.state, item.zip].filter(Boolean).join(", ");
+  const directions = destination
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
+    : null;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div>
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="space-y-0.5">
         <p className="font-medium">
-          {slotLabel(item.accepted_at)} · {item.title}
+          {lastName(item.homeowner_name)} · {slotTime(item.accepted_at)}
         </p>
-        <p className="text-sm text-muted-foreground">
-          {item.homeowner_name}
-          {item.address_line ? ` · ${item.address_line}` : ""}
-          {item.confirmation_code ? ` · ${item.confirmation_code}` : ""}
-          {item.source ? ` · ${item.source}` : ""}
-        </p>
+        <p className="text-sm text-muted-foreground">{item.title}</p>
+        {item.phone ? (
+          <p className="text-sm">
+            <a className="underline underline-offset-4" href={`tel:${item.phone.replace(/[^\d+]/g, "")}`}>
+              {item.phone}
+            </a>
+          </p>
+        ) : null}
+        {destination ? <p className="text-sm">{destination}</p> : null}
+        {directions ? (
+          <p className="text-sm">
+            <a className="underline underline-offset-4" href={directions} target="_blank" rel="noreferrer">
+              Directions
+            </a>
+          </p>
+        ) : null}
       </div>
       <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
         Cancel
       </Button>
     </div>
   );
+}
+
+function lastName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const last = parts.at(-1) ?? name;
+  return last.replace(/\.$/, "");
 }
 
 function DayJobs({

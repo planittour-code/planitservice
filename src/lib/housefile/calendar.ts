@@ -99,6 +99,15 @@ export function slotDay(startIso: string) {
   return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
 }
 
+/** Arrival time in America/New_York, for the shop calendar. */
+export function slotTime(startIso: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(startIso));
+}
+
 export function slotLabel(startIso: string) {
   const d = new Date(startIso);
   return new Intl.DateTimeFormat("en-US", {

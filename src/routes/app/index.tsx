@@ -18,6 +18,7 @@ function calendarItems(
     slot_start: string;
     service: string;
     name: string;
+    phone: string | null;
     address_line: string | null;
     confirmation_code: string;
     source: string;
@@ -37,6 +38,7 @@ function calendarItems(
     scheduled_note: null,
     confirmation_code: row.confirmation_code,
     source: row.source,
+    phone: row.phone,
   }));
   return [...sold.map((row) => ({ ...row, kind: "sold" as const })), ...booked];
 }

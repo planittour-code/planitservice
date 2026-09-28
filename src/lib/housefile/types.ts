@@ -243,6 +243,7 @@ export type ShopScheduleItem = {
   scheduled_note: string | null;
   confirmation_code?: string | null;
   source?: string | null;
+  phone?: string | null;
 };
 
 export type ShopClientRow = {
