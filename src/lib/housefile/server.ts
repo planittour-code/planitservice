@@ -2798,6 +2798,14 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
     const sql = await getSql();
     const rows = await sql<Proposal>`select * from proposals where share_token = ${data.token} limit 1`;
     if (!rows[0]) throw new Error("Proposal not found");
+    const openNotes = await sql<{ id: string }>`
+      select id from proposal_items
+      where proposal_id = ${rows[0].id} and review_status = ${"change_review"}
+      limit 1
+    `;
+    if (openNotes[0]) {
+      throw new Error("Resolve the open notes before this estimate can be accepted.");
+    }
     const already = rows[0].status === "accepted" || rows[0].status === "completed";
     if (!already) {
       const hold = sundayOfWeek();

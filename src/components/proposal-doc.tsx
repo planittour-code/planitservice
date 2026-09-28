@@ -43,7 +43,7 @@ import {
 } from "@/lib/housefile/server";
 import { sundayOfWeek } from "@/lib/housefile/maintain";
 import { estimateBrandLogo, parseTradeLogos } from "@/lib/housefile/quote";
-import type { ProposalBundle, ProposalItem } from "@/lib/housefile/types";
+import type { ProposalBundle, ProposalItem, ProposalMessage } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
 
 export function ProposalTotals({
@@ -78,7 +78,7 @@ export function ProposalDoc({
   onChanged: () => void;
 }) {
   const navigate = useNavigate();
-  const { proposal, items, property, company, house, salesReps } = bundle;
+  const { proposal, items, messages, property, company, house, salesReps } = bundle;
   const brandLogo = estimateBrandLogo({
     tradeLogos: parseTradeLogos(company.trade_logos),
     templateId: proposal.template_id,
@@ -124,22 +124,23 @@ export function ProposalDoc({
             </div>
             <Button
               className="min-h-12 w-full"
-              data-preview-ok
+              disabled={notesOpen}
               onClick={async () => {
+                if (notesOpen) return;
                 try {
                   if (proposal.status !== "accepted" && proposal.status !== "completed") {
                     await acceptProposalPublic({ data: { token: proposal.share_token } });
                   }
-                } catch {
-                  /* sample or already accepted */
+                  void navigate({
+                    to: "/p/$token/accepted",
+                    params: { token: proposal.share_token },
+                  });
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Resolve the open notes first");
                 }
-                void navigate({
-                  to: "/p/$token/accepted",
-                  params: { token: proposal.share_token },
-                });
               }}
             >
-              Accept proposal
+              {notesOpen ? "Notes still open" : "Accept proposal"}
             </Button>
           </div>
         ) : null}
@@ -289,6 +290,16 @@ export function ProposalDoc({
 
       <ProposalTotals items={items} />
 
+      <NoteThread
+        messages={messages}
+        items={items}
+        mode={editMode}
+        proposalId={proposal.id}
+        token={proposal.share_token}
+        locked={locked}
+        onChanged={onChanged}
+      />
+
       {mode === "contractor" && !locked && (
         <>
           <SectionRule />
@@ -311,22 +322,23 @@ export function ProposalDoc({
           </div>
           <Button
             className="min-h-12 w-full"
-            data-preview-ok
+            disabled={notesOpen}
             onClick={async () => {
+              if (notesOpen) return;
               try {
                 if (proposal.status !== "accepted" && proposal.status !== "completed") {
                   await acceptProposalPublic({ data: { token: proposal.share_token } });
                 }
-              } catch {
-                /* sample or already accepted */
+                void navigate({
+                  to: "/p/$token/accepted",
+                  params: { token: proposal.share_token },
+                });
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Resolve the open notes first");
               }
-              void navigate({
-                to: "/p/$token/accepted",
-                params: { token: proposal.share_token },
-              });
             }}
           >
-            Accept proposal
+            {notesOpen ? "Notes still open" : "Accept proposal"}
           </Button>
         </div>
       )}
@@ -894,7 +906,31 @@ function ProposalLine({
           ) : null}
         </div>
         {mode === "contractor" ? (
-          <p className="font-medium tabular-nums">{money(line)}</p>
+          canEdit && !locked ? (
+            <form
+              className="flex items-end gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void saveEdit();
+              }}
+            >
+              <div className="space-y-1">
+                <Label htmlFor={`price-${item.id}`}>Price</Label>
+                <Input
+                  id={`price-${item.id}`}
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="w-28"
+                />
+              </div>
+              <Button type="submit" size="sm">
+                Save price
+              </Button>
+            </form>
+          ) : (
+            <p className="font-medium tabular-nums">{money(line)}</p>
+          )
         ) : null}
       </div>
 
@@ -1014,6 +1050,63 @@ function AddLine({ proposalId, onChanged }: { proposalId: string; onChanged: () 
         </Button>
       </div>
     </div>
+  );
+}
+
+function NoteThread({
+  messages,
+  items,
+  mode,
+  proposalId,
+  token,
+  locked,
+  onChanged,
+}: {
+  messages: ProposalMessage[];
+  items: ProposalItem[];
+  mode: "homeowner" | "contractor";
+  proposalId: string;
+  token: string;
+  locked: boolean;
+  onChanged: () => void;
+}) {
+  const lineNotes = items
+    .filter((item) => item.homeowner_note?.trim())
+    .map((item) => ({
+      id: `line-${item.id}`,
+      who: "Customer",
+      body: `${item.name}: ${item.homeowner_note}`,
+      open: item.review_status === "change_review",
+    }));
+  const thread = [
+    ...messages.map((message) => ({
+      id: message.id,
+      who: message.author_role === "homeowner" ? message.author_name || "Customer" : message.author_name || "Shop",
+      body: message.body,
+      open: false,
+    })),
+    ...lineNotes,
+  ];
+  if (thread.length === 0 && locked) return null;
+  return (
+    <section className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+      <h2 className="font-display text-xl font-medium">Notes</h2>
+      {thread.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No notes yet.</p>
+      ) : (
+        <ol className="space-y-3">
+          {thread.map((note) => (
+            <li key={note.id} className={cn("space-y-1", note.open && "rounded-lg bg-warning/15 px-3 py-2")}>
+              <p className="text-xs tracking-wide text-muted-foreground uppercase">{note.who}</p>
+              <p className="whitespace-pre-wrap text-sm">{note.body}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+      {!locked ? (
+        <MessageForm mode={mode} proposalId={proposalId} token={token} onChanged={onChanged} />
+      ) : null}
+    </section>
   );
 }
 
