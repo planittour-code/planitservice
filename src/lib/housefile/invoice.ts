@@ -86,7 +86,7 @@ export function invoicePaymentCopy(input: {
   const due = invoiceDueLabel(input.paymentTerms);
   const terms = paymentTermLabel(input.paymentTerms);
   const portal = input.hasPortal
-    ? "Pay online with the Payment Portal below. The amount, invoice number, and customer are already filled in. The card stays on the payment page."
+    ? "Pay online with the Payment Portal below. The amount includes a 3% card fee. The invoice number and customer are already filled in. The card stays on the payment page."
     : "Ask the shop how they take payment.";
   return [
     `Thank you for your business. Payment is ${due.toLowerCase()} (${terms}).`,

@@ -57,9 +57,16 @@ export function paymentInvoiceNumber(proposalId: string) {
   return String(10000000 + n);
 }
 
+/** Card transaction fee added only to the amount injected on the payment page. */
+export const CARD_FEE_RATE = 0.03;
+
+export function withCardFee(amount: number) {
+  return Math.round(amount * (1 + CARD_FEE_RATE) * 100) / 100;
+}
+
 export function checkoutAmount(total: number, terms: string | null | undefined) {
   const due = paymentSchedule(total, terms)[0]?.amount ?? total;
-  return Math.round(due * 100) / 100;
+  return withCardFee(Math.round(due * 100) / 100);
 }
 
 /**
