@@ -101,7 +101,13 @@ function HomeRecord() {
       <header className="space-y-2">
         <p className="text-sm tracking-wide text-muted-foreground uppercase">
           {plan?.tier === "pro" ? "Pro Property Record" : "Property Record"}
-          {plan ? ` · ${plan.cadence}` : ""}
+          {plan?.status === "complimentary" && plan.complimentary_until
+            ? ` · free through ${shortDate(plan.complimentary_until)}`
+            : plan?.status === "complimentary"
+              ? " · free while we estimate"
+              : plan
+                ? ` · ${plan.cadence}`
+                : ""}
         </p>
         <h1 className="font-display text-3xl font-medium tracking-tight">{p.address_line}</h1>
         <p className="text-muted-foreground">

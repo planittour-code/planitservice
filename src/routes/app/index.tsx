@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ShopBookings } from "@/components/shop-bookings";
 import { ShopScheduleBoard } from "@/components/shop-schedule";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ function ShopHome() {
   if (q.error || !q.data) {
     return <p className="text-destructive">Could not load the shop.</p>;
   }
-  const { company, properties, proposals, pending, role, schedule, salesAssigned, salesSeats } = q.data;
+  const { company, properties, proposals, pending, role, schedule, bookings, salesAssigned, salesSeats } = q.data;
   const clients = q.data.clients ?? [];
   const namedInvites = q.data.namedInvites ?? [];
   const propertyCount = properties.length;
@@ -107,6 +108,7 @@ function ShopHome() {
         </section>
       )}
 
+      <ShopBookings items={bookings ?? []} />
       <ShopScheduleBoard items={schedule ?? []} />
 
       {role === "owner" && (pending?.length ?? 0) > 0 && (

@@ -278,7 +278,7 @@ export function ProposalDoc({
             <div>
               <p className="text-sm tracking-wide text-muted-foreground uppercase">Agreement</p>
               <p className="text-sm text-muted-foreground">
-                Accept this estimate to start work.
+                Accept this estimate to start work. The Property Record stays free for 30 days from this click, then continues at $7.99 a month if you keep it.
               </p>
             </div>
             <p className="font-display text-2xl font-medium tabular-nums">{money(includedTotal)}</p>

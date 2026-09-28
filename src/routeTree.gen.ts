@@ -33,6 +33,7 @@ import { Route as AppOnboardRouteImport } from './routes/app/onboard'
 import { Route as AppPropertiesRouteImport } from './routes/app/properties'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
 import { Route as AppTemplatesRouteImport } from './routes/app/templates'
+import { Route as BookAlbinRouteImport } from './routes/book.albin'
 import { Route as ClaimTokenRouteImport } from './routes/claim.$token'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as HomeIdRouteImport } from './routes/home/$id'
@@ -50,9 +51,11 @@ import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as RfpTokenRouteImport } from './routes/rfp.$token'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ShopOpenRouteImport } from './routes/shop.open'
+import { Route as StartProjectRouteImport } from './routes/start.project'
 import { Route as USlugRouteImport } from './routes/u.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiVoiceSplatRouteImport } from './routes/api/voice/$'
 import { Route as AppPropertiesIdRouteImport } from './routes/app/properties.$id'
 import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
 import { Route as PTokenAcceptedRouteImport } from './routes/p.$token.accepted'
@@ -177,6 +180,11 @@ const AppTemplatesRoute = AppTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const BookAlbinRoute = BookAlbinRouteImport.update({
+  id: '/book/albin',
+  path: '/book/albin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClaimTokenRoute = ClaimTokenRouteImport.update({
   id: '/claim/$token',
   path: '/claim/$token',
@@ -262,6 +270,11 @@ const ShopOpenRoute = ShopOpenRouteImport.update({
   path: '/open',
   getParentRoute: () => ShopRoute,
 } as any)
+const StartProjectRoute = StartProjectRouteImport.update({
+  id: '/start/project',
+  path: '/start/project',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const USlugRoute = USlugRouteImport.update({
   id: '/u/$slug',
   path: '/u/$slug',
@@ -275,6 +288,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe/webhook',
   path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceSplatRoute = ApiVoiceSplatRouteImport.update({
+  id: '/api/voice/$',
+  path: '/api/voice/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppPropertiesIdRoute = AppPropertiesIdRouteImport.update({
@@ -317,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/app/properties': typeof AppPropertiesRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/templates': typeof AppTemplatesRoute
+  '/book/albin': typeof BookAlbinRoute
   '/claim/$token': typeof ClaimTokenRoute
   '/home/$id': typeof HomeIdRoute
   '/home/add': typeof HomeAddRoute
@@ -332,12 +351,14 @@ export interface FileRoutesByFullPath {
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
+  '/start/project': typeof StartProjectRoute
   '/u/$slug': typeof USlugRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/manage/': typeof ManageIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/voice/$': typeof ApiVoiceSplatRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -363,6 +384,7 @@ export interface FileRoutesByTo {
   '/app/properties': typeof AppPropertiesRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/templates': typeof AppTemplatesRoute
+  '/book/albin': typeof BookAlbinRoute
   '/claim/$token': typeof ClaimTokenRoute
   '/home/$id': typeof HomeIdRoute
   '/home/add': typeof HomeAddRoute
@@ -378,12 +400,14 @@ export interface FileRoutesByTo {
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
+  '/start/project': typeof StartProjectRoute
   '/u/$slug': typeof USlugRoute
   '/app': typeof AppIndexRoute
   '/home': typeof HomeIndexRoute
   '/manage': typeof ManageIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/voice/$': typeof ApiVoiceSplatRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -413,6 +437,7 @@ export interface FileRoutesById {
   '/app/properties': typeof AppPropertiesRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/templates': typeof AppTemplatesRoute
+  '/book/albin': typeof BookAlbinRoute
   '/claim/$token': typeof ClaimTokenRoute
   '/home/$id': typeof HomeIdRoute
   '/home/add': typeof HomeAddRoute
@@ -428,12 +453,14 @@ export interface FileRoutesById {
   '/rfp/$token': typeof RfpTokenRoute
   '/s/$slug': typeof SSlugRoute
   '/shop/open': typeof ShopOpenRoute
+  '/start/project': typeof StartProjectRoute
   '/u/$slug': typeof USlugRoute
   '/app/': typeof AppIndexRoute
   '/home/': typeof HomeIndexRoute
   '/manage/': typeof ManageIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/voice/$': typeof ApiVoiceSplatRoute
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
@@ -464,6 +491,7 @@ export interface FileRouteTypes {
     | '/app/properties'
     | '/app/settings'
     | '/app/templates'
+    | '/book/albin'
     | '/claim/$token'
     | '/home/$id'
     | '/home/add'
@@ -479,12 +507,14 @@ export interface FileRouteTypes {
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
+    | '/start/project'
     | '/u/$slug'
     | '/app/'
     | '/home/'
     | '/manage/'
     | '/api/auth/$'
     | '/api/stripe/webhook'
+    | '/api/voice/$'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -510,6 +540,7 @@ export interface FileRouteTypes {
     | '/app/properties'
     | '/app/settings'
     | '/app/templates'
+    | '/book/albin'
     | '/claim/$token'
     | '/home/$id'
     | '/home/add'
@@ -525,12 +556,14 @@ export interface FileRouteTypes {
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
+    | '/start/project'
     | '/u/$slug'
     | '/app'
     | '/home'
     | '/manage'
     | '/api/auth/$'
     | '/api/stripe/webhook'
+    | '/api/voice/$'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -559,6 +592,7 @@ export interface FileRouteTypes {
     | '/app/properties'
     | '/app/settings'
     | '/app/templates'
+    | '/book/albin'
     | '/claim/$token'
     | '/home/$id'
     | '/home/add'
@@ -574,12 +608,14 @@ export interface FileRouteTypes {
     | '/rfp/$token'
     | '/s/$slug'
     | '/shop/open'
+    | '/start/project'
     | '/u/$slug'
     | '/app/'
     | '/home/'
     | '/manage/'
     | '/api/auth/$'
     | '/api/stripe/webhook'
+    | '/api/voice/$'
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
@@ -600,15 +636,18 @@ export interface RootRouteChildren {
   ShopRoute: typeof ShopRouteWithChildren
   SlaRoute: typeof SlaRoute
   TermsRoute: typeof TermsRoute
+  BookAlbinRoute: typeof BookAlbinRoute
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRouteWithChildren
   RfpTokenRoute: typeof RfpTokenRoute
   SSlugRoute: typeof SSlugRoute
+  StartProjectRoute: typeof StartProjectRoute
   USlugRoute: typeof USlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiVoiceSplatRoute: typeof ApiVoiceSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -781,6 +820,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTemplatesRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/book/albin': {
+      id: '/book/albin'
+      path: '/book/albin'
+      fullPath: '/book/albin'
+      preLoaderRoute: typeof BookAlbinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/claim/$token': {
       id: '/claim/$token'
       path: '/claim/$token'
@@ -900,6 +946,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopOpenRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/start/project': {
+      id: '/start/project'
+      path: '/start/project'
+      fullPath: '/start/project'
+      preLoaderRoute: typeof StartProjectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/u/$slug': {
       id: '/u/$slug'
       path: '/u/$slug'
@@ -919,6 +972,13 @@ declare module '@tanstack/react-router' {
       path: '/api/stripe/webhook'
       fullPath: '/api/stripe/webhook'
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice/$': {
+      id: '/api/voice/$'
+      path: '/api/voice/$'
+      fullPath: '/api/voice/$'
+      preLoaderRoute: typeof ApiVoiceSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/properties/$id': {
@@ -1065,15 +1125,18 @@ const rootRouteChildren: RootRouteChildren = {
   ShopRoute: ShopRouteWithChildren,
   SlaRoute: SlaRoute,
   TermsRoute: TermsRoute,
+  BookAlbinRoute: BookAlbinRoute,
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRouteWithChildren,
   RfpTokenRoute: RfpTokenRoute,
   SSlugRoute: SSlugRoute,
+  StartProjectRoute: StartProjectRoute,
   USlugRoute: USlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiVoiceSplatRoute: ApiVoiceSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

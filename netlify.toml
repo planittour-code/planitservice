@@ -9,6 +9,8 @@
 # Nitro writes the server to .netlify/functions-internal on this preset.
 # DATABASE_URL and BETTER_AUTH_* must be set in the Netlify UI.
 # Mail: RESEND_API_KEY plus EMAIL_FROM on mail.planitservice.com.
+# Albin calendar: GOOGLE_CALENDAR_CREDENTIALS (service account JSON) invited on albin@guttersplus.com.
+# Voice agent tools: VOICE_AGENT_SECRET as Bearer token on /api/voice/*.
 # Inbound estimate replies: Resend webhook → https://planitservice.com/api/resend/webhook
 
 [[headers]]

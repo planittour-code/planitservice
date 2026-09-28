@@ -449,6 +449,21 @@ export type PropertyPlan = {
   tier: PlanTier;
   status: string;
   renews_on: string;
+  complimentary_until?: string | null;
+};
+
+export type ShopBooking = {
+  id: string;
+  slot_start: string;
+  slot_end: string;
+  service: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address_line: string | null;
+  confirmation_code: string;
+  source: string;
+  status: string;
 };
 
 export type MaintenanceTask = {

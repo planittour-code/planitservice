@@ -18,6 +18,11 @@ function HomeDashboard() {
   const houses = q.data?.houses ?? [];
   const planLabel = (house: (typeof houses)[number]) => {
     if (!house.plan) return "No plan yet";
+    if (house.plan.status === "complimentary" && house.plan.complimentary_until) {
+      return `Free through ${house.plan.complimentary_until}`;
+    }
+    if (house.plan.status === "complimentary") return "Free while we estimate";
+    if (house.plan.status === "lapsed") return "Free period ended · $7.99/mo to keep the file";
     const tier = house.plan.tier === "pro" ? "Pro" : "Standard";
     const cadence = house.plan.cadence === "annual" ? "yearly" : "monthly";
     return `${tier} plan · billed ${cadence}`;

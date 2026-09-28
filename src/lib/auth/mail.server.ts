@@ -429,6 +429,117 @@ ${payHtml}
   });
 }
 
+export async function sendBookingConfirmationEmail(data: {
+  to: string;
+  name: string;
+  whenLabel: string;
+  service: string;
+  code: string;
+  address?: string;
+  moved?: boolean;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = data.moved
+    ? `Your Gutters Plus visit moved to ${data.whenLabel}`
+    : `Gutters Plus visit confirmed for ${data.whenLabel}`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    data.moved
+      ? `Albin moved your ${data.service} visit to ${data.whenLabel}.`
+      : `You're booked with Gutters Plus for ${data.service} on ${data.whenLabel}.`,
+    data.address ? `Address: ${data.address}` : "",
+    `Confirmation ${data.code}.`,
+    "",
+    "Reply to this email if you need a different day. It comes straight to Albin at Gutters Plus.",
+    "",
+    "Albin",
+    "Gutters Plus",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>${escapeHtml(
+    data.moved
+      ? `Albin moved your ${data.service} visit to ${data.whenLabel}.`
+      : `You're booked with Gutters Plus for ${data.service} on ${data.whenLabel}.`,
+  )}</p>
+${data.address ? `<p>Address: ${escapeHtml(data.address)}</p>` : ""}
+<p>Confirmation <strong>${escapeHtml(data.code)}</strong>.</p>
+<p>Reply to this email if you need a different day. It comes straight to Albin at Gutters Plus.</p>
+<p>Albin<br>Gutters Plus</p>`;
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: "Albin at Gutters Plus <albin@mail.planitservice.com>",
+    replyTo: "albin@guttersplus.com",
+  });
+}
+
+export async function sendTransferToOwnerEmail(data: {
+  callerName: string;
+  callerPhone: string;
+  note: string;
+}) {
+  const subject = `Call transfer: ${data.callerName || "Gutters Plus caller"}`;
+  const text = [
+    "A caller asked to speak with you.",
+    "",
+    `Name: ${data.callerName || "not given"}`,
+    `Phone: ${data.callerPhone || "not given"}`,
+    "",
+    data.note || "No note.",
+  ].join("\n");
+  const html = `<p>A caller asked to speak with you.</p>
+<p>Name: ${escapeHtml(data.callerName || "not given")}<br>Phone: ${escapeHtml(data.callerPhone || "not given")}</p>
+<p>${escapeHtml(data.note || "No note.")}</p>`;
+  await sendResendEmail({
+    to: "albin@guttersplus.com",
+    subject,
+    text,
+    html,
+    from: "Albin at Gutters Plus <albin@mail.planitservice.com>",
+    replyTo: data.callerPhone.includes("@") ? data.callerPhone : "albin@guttersplus.com",
+  });
+}
+
+export async function sendProjectOpenedEmail(data: {
+  to: string;
+  name: string;
+  address: string;
+  work: string;
+  inviteUrl: string;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = `Gutters Plus has your ${data.work} request`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    `We opened a Property Record for ${data.address} and sent your ${data.work} request to Gutters Plus.`,
+    "The file is free while we estimate the work. After you accept and we start work, it stays free for 30 days, then continues at $7.99 per month if you want to keep it.",
+    "",
+    `Open the file: ${data.inviteUrl}`,
+    "",
+    "Albin",
+    "Gutters Plus",
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>We opened a Property Record for ${escapeHtml(data.address)} and sent your ${escapeHtml(data.work)} request to Gutters Plus.</p>
+<p>The file is free while we estimate the work. After you accept and we start work, it stays free for 30 days, then continues at $7.99 per month if you want to keep it.</p>
+<p><a href="${escapeHtml(data.inviteUrl)}">Open the file</a></p>
+<p>Albin<br>Gutters Plus</p>`;
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: "Albin at Gutters Plus <albin@mail.planitservice.com>",
+    replyTo: "albin@guttersplus.com",
+  });
+}
+
 export async function fetchReceivedEmail(emailId: string) {
   const key = resendKey();
   if (!key) throw new Error("RESEND_API_KEY is not set");

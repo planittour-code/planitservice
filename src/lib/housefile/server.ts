@@ -1050,6 +1050,8 @@ export const getDashboard = createServerFn({ method: "GET" })
     }));
     const namedInvites = await namedWorkForShop(sql, company, session?.email);
     const schedule = await shopScheduleFor(sql, company.id);
+    const { listShopBookings } = await import("./booking");
+    const bookings = await listShopBookings(company.id);
     const sales = await sql<{ c: number }>`
       select count(*)::int as c from company_members where company_id = ${company.id} and role = ${"sales"}
     `;
@@ -1063,10 +1065,74 @@ export const getDashboard = createServerFn({ method: "GET" })
       proposals,
       namedInvites,
       schedule,
+      bookings,
       templateCount: num(templates[0]?.c),
       salesAssigned: num(sales[0]?.c),
       salesSeats: num(company.extra_seats),
     };
+  });
+
+export const getPublicBookingSlots = createServerFn({ method: "GET" }).handler(async () => {
+  const { listOpenSlots } = await import("./booking");
+  return listOpenSlots();
+});
+
+export const bookPublicSlot = createServerFn({ method: "POST" })
+  .validator(
+    (input: {
+      start: string;
+      service: string;
+      name: string;
+      email: string;
+      phone?: string;
+      address?: string;
+    }) => input,
+  )
+  .handler(async ({ data }) => {
+    const { bookSlot } = await import("./booking");
+    return bookSlot({ ...data, source: "web" });
+  });
+
+export const startPublicProject = createServerFn({ method: "POST" })
+  .validator(
+    (input: {
+      name: string;
+      email: string;
+      phone?: string;
+      addressLine: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+      workId: string;
+    }) => input,
+  )
+  .handler(async ({ data }) => {
+    const { openProjectLead } = await import("./booking");
+    return openProjectLead({ ...data, source: "web" });
+  });
+
+export const moveShopBooking = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { bookingId: string; start: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
+    const { moveBooking } = await import("./booking");
+    return moveBooking({ companyId: company.id, bookingId: data.bookingId, start: data.start });
+  });
+
+export const cancelShopBooking = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { bookingId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
+    const { cancelBooking } = await import("./booking");
+    return cancelBooking(company.id, data.bookingId);
   });
 
 export const listShopIndex = createServerFn({ method: "GET" })
@@ -2685,13 +2751,17 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
     const already = rows[0].status === "accepted" || rows[0].status === "completed";
     if (!already) {
       const hold = sundayOfWeek();
+      const started = new Date();
       await sql`
         update proposals
         set status = ${"accepted"},
             accepted_at = now(),
+            started_work_at = coalesce(started_work_at, now()),
             scheduled_on = coalesce(scheduled_on, ${hold}::date)
         where id = ${rows[0].id}
       `;
+      const { stampComplimentaryWindow } = await import("./booking");
+      await stampComplimentaryWindow(sql, rows[0].property_id, started);
       await sql`
         update proposal_items
         set review_status = ${"accepted"}
@@ -4133,6 +4203,16 @@ export const getHousehold = createServerFn({ method: "GET" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     if (session?.email) await bindHomeownerByEmail(sql, context.userId, session.email);
+    await sql`
+      update property_plans
+      set status = ${"lapsed"}
+      where status = ${"complimentary"}
+        and complimentary_until is not null
+        and complimentary_until < current_date
+        and property_id in (
+          select id from properties where homeowner_user_id = ${context.userId}
+        )
+    `;
     await sql`
       update property_plans pp
       set tier = ${"standard"}
