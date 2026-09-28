@@ -87,7 +87,7 @@ function PropertiesPage() {
         <div>
           <h1 className="font-display text-2xl font-medium tracking-tight">Jobs</h1>
           <p className="mt-1 text-muted-foreground">
-            Work in progress, the people you quote, and the houses on file. Search any of those.
+            New requests, estimates already sent, and the houses on file. Search any of those.
           </p>
         </div>
         <Button asChild>
@@ -171,14 +171,28 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
   if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        {query.trim() ? "No jobs match that search." : "No open quotes or completed jobs yet."}
+        {query.trim() ? "No jobs match that search." : "No new requests, open estimates, or completed jobs yet."}
       </p>
     );
   }
-  const open = rows.filter((row) => row.kind === "proposal" || row.kind === "invite");
+  const incoming = rows.filter((row) => row.kind === "invite");
+  const open = rows.filter((row) => row.kind === "proposal" && row.status !== "draft" && row.status !== "pending");
+  const drafts = rows.filter((row) => row.kind === "proposal" && (row.status === "draft" || row.status === "pending"));
   const done = rows.filter((row) => row.kind === "job");
   return (
     <div className="space-y-2">
+      {incoming.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">New</h2>
+          <WorkRows rows={incoming} />
+        </section>
+      )}
+      {drafts.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Draft</h2>
+          <WorkRows rows={drafts} />
+        </section>
+      )}
       {open.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Open</h2>
