@@ -20,10 +20,11 @@ function LeadsPage() {
 
   return (
     <div className="space-y-2">
-      <div>
-        <p className="text-sm tracking-wide text-muted-foreground uppercase">Request Estimates</p>
-        <h1 className="font-display text-2xl font-medium tracking-tight">Leads in your area</h1>
-        <p className="mt-1 text-muted-foreground">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm tracking-wide text-muted-foreground uppercase">Request Estimates</p>
+          <h1 className="font-display text-2xl font-medium tracking-tight">Leads in your area</h1>
+          <p className="mt-1 text-muted-foreground">
           Open requests for{" "}
           {trades.length
             ? trades.map((id) => workFromId(id)?.name ?? id).join(", ")
@@ -31,6 +32,17 @@ function LeadsPage() {
           {place ? ` near ${place}` : ""}. Only jobs in those categories, in this shop’s service
           area.
         </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link to="/app/campaign">Email past customers</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/app/properties" search={{ view: "clients" }}>
+              All clients
+            </Link>
+          </Button>
+        </div>
       </div>
       {rfps.length === 0 ? (
         <p className="text-sm text-muted-foreground">

@@ -100,14 +100,9 @@ function ShopHome() {
             Address and the ask first. Photos, measurements, then line items from Materials.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link to="/app/new">Start a Quote</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/app/leads">Request Estimates leads</Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link to="/app/new">Start a Quote</Link>
+        </Button>
       </section>
 
       {namedInvites.length > 0 && (
@@ -188,16 +183,7 @@ function ShopHome() {
                 {jobCount === 1 ? "job" : "jobs"}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline">
-                <Link to="/app/campaign">Email past customers</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/app/properties" search={{ view: "clients" }}>
-                  All clients
-                </Link>
-              </Button>
-            </div>
+
           </div>
           <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
             {clients.slice(0, 8).map((client) => (

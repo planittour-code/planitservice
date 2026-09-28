@@ -90,14 +90,9 @@ function PropertiesPage() {
             Work in progress, the people you quote, and the houses on file. Search any of those.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link to="/app/campaign">Email past customers</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/app/new">Start a Quote</Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link to="/app/new">Start a Quote</Link>
+        </Button>
       </div>
 
       <Input
