@@ -38,8 +38,8 @@ function PropertyPage() {
       <FileSectionNav sections={sections} />
       <header className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          <Link to="/app/properties" className="underline-offset-4 hover:underline">
-            Jobs
+          <Link to="/app/customers" className="underline-offset-4 hover:underline">
+            Customers
           </Link>
           {" · "}
           {file.company.name}
@@ -99,6 +99,9 @@ function PropertyPage() {
       </div>
       <div id="jobs" className="scroll-mt-20">
         <JobTimeline file={file} />
+      </div>
+      <div id="materials" className="scroll-mt-20">
+        <JobTimeline file={file} mode="materials" />
       </div>
       <div id="warranties" className="scroll-mt-20">
         <WarrantyList file={file} />

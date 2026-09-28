@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   House,
+  Package,
   Mail,
   Ruler,
   Shield,
@@ -49,7 +50,8 @@ export const MANAGER_SECTIONS: FileSection[] = [
 export const CONTRACTOR_SECTIONS: FileSection[] = [
   { id: "quotes", label: "Quotes", Icon: FileText },
   { id: "photos", label: "Photos", Icon: Camera },
-  { id: "jobs", label: "Jobs", Icon: Briefcase },
+  { id: "jobs", label: "Job history", Icon: Briefcase },
+  { id: "materials", label: "Materials", Icon: Package },
   { id: "warranties", label: "Warranties", Icon: Shield },
   { id: "house-data", label: "House data", Icon: House },
 ];

@@ -92,11 +92,15 @@ function CampaignPage() {
   return (
     <div className="space-y-2">
       <div>
-        <p className="text-sm tracking-wide text-muted-foreground uppercase">Past customers</p>
+        <p className="text-sm text-muted-foreground">
+          <Link to="/app/leads" className="underline-offset-4 hover:underline">
+            Leads
+          </Link>
+        </p>
         <h1 className="font-display text-2xl font-medium tracking-tight">Schedule the next visit</h1>
         <p className="mt-1 text-muted-foreground">
-          Email people you already worked. Offer only the categories this shop pays for — $
-          {dollars(SHOP_MONTHLY)}/month each. They open the File and book you for that work.
+          A repeat-business campaign for people you already worked. Offer only the categories this
+          shop pays for — ${dollars(SHOP_MONTHLY)}/month each. New Request Estimates stay on Leads.
         </p>
       </div>
 

@@ -87,7 +87,7 @@ function AppLayout() {
                 Shop
               </AppNavLink>
               <AppNavLink to="/app/leads">Leads</AppNavLink>
-              <AppNavLink to="/app/campaign">Customers</AppNavLink>
+              <AppNavLink to="/app/customers">Customers</AppNavLink>
               <AppNavLink to="/app/properties">Jobs</AppNavLink>
               <AppNavLink to="/app/book">Materials</AppNavLink>
               <AppNavLink to="/app/settings">
@@ -103,7 +103,7 @@ function AppLayout() {
               Shop
             </AppNavLink>
             <AppNavLink to="/app/leads">Leads</AppNavLink>
-            <AppNavLink to="/app/campaign">Customers</AppNavLink>
+            <AppNavLink to="/app/customers">Customers</AppNavLink>
             <AppNavLink to="/app/properties">Jobs</AppNavLink>
             <AppNavLink to="/app/book">Materials</AppNavLink>
             <AppNavLink to="/app/settings">

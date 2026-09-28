@@ -177,7 +177,11 @@ function ShopHome() {
         <section className="space-y-2">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-medium">Client List</h2>
+              <h2 className="font-display text-lg font-medium">
+                <Link to="/app/customers" className="underline-offset-4 hover:underline">
+                  Customers
+                </Link>
+              </h2>
               <p className="text-sm text-muted-foreground">
                 {propertyCount} {propertyCount === 1 ? "property" : "properties"} · {jobCount}{" "}
                 {jobCount === 1 ? "job" : "jobs"}
@@ -189,8 +193,7 @@ function ShopHome() {
             {clients.slice(0, 8).map((client) => (
               <li key={client.key}>
                 <Link
-                  to="/app/properties"
-                  search={{ view: "clients", q: client.email || client.name }}
+                  to="/app/customers"
                   className="flex min-h-14 flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>

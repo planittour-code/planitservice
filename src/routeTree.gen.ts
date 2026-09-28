@@ -26,6 +26,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
 import { Route as AppCampaignRouteImport } from './routes/app/campaign'
+import { Route as AppCustomersRouteImport } from './routes/app/customers'
 import { Route as AppLeadsRouteImport } from './routes/app/leads'
 import { Route as AppMarketRouteImport } from './routes/app/market'
 import { Route as AppNewRouteImport } from './routes/app/new'
@@ -145,6 +146,11 @@ const AppBookRoute = AppBookRouteImport.update({
 const AppCampaignRoute = AppCampaignRouteImport.update({
   id: '/campaign',
   path: '/campaign',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCustomersRoute = AppCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppLeadsRoute = AppLeadsRouteImport.update({
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
+  '/app/customers': typeof AppCustomersRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
   '/app/new': typeof AppNewRoute
@@ -391,6 +398,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
+  '/app/customers': typeof AppCustomersRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
   '/app/new': typeof AppNewRoute
@@ -446,6 +454,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
+  '/app/customers': typeof AppCustomersRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/market': typeof AppMarketRoute
   '/app/new': typeof AppNewRoute
@@ -502,6 +511,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/app/book'
     | '/app/campaign'
+    | '/app/customers'
     | '/app/leads'
     | '/app/market'
     | '/app/new'
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/app/book'
     | '/app/campaign'
+    | '/app/customers'
     | '/app/leads'
     | '/app/market'
     | '/app/new'
@@ -607,6 +618,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/app/book'
     | '/app/campaign'
+    | '/app/customers'
     | '/app/leads'
     | '/app/market'
     | '/app/new'
@@ -793,6 +805,13 @@ declare module '@tanstack/react-router' {
       path: '/campaign'
       fullPath: '/app/campaign'
       preLoaderRoute: typeof AppCampaignRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/customers': {
+      id: '/app/customers'
+      path: '/customers'
+      fullPath: '/app/customers'
+      preLoaderRoute: typeof AppCustomersRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/app/leads': {
@@ -1058,6 +1077,7 @@ const AppPropertiesRouteWithChildren = AppPropertiesRoute._addFileChildren(
 interface AppRouteRouteChildren {
   AppBookRoute: typeof AppBookRoute
   AppCampaignRoute: typeof AppCampaignRoute
+  AppCustomersRoute: typeof AppCustomersRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMarketRoute: typeof AppMarketRoute
   AppNewRoute: typeof AppNewRoute
@@ -1072,6 +1092,7 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppBookRoute: AppBookRoute,
   AppCampaignRoute: AppCampaignRoute,
+  AppCustomersRoute: AppCustomersRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMarketRoute: AppMarketRoute,
   AppNewRoute: AppNewRoute,

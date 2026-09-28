@@ -783,15 +783,25 @@ export function KnownProviders({
   );
 }
 
-export function JobTimeline({ file }: { file: HouseFile }) {
+export function JobTimeline({
+  file,
+  mode = "history",
+}: {
+  file: HouseFile;
+  mode?: "history" | "materials";
+}) {
   const categories = file.jobs
     .map((job) => jobWorkType(job))
     .filter((w): w is NonNullable<typeof w> => Boolean(w));
   const unique = [...new Map(categories.map((w) => [w.id, w])).values()];
   return (
     <RecordSection
-      title="Jobs at this address"
-      blurb="Colors, products, and measurements stay with the house."
+      title={mode === "materials" ? "Materials and measurements" : "Job history"}
+      blurb={
+        mode === "materials"
+          ? "Products, colors, and measurements agreed when the work was sold. The homeowner keeps these."
+          : "Completed work at this address, in the order it was done."
+      }
       photo={unique[0] ? CATEGORY_PHOTO[unique[0].id] ?? CATEGORY_PHOTO.house : CATEGORY_PHOTO.house}
       countLabel={`${file.jobs.length} on file`}
       chips={
@@ -815,10 +825,19 @@ export function JobTimeline({ file }: { file: HouseFile }) {
       }
     >
       {file.jobs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No completed jobs yet. Accepted work will land here.</p>
+        <p className="text-sm text-muted-foreground">
+          {mode === "materials"
+            ? "No materials on file yet. They land here when an estimate is accepted."
+            : "No completed jobs yet. Accepted work will land here."}
+        </p>
       ) : (
         <ol className="space-y-2">
           {file.jobs.map((job) => {
+            const specs =
+              mode === "materials"
+                ? job.specs.filter((spec) => spec.kind !== "note" || spec.manufacturer || spec.product_name)
+                : job.specs;
+            if (mode === "materials" && specs.length === 0) return null;
             const work = jobWorkType(job);
             return (
               <li key={job.id} className="rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
@@ -835,10 +854,12 @@ export function JobTimeline({ file }: { file: HouseFile }) {
                   </div>
                   <time className="text-sm text-muted-foreground">{shortDate(job.completed_at)}</time>
                 </div>
-                {job.summary && <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>}
-                {job.specs.length > 0 && (
+                {mode === "history" && job.summary ? (
+                  <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>
+                ) : null}
+                {specs.length > 0 && (
                   <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                    {job.specs.map((spec) => (
+                    {specs.map((spec) => (
                       <div key={spec.id} className="rounded-md bg-muted/60 px-3 py-2">
                         <dt className="text-xs tracking-wide text-muted-foreground uppercase">{spec.label}</dt>
                         <dd className="text-sm font-medium">{spec.value}</dd>
