@@ -359,6 +359,45 @@ export async function sendEstimateReviewEmail(data: {
   });
 }
 
+function icsEscape(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+}
+
+function serviceDateIcs(data: {
+  uid: string;
+  title: string;
+  address: string;
+  note: string;
+  company: string;
+  date: string;
+  organizer?: string | null;
+}) {
+  const day = data.date.replace(/-/g, "").slice(0, 8);
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const description = `${data.company} is sorry for the change. ${data.note}`;
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//PlanItService//Service Date//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:REQUEST",
+    "BEGIN:VEVENT",
+    `UID:${icsEscape(data.uid)}`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${day}`,
+    `DTEND;VALUE=DATE:${day}`,
+    `SUMMARY:${icsEscape(`${data.company}: ${data.title}`)}`,
+    `LOCATION:${icsEscape(data.address)}`,
+    `DESCRIPTION:${icsEscape(description)}`,
+    data.organizer ? `ORGANIZER:mailto:${icsEscape(data.organizer)}` : "",
+    "STATUS:CONFIRMED",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+}
+
 export async function sendServiceDateEmail(data: {
   to: string;
   name: string;
@@ -366,26 +405,41 @@ export async function sendServiceDateEmail(data: {
   address: string;
   title: string;
   serviceDate: string;
+  serviceDay: string;
   note: string;
   replyTo?: string | null;
+  eventUid: string;
 }) {
   const first = data.name.trim().split(/\s+/)[0] || "there";
-  const subject = `${data.company} updated the service date for ${data.address}`;
+  const subject = `${data.company} is sorry — the service date moved to ${data.serviceDate}`;
+  const apology = `We are sorry for the change. ${data.note}`;
   const text = [
     `Hi ${first},`,
     "",
-    `${data.company} updated the service date for ${data.title} at ${data.address}.`,
-    `Service date: ${data.serviceDate}`,
+    `${data.company} is sorry to move the service date for ${data.title} at ${data.address}.`,
+    `New service date: ${data.serviceDate}`,
     "",
-    data.note,
+    apology,
+    "",
+    "A calendar appointment for that day is attached.",
     "",
     data.company,
   ].join("\n");
   const html = `<p>Hi ${escapeHtml(first)},</p>
-<p>${escapeHtml(data.company)} updated the service date for ${escapeHtml(data.title)} at ${escapeHtml(data.address)}.</p>
-<p>Service date: ${escapeHtml(data.serviceDate)}</p>
-<p>${escapeHtml(data.note)}</p>
+<p>${escapeHtml(data.company)} is sorry to move the service date for ${escapeHtml(data.title)} at ${escapeHtml(data.address)}.</p>
+<p>New service date: <strong>${escapeHtml(data.serviceDate)}</strong></p>
+<p>${escapeHtml(apology)}</p>
+<p>A calendar appointment for that day is attached.</p>
 <p>${escapeHtml(data.company)}</p>`;
+  const ics = serviceDateIcs({
+    uid: data.eventUid,
+    title: data.title,
+    address: data.address,
+    note: data.note,
+    company: data.company,
+    date: data.serviceDay,
+    organizer: data.replyTo,
+  });
   await sendResendEmail({
     to: data.to,
     subject,
@@ -393,6 +447,12 @@ export async function sendServiceDateEmail(data: {
     html,
     from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
     replyTo: data.replyTo || undefined,
+    attachments: [
+      {
+        filename: "service-date.ics",
+        content: Buffer.from(ics, "utf8").toString("base64"),
+      },
+    ],
   });
 }
 

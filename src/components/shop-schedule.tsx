@@ -296,12 +296,12 @@ export function SoldDateMover({
           notify: next.notify,
         },
       }),
-    onSuccess: (result, next) => {
+    onSuccess: (_result, next) => {
       setDate(next.scheduledOn);
       toast.success(
-        result.emailed
+        next.notify
           ? `Service date set to ${shortDate(next.scheduledOn)}. Customer notified.`
-          : `Service date set to ${shortDate(next.scheduledOn)}`,
+          : `Service date set to ${shortDate(next.scheduledOn)}. Apology and calendar appointment sent.`,
       );
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["proposal", item.id] });

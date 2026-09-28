@@ -99,8 +99,10 @@ export async function deliverServiceDateEmail(input: {
   address: string;
   title: string;
   serviceDate: string;
+  serviceDay: string;
   note: string;
   replyTo?: string | null;
+  eventUid: string;
 }) {
   const { sendServiceDateEmail } = await import("@/lib/auth/mail.server");
   await sendServiceDateEmail(input);

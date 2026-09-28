@@ -2820,33 +2820,33 @@ export const scheduleSoldEstimate = createServerFn({ method: "POST" })
     if (!scheduledOn) throw new Error("Need a real date.");
     const note = data.scheduledNote?.trim() || "";
     if (note.length < 2) throw new Error("Write a note before updating the service date.");
+    const property = (
+      await sql<Property>`select * from properties where id = ${proposal.property_id} limit 1`
+    )[0];
+    const to = property?.homeowner_email?.trim() ?? "";
+    if (!to.includes("@")) throw new Error("This customer has no email on the record.");
+    const { shortDate } = await import("./format");
+    const { deliverServiceDateEmail } = await import("./mail");
+    await deliverServiceDateEmail({
+      to,
+      name: property?.homeowner_name || "there",
+      company: company.name,
+      address: property
+        ? `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`
+        : "",
+      title: proposal.title,
+      serviceDate: shortDate(scheduledOn),
+      serviceDay: scheduledOn,
+      note,
+      replyTo: company.email,
+      eventUid: `service-date-${proposal.id}@mail.planitservice.com`,
+    });
     await sql`
       update proposals
       set scheduled_on = ${scheduledOn}::date, scheduled_note = ${note}
       where id = ${proposal.id}
     `;
-    let emailed = false;
-    if (data.notify) {
-      const property = (
-        await sql<Property>`select * from properties where id = ${proposal.property_id} limit 1`
-      )[0];
-      const to = property?.homeowner_email?.trim();
-      if (!to || !to.includes("@")) throw new Error("This customer has no email on the record.");
-      const { shortDate } = await import("./format");
-      const { deliverServiceDateEmail } = await import("./mail");
-      await deliverServiceDateEmail({
-        to,
-        name: property.homeowner_name,
-        company: company.name,
-        address: `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`,
-        title: proposal.title,
-        serviceDate: shortDate(scheduledOn),
-        note,
-        replyTo: company.email,
-      });
-      emailed = true;
-    }
-    return { ok: true as const, scheduledOn, emailed };
+    return { ok: true as const, scheduledOn, emailed: true };
   });
 
 export const draftCoverNote = createServerFn({ method: "POST" })
