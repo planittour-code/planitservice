@@ -2799,7 +2799,10 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
 
 export const scheduleSoldEstimate = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { proposalId: string; scheduledOn: string; scheduledNote?: string }) => input)
+  .validator(
+    (input: { proposalId: string; scheduledOn: string; scheduledNote?: string; notify?: boolean }) =>
+      input,
+  )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
@@ -2815,13 +2818,35 @@ export const scheduleSoldEstimate = createServerFn({ method: "POST" })
     }
     const scheduledOn = parseIsoDate(data.scheduledOn);
     if (!scheduledOn) throw new Error("Need a real date.");
-    const note = data.scheduledNote?.trim() || null;
+    const note = data.scheduledNote?.trim() || "";
+    if (note.length < 2) throw new Error("Write a note before updating the service date.");
     await sql`
       update proposals
       set scheduled_on = ${scheduledOn}::date, scheduled_note = ${note}
       where id = ${proposal.id}
     `;
-    return { ok: true as const, scheduledOn };
+    let emailed = false;
+    if (data.notify) {
+      const property = (
+        await sql<Property>`select * from properties where id = ${proposal.property_id} limit 1`
+      )[0];
+      const to = property?.homeowner_email?.trim();
+      if (!to || !to.includes("@")) throw new Error("This customer has no email on the record.");
+      const { shortDate } = await import("./format");
+      const { deliverServiceDateEmail } = await import("./mail");
+      await deliverServiceDateEmail({
+        to,
+        name: property.homeowner_name,
+        company: company.name,
+        address: `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`,
+        title: proposal.title,
+        serviceDate: shortDate(scheduledOn),
+        note,
+        replyTo: company.email,
+      });
+      emailed = true;
+    }
+    return { ok: true as const, scheduledOn, emailed };
   });
 
 export const draftCoverNote = createServerFn({ method: "POST" })

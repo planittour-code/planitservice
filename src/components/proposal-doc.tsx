@@ -651,8 +651,8 @@ function SoldHoldBar({
   return (
     <div className="space-y-3 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
       <p className="text-sm text-muted-foreground">
-        Sold work is on the shop calendar for Sunday of that week. Move the hold if weather or the
-        crew needs the following week.
+        Sold work sits on the shop calendar. A note is required to change the service date. Notify
+        Customer sends that note with the new date.
       </p>
       <SoldDateMover
         item={{ id: proposalId, scheduled_on: hold, scheduled_note: scheduledNote ?? null }}

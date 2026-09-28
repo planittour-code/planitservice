@@ -92,6 +92,20 @@ export async function deliverEstimateReviewEmail(input: {
   await sendEstimateReviewEmail(input);
 }
 
+export async function deliverServiceDateEmail(input: {
+  to: string;
+  name: string;
+  company: string;
+  address: string;
+  title: string;
+  serviceDate: string;
+  note: string;
+  replyTo?: string | null;
+}) {
+  const { sendServiceDateEmail } = await import("@/lib/auth/mail.server");
+  await sendServiceDateEmail(input);
+}
+
 export async function deliverAcceptedEstimateEmail(input: {
   property: Property;
   proposal: Proposal;

@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { slotTime } from "@/lib/housefile/calendar";
 import { lastName, shortDate } from "@/lib/housefile/format";
-import { addDaysIso, sundayOfWeek } from "@/lib/housefile/maintain";
+
 import { cancelShopBooking, scheduleSoldEstimate } from "@/lib/housefile/server";
 import type { ShopScheduleItem } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
@@ -287,23 +287,34 @@ export function SoldDateMover({
     setNote(item.scheduled_note ?? "");
   }, [item.scheduled_on, item.scheduled_note]);
   const save = useMutation({
-    mutationFn: (next: { scheduledOn: string; scheduledNote?: string }) =>
+    mutationFn: (next: { scheduledOn: string; scheduledNote: string; notify: boolean }) =>
       scheduleSoldEstimate({
-        data: { proposalId: item.id, scheduledOn: next.scheduledOn, scheduledNote: next.scheduledNote },
+        data: {
+          proposalId: item.id,
+          scheduledOn: next.scheduledOn,
+          scheduledNote: next.scheduledNote,
+          notify: next.notify,
+        },
       }),
-    onSuccess: (_result, next) => {
+    onSuccess: (result, next) => {
       setDate(next.scheduledOn);
-      toast.success(`Hold moved to ${shortDate(next.scheduledOn)}`);
+      toast.success(
+        result.emailed
+          ? `Service date set to ${shortDate(next.scheduledOn)}. Customer notified.`
+          : `Service date set to ${shortDate(next.scheduledOn)}`,
+      );
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["proposal", item.id] });
       onSaved?.();
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not move the date"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not update the service date"),
   });
 
-  function commit(nextDate: string, nextNote = note) {
-    if (!nextDate) return;
-    save.mutate({ scheduledOn: nextDate, scheduledNote: nextNote });
+  const noteReady = note.trim().length >= 2;
+
+  function commit(notify: boolean) {
+    if (!date || !noteReady) return;
+    save.mutate({ scheduledOn: date, scheduledNote: note.trim(), notify });
   }
 
   return (
@@ -311,11 +322,11 @@ export function SoldDateMover({
       className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
       onSubmit={(e) => {
         e.preventDefault();
-        commit(date, note);
+        commit(false);
       }}
     >
       <div className="space-y-1">
-        <Label htmlFor={`hold-${item.id}`}>Service hold</Label>
+        <Label htmlFor={`hold-${item.id}`}>Service Date</Label>
         <Input
           id={`hold-${item.id}`}
           type="date"
@@ -330,25 +341,22 @@ export function SoldDateMover({
           id={`hold-note-${item.id}`}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Weather, crew, or next week"
+          placeholder="Why the date is changing"
+          required
         />
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={save.isPending || !date}>
+        <Button type="submit" size="sm" disabled={save.isPending || !date || !noteReady}>
           {save.isPending ? "Saving…" : "Update date"}
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          disabled={save.isPending}
-          onClick={() => {
-            const next = sundayOfWeek(addDaysIso(date || item.scheduled_on, 7));
-            setDate(next);
-            commit(next, note || "Moved to the following week");
-          }}
+          disabled={save.isPending || !date || !noteReady}
+          onClick={() => commit(true)}
         >
-          Next Sunday
+          Notify Customer
         </Button>
       </div>
     </form>

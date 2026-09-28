@@ -359,6 +359,43 @@ export async function sendEstimateReviewEmail(data: {
   });
 }
 
+export async function sendServiceDateEmail(data: {
+  to: string;
+  name: string;
+  company: string;
+  address: string;
+  title: string;
+  serviceDate: string;
+  note: string;
+  replyTo?: string | null;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = `${data.company} updated the service date for ${data.address}`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    `${data.company} updated the service date for ${data.title} at ${data.address}.`,
+    `Service date: ${data.serviceDate}`,
+    "",
+    data.note,
+    "",
+    data.company,
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>${escapeHtml(data.company)} updated the service date for ${escapeHtml(data.title)} at ${escapeHtml(data.address)}.</p>
+<p>Service date: ${escapeHtml(data.serviceDate)}</p>
+<p>${escapeHtml(data.note)}</p>
+<p>${escapeHtml(data.company)}</p>`;
+  await sendResendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+    from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: data.replyTo || undefined,
+  });
+}
+
 function bytesToBase64(bytes: Uint8Array) {
   return Buffer.from(bytes).toString("base64");
 }
