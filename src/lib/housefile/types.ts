@@ -200,6 +200,8 @@ export type PropertyListRow = Property & {
   job_count: number;
   open_proposal_count: number;
   cover_src: string | null;
+  last_job_title: string | null;
+  last_job_at: string | null;
 };
 
 export type ProposalListRow = Proposal & {

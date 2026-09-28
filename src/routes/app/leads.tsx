@@ -29,8 +29,7 @@ function LeadsPage() {
           {trades.length
             ? trades.map((id) => workFromId(id)?.name ?? id).join(", ")
             : "the categories you offer"}
-          {place ? ` near ${place}` : ""}. Only jobs in those categories, in this shop’s service
-          area.
+          {place ? ` near ${place}` : ""}. Repeat-customer campaigns sit beside them.
         </p>
         </div>
         <Button asChild variant="outline">

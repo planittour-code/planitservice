@@ -606,6 +606,8 @@ function listRowFromCounts(p: PropertyListRow): PropertyListRow {
     photo_count: num(p.photo_count),
     job_count: num(p.job_count),
     open_proposal_count: num(p.open_proposal_count),
+    last_job_title: p.last_job_title ?? null,
+    last_job_at: p.last_job_at ?? null,
   };
 }
 
@@ -1020,7 +1022,9 @@ export const getDashboard = createServerFn({ method: "GET" })
         (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
         (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','pending','sent','revised')) as open_proposal_count,
-        (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src
+        (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
+        (select j.title from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_title,
+        (select j.completed_at from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_at
       from properties p
       where p.company_id = ${company.id}
       order by p.created_at desc
@@ -1041,13 +1045,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       where pr.company_id = ${company.id} and pr.status = ${"pending"}
       order by pr.created_at desc
     `;
-    const houses = properties.map((p) => ({
-      ...p,
-      fact_count: num(p.fact_count),
-      photo_count: num(p.photo_count),
-      job_count: num(p.job_count),
-      open_proposal_count: num(p.open_proposal_count),
-    }));
+    const houses = properties.map(listRowFromCounts);
     const namedInvites = await namedWorkForShop(sql, company, session?.email);
     const schedule = await shopScheduleFor(sql, company.id);
     const { listShopBookings } = await import("./booking");
@@ -1152,18 +1150,14 @@ export const listShopIndex = createServerFn({ method: "GET" })
         (select count(*)::int from property_photos ph where ph.property_id = p.id) as photo_count,
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
         (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','pending','sent','revised')) as open_proposal_count,
-        (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src
+        (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
+        (select j.title from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_title,
+        (select j.completed_at from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_at
       from properties p
       where p.company_id = ${company.id}
       order by p.address_line
     `;
-    const houses = properties.map((p) => ({
-      ...p,
-      fact_count: num(p.fact_count),
-      photo_count: num(p.photo_count),
-      job_count: num(p.job_count),
-      open_proposal_count: num(p.open_proposal_count),
-    }));
+    const houses = properties.map(listRowFromCounts);
     const proposalRows = await sql<{
       id: string;
       title: string;
@@ -3802,6 +3796,8 @@ export const getMyHouses = createServerFn({ method: "GET" })
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
         (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
+        (select j.title from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_title,
+        (select j.completed_at from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_at,
         (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_title,
         (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_token
       from properties p
@@ -4258,6 +4254,8 @@ export const getHousehold = createServerFn({ method: "GET" })
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
         (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
+        (select j.title from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_title,
+        (select j.completed_at from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_at,
         (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_title,
         (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_token
       from properties p
@@ -5354,6 +5352,8 @@ export const getPortfolio = createServerFn({ method: "GET" })
         (select count(*)::int from jobs j where j.property_id = p.id) as job_count,
         (select count(*)::int from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised')) as open_proposal_count,
         (select ph.src from property_photos ph where ph.property_id = p.id order by case when ph.category = 'exterior' then 0 else 1 end, ph.created_at desc limit 1) as cover_src,
+        (select j.title from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_title,
+        (select j.completed_at from jobs j where j.property_id = p.id order by j.completed_at desc limit 1) as last_job_at,
         (select pr.title from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_title,
         (select pr.share_token from proposals pr where pr.property_id = p.id and pr.status in ('draft','sent','revised') order by pr.created_at desc limit 1) as open_token
       from portfolio_properties pp

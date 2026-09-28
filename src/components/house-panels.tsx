@@ -786,9 +786,11 @@ export function KnownProviders({
 export function JobTimeline({
   file,
   mode = "history",
+  defaultOpen,
 }: {
   file: HouseFile;
   mode?: "history" | "materials";
+  defaultOpen?: boolean;
 }) {
   const categories = file.jobs
     .map((job) => jobWorkType(job))
@@ -796,6 +798,7 @@ export function JobTimeline({
   const unique = [...new Map(categories.map((w) => [w.id, w])).values()];
   return (
     <RecordSection
+      defaultOpen={defaultOpen}
       title={mode === "materials" ? "Materials and measurements" : "Job history"}
       blurb={
         mode === "materials"
@@ -910,7 +913,13 @@ function manufacturerMark(name: string) {
   return name.slice(0, 2).toUpperCase() || "M";
 }
 
-export function WarrantyList({ file }: { file: HouseFile }) {
+export function WarrantyList({
+  file,
+  defaultOpen,
+}: {
+  file: HouseFile;
+  defaultOpen?: boolean;
+}) {
   const items: (JobSpec & { jobTitle: string; completed: string })[] = [];
   for (const job of file.jobs) {
     for (const spec of job.specs) {
@@ -929,6 +938,7 @@ export function WarrantyList({ file }: { file: HouseFile }) {
   ];
   return (
     <RecordSection
+      defaultOpen={defaultOpen}
       title="Manufacturer warranties"
       blurb="Tied to this address, not a PDF in a drawer."
       photo={CATEGORY_PHOTO.systems}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { HouseCard } from "@/components/site-chrome";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { lastName, shortDate } from "@/lib/housefile/format";
 import { listShopIndex } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/customers")({ component: CustomersPage });
@@ -36,8 +37,8 @@ function CustomersPage() {
           The houses this shop keeps
         </h1>
         <p className="mt-1 max-w-2xl text-muted-foreground">
-          Open a cover to the record: job history, materials, measurements, and warranties. The
-          homeowner keeps the details that were agreed when the work started.
+          Each cover is a house this shop keeps. Open it for the job history, materials,
+          measurements, and warranties agreed when the work was sold.
         </p>
       </div>
       <Input
@@ -71,10 +72,12 @@ function CustomersPage() {
               openCount={house.open_proposal_count}
               footnote={
                 <p className="text-sm text-muted-foreground">
-                  {house.job_count} {house.job_count === 1 ? "job" : "jobs"} on the record
-                  {house.open_proposal_count
-                    ? ` · ${house.open_proposal_count} open`
-                    : ""}
+                  {house.last_job_title
+                    ? `${house.last_job_title}${house.last_job_at ? ` · ${shortDate(house.last_job_at)}` : ""}`
+                    : house.open_proposal_count
+                      ? "Estimate in progress"
+                      : "Open the record"}
+                  {lastName(house.homeowner_name) ? ` · ${lastName(house.homeowner_name)}` : ""}
                 </p>
               }
             />

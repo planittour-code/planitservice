@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { slotTime } from "@/lib/housefile/calendar";
-import { shortDate } from "@/lib/housefile/format";
+import { lastName, shortDate } from "@/lib/housefile/format";
 import { addDaysIso, sundayOfWeek } from "@/lib/housefile/maintain";
 import { cancelShopBooking, scheduleSoldEstimate } from "@/lib/housefile/server";
 import type { ShopScheduleItem } from "@/lib/housefile/types";
@@ -222,12 +222,6 @@ function BookedVisit({ item }: { item: ShopScheduleItem }) {
       </Button>
     </div>
   );
-}
-
-function lastName(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const last = parts.at(-1) ?? name;
-  return last.replace(/\.$/, "");
 }
 
 function DayJobs({

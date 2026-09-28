@@ -26,7 +26,8 @@ export type FileSection = {
 export const HOMEOWNER_SECTIONS: FileSection[] = [
   { id: "photos", label: "Photos", Icon: Camera },
   { id: "house-data", label: "House data", Icon: House },
-  { id: "jobs", label: "Jobs", Icon: Briefcase },
+  { id: "jobs", label: "Job history", Icon: Briefcase },
+  { id: "materials", label: "Materials", Icon: Package },
   { id: "shops", label: "Known shops", Icon: Store },
   { id: "warranties", label: "Warranties", Icon: Shield },
   { id: "maintenance", label: "Maintenance", Icon: CalendarCheck },

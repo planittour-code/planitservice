@@ -15,6 +15,12 @@ export function shortDate(iso: string | null | undefined) {
   }).format(d);
 }
 
+export function lastName(name: string | null | undefined) {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  const last = parts.at(-1) ?? "";
+  return last.replace(/\.$/, "");
+}
+
 export function yearFrom(iso: string | null | undefined) {
   if (!iso) return "";
   return iso.slice(0, 4);

@@ -98,13 +98,13 @@ function PropertyPage() {
         <PhotoGrid file={file} mode="contractor" onChanged={() => q.refetch()} />
       </div>
       <div id="jobs" className="scroll-mt-20">
-        <JobTimeline file={file} />
+        <JobTimeline file={file} defaultOpen />
       </div>
       <div id="materials" className="scroll-mt-20">
-        <JobTimeline file={file} mode="materials" />
+        <JobTimeline file={file} mode="materials" defaultOpen />
       </div>
       <div id="warranties" className="scroll-mt-20">
-        <WarrantyList file={file} />
+        <WarrantyList file={file} defaultOpen />
       </div>
       <div id="house-data" className="scroll-mt-20">
         <FactsPanel file={file} mode="contractor" onChanged={() => q.refetch()} />

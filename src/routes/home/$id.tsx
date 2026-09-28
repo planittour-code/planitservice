@@ -114,7 +114,7 @@ function HomeRecord() {
           {p.city}, {p.state} {p.zip}
         </p>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Photos first. Then house data, jobs, and the shops that already worked here.
+          Photos first. Then the job history, materials, measurements, and warranties agreed for this house.
         </p>
       </header>
 
@@ -125,13 +125,16 @@ function HomeRecord() {
         <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       </div>
       <div id="jobs" className="scroll-mt-20">
-        <JobTimeline file={house} />
+        <JobTimeline file={house} defaultOpen />
+      </div>
+      <div id="materials" className="scroll-mt-20">
+        <JobTimeline file={house} mode="materials" defaultOpen />
       </div>
       <div id="shops" className="scroll-mt-20">
         <KnownProviders providers={q.data.knownProviders ?? []} />
       </div>
       <div id="warranties" className="scroll-mt-20">
-        <WarrantyList file={house} />
+        <WarrantyList file={house} defaultOpen />
       </div>
 
       <RecordSection
