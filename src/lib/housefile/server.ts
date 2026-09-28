@@ -26,7 +26,7 @@ import {
   type ProfileHat,
   type UserProfile,
 } from "./profile";
-import { asPaymentTerms, normalizePaymentLink, shopPaymentLinkForWork } from "./payment";
+import { normalizePaymentLink, shopPaymentLinkForWork } from "./payment";
 import { geocodeLine, parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
   ESTIMATE_KEY,
@@ -1510,7 +1510,7 @@ export const updateCompany = createServerFn({ method: "POST" })
           terms = ${data.terms === undefined ? company.terms : data.terms},
           trades = ${nextTrades},
           slug = ${nextSlug},
-          payment_terms = ${data.payment_terms === undefined ? company.payment_terms : asPaymentTerms(data.payment_terms)},
+          payment_terms = ${data.payment_terms === undefined ? company.payment_terms : (data.payment_terms ?? "").trim().slice(0, 80) || null},
           payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)},
           paint_payment_link = ${data.paint_payment_link === undefined ? company.paint_payment_link : normalizePaymentLink(data.paint_payment_link)}
       where id = ${company.id}

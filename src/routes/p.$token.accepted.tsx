@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { HomeownerHeader } from "@/components/homeowner-chrome";
 import { ProposalDoc } from "@/components/proposal-doc";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getProposalByToken } from "@/lib/housefile/server";
 
@@ -37,11 +36,6 @@ function AcceptedEstimate() {
           </p>
         </div>
         <ProposalDoc bundle={bundle} mode="accepted" onChanged={() => q.refetch()} />
-        <Button asChild variant="outline" className="w-full">
-          <Link to="/p/$token" params={{ token }}>
-            Back to the working estimate
-          </Link>
-        </Button>
       </main>
     </div>
   );

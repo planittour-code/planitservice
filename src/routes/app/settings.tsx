@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
-import { PAYMENT_TERM_LABELS, PAYMENT_TERMS, asPaymentTerms } from "@/lib/housefile/payment";
+import { depositPercent, paymentTermLabel } from "@/lib/housefile/payment";
 import { SEAT_MONTHLY, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { parseTradeLogos, parseTradeTokens, workTypesFor, type WorkType } from "@/lib/housefile/quote";
 import {
@@ -24,7 +24,6 @@ import {
 } from "@/lib/housefile/server";
 import { shopSeatKind } from "@/lib/housefile/stripe";
 import { confirmShopSeatCheckout, startBillingPortal, startCheckout } from "@/lib/housefile/stripe-billing";
-import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
   session_id: z.string().optional(),
@@ -46,7 +45,7 @@ function SettingsPage() {
   const [tradeLogos, setTradeLogos] = useState<Record<string, string>>({});
   const [agreement, setAgreement] = useState("");
   const [terms, setTerms] = useState("");
-  const [paymentTerms, setPaymentTerms] = useState<(typeof PAYMENT_TERMS)[number]>("due_completion");
+  const [paymentTerms, setPaymentTerms] = useState("0");
   const [paymentLink, setPaymentLink] = useState("");
   const [paintPaymentLink, setPaintPaymentLink] = useState("");
   const [pickingTrades, setPickingTrades] = useState(false);
@@ -61,7 +60,7 @@ function SettingsPage() {
     setTradeLogos(parseTradeLogos(q.data.company.trade_logos));
     setAgreement(q.data.company.agreement ?? "");
     setTerms(q.data.company.terms ?? "");
-    setPaymentTerms(asPaymentTerms(q.data.company.payment_terms));
+    setPaymentTerms(String(depositPercent(q.data.company.payment_terms)));
     setPaymentLink(q.data.company.payment_link ?? "");
     setPaintPaymentLink(q.data.company.paint_payment_link ?? "");
   }, [q.data]);
@@ -413,27 +412,19 @@ function SettingsPage() {
           <Label htmlFor="tm">Terms and conditions</Label>
           <Textarea id="tm" rows={5} value={terms} onChange={(e) => setTerms(e.target.value)} />
         </div>
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">Payment terms</legend>
+        <div className="space-y-0.5">
+          <Label htmlFor="pay-terms">Due now (%)</Label>
+          <Input
+            id="pay-terms"
+            inputMode="decimal"
+            value={paymentTerms}
+            onChange={(e) => setPaymentTerms(e.target.value)}
+            placeholder="50"
+          />
           <p className="text-sm text-muted-foreground">
-            This goes on the accepted-estimate email with a PDF of the estimate.
+            {paymentTermLabel(paymentTerms)}. This goes on the accepted estimate and the payment page.
           </p>
-          <div className="grid gap-2">
-            {PAYMENT_TERMS.map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                onClick={() => setPaymentTerms(kind)}
-                className={cn(
-                  "rounded-xl p-4 text-left shadow-[var(--shadow-border)]",
-                  paymentTerms === kind ? "bg-primary text-primary-foreground" : "bg-background",
-                )}
-              >
-                <p className="font-medium">{PAYMENT_TERM_LABELS[kind]}</p>
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        </div>
         <div className="space-y-0.5">
           <Label htmlFor="pay">Gutters payment link</Label>
           <Input

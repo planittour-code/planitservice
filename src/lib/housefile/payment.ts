@@ -16,23 +16,36 @@ export function asPaymentTerms(value: string | null | undefined): PaymentTerms {
   return PAYMENT_TERMS.includes(value as PaymentTerms) ? (value as PaymentTerms) : "due_completion";
 }
 
+/** Deposit percent due now. Accepts 50, 50/50, or the older preset names. */
+export function depositPercent(value: string | null | undefined) {
+  const raw = value?.trim() ?? "";
+  if (!raw || raw === "due_completion") return 0;
+  if (raw === "split_50") return 50;
+  if (raw === "upfront_100") return 100;
+  const match = raw.match(/\d+(\.\d+)?/);
+  const n = match ? Number(match[0]) : 0;
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
+}
+
 export function paymentTermLabel(value: string | null | undefined) {
-  return PAYMENT_TERM_LABELS[asPaymentTerms(value)];
+  const raw = value?.trim() ?? "";
+  if (PAYMENT_TERMS.includes(raw as PaymentTerms)) return PAYMENT_TERM_LABELS[raw as PaymentTerms];
+  const due = depositPercent(raw);
+  if (due <= 0) return "Due upon completion";
+  if (due >= 100) return "100% due now";
+  return `${due}% due now, ${Math.round((100 - due) * 100) / 100}% upon completion`;
 }
 
 export function paymentSchedule(total: number, terms: string | null | undefined) {
-  const kind = asPaymentTerms(terms);
-  if (kind === "split_50") {
-    const half = Math.round(total * 50) / 100;
-    return [
-      { label: "Due now (50%)", amount: half },
-      { label: "Due upon completion (50%)", amount: total - half },
-    ];
-  }
-  if (kind === "upfront_100") {
-    return [{ label: "Due now (100%)", amount: total }];
-  }
-  return [{ label: "Due upon completion", amount: total }];
+  const due = depositPercent(terms);
+  const now = Math.round(total * due) / 100;
+  if (due <= 0) return [{ label: "Due upon completion", amount: total }];
+  if (due >= 100) return [{ label: "Due now", amount: total }];
+  return [
+    { label: `Due now (${due}%)`, amount: now },
+    { label: `Due upon completion (${Math.round((100 - due) * 100) / 100}%)`, amount: total - now },
+  ];
 }
 
 export function normalizePaymentLink(value: string | null | undefined) {

@@ -1,5 +1,5 @@
 import { GUTTERS_PLUS_DRAINAGE_KIT } from "./kits";
-import { asPaymentTerms, customerCode, paymentInvoiceNumber, paymentTermLabel } from "./payment";
+import { customerCode, depositPercent, paymentInvoiceNumber, paymentTermLabel } from "./payment";
 import type { HouseCompany, InvoiceSalesRep, Property, Proposal, ProposalItem } from "./types";
 
 export type InvoiceView = {
@@ -44,9 +44,9 @@ export function invoiceDateIso(proposal: Pick<Proposal, "sent_at" | "accepted_at
 }
 
 export function invoiceDueLabel(paymentTerms: string | null | undefined) {
-  const kind = asPaymentTerms(paymentTerms);
-  if (kind === "upfront_100") return "Due on Receipt";
-  if (kind === "split_50") return "50% due now";
+  const due = depositPercent(paymentTerms);
+  if (due >= 100) return "Due on Receipt";
+  if (due > 0) return `${due}% due now`;
   return "Due upon Completion";
 }
 
