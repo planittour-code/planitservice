@@ -18,7 +18,15 @@ import { Mark } from "@/components/logo";
 import { lineShowsInstalledProduct, lineShowsQuantity, optionLabel } from "@/lib/housefile/estimate-lines";
 import { money, shortDate } from "@/lib/housefile/format";
 import { isDrainageInvoice } from "@/lib/housefile/invoice";
-import { normalizePaymentLink, paymentSchedule, paymentTermLabel } from "@/lib/housefile/payment";
+import {
+  checkoutAmount,
+  customerCode,
+  mxPaymentUrl,
+  normalizePaymentLink,
+  paymentInvoiceNumber,
+  paymentSchedule,
+  paymentTermLabel,
+} from "@/lib/housefile/payment";
 import { SalesSeatPicker } from "@/components/sales-seat-picker";
 import { SoldDateMover } from "@/components/shop-schedule";
 import {
@@ -75,10 +83,21 @@ export function ProposalDoc({
     title: proposal.title,
     shopLogo: company.logo_src,
   });
-  const payHref = normalizePaymentLink(proposal.payment_link || company.payment_link);
+  const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
+  const payHref = mxPaymentUrl(normalizePaymentLink(proposal.payment_link || company.payment_link), {
+    amount: checkoutAmount(includedTotal, company.payment_terms),
+    invoiceNumber: paymentInvoiceNumber(proposal.id),
+    customerCode: customerCode(property.invite_token),
+    name: property.homeowner_name,
+    email: property.homeowner_email,
+    phone: property.homeowner_phone,
+    address: property.address_line,
+    city: property.city,
+    state: property.state,
+    zip: property.zip,
+  });
   const locked = proposal.status === "completed" || mode === "accepted";
   const editMode: "homeowner" | "contractor" = mode === "contractor" ? "contractor" : "homeowner";
-  const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   const showInvoice = isDrainageInvoice(proposal.title);
 
   if (showInvoice) {

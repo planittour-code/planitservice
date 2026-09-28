@@ -12,7 +12,14 @@ import {
   invoiceTotal,
   isDrainageInvoice,
 } from "./invoice";
-import { paymentSchedule, paymentTermLabel } from "./payment";
+import {
+  checkoutAmount,
+  customerCode,
+  mxPaymentUrl,
+  normalizePaymentLink,
+  paymentSchedule,
+  paymentTermLabel,
+} from "./payment";
 import type { Company, InvoiceSalesRep, Property, Proposal, ProposalItem } from "./types";
 
 function includedTotal(items: ProposalItem[]) {
@@ -99,6 +106,7 @@ async function estimatePdf(input: {
 
   const address = `${input.property.address_line}, ${input.property.city}, ${input.property.state} ${input.property.zip}`;
   const total = includedTotal(input.items);
+  const invoiceNo = invoiceNumber(input.proposal);
   const terms = paymentTermLabel(input.company.payment_terms);
   const schedule = paymentSchedule(total, input.company.payment_terms);
 
@@ -134,7 +142,18 @@ async function estimatePdf(input: {
   for (const row of schedule) {
     write(`${row.label}: ${money(row.amount)}`, { size: 10 });
   }
-  const payHref = input.proposal.payment_link || input.company.payment_link;
+  const payHref = mxPaymentUrl(normalizePaymentLink(input.proposal.payment_link || input.company.payment_link), {
+    amount: checkoutAmount(total, input.company.payment_terms),
+    invoiceNumber: invoiceNo,
+    customerCode: customerCode(input.property.invite_token),
+    name: input.property.homeowner_name,
+    email: input.property.homeowner_email,
+    phone: input.property.homeowner_phone,
+    address: input.property.address_line,
+    city: input.property.city,
+    state: input.property.state,
+    zip: input.property.zip,
+  });
   if (payHref) {
     y -= 4;
     write("Pay", { size: 12, weight: "bold" });
@@ -264,7 +283,19 @@ async function invoiceReceiptPdf(input: {
     write(line, { size: 9, color: muted });
   }
   write(invoiceThankYou(input.salesReps?.length ? input.salesReps : input.salesRep ?? null), { size: 10 });
-  const pay = input.proposal.payment_link || input.company.payment_link;
+  const pay = mxPaymentUrl(normalizePaymentLink(input.proposal.payment_link || input.company.payment_link), {
+    amount: checkoutAmount(total, input.company.payment_terms),
+    invoiceNumber: invoiceNo === "DRAFT" ? "" : invoiceNo,
+    customerCode: customerCode(input.property.invite_token),
+    name: input.property.homeowner_name,
+    email: input.property.homeowner_email,
+    phone: input.property.homeowner_phone,
+    address: input.property.address_line,
+    city: input.property.city,
+    state: input.property.state,
+    zip: input.property.zip,
+    memo: `Customer ${customerCode(input.property.invite_token)} · invoice ${invoiceNo}`,
+  });
   if (pay) {
     y -= 4;
     write("Payment Portal", { size: 11, weight: "bold" });

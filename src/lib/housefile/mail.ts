@@ -1,6 +1,14 @@
 import { money } from "./format";
 import { acceptedEstimatePdf } from "./estimate-pdf";
-import { normalizePaymentLink, paymentSchedule, paymentTermLabel } from "./payment";
+import {
+  checkoutAmount,
+  customerCode,
+  mxPaymentUrl,
+  normalizePaymentLink,
+  paymentInvoiceNumber,
+  paymentSchedule,
+  paymentTermLabel,
+} from "./payment";
 import type { Company, Property, Proposal, ProposalItem } from "./types";
 
 function publicUrl(path: string) {
@@ -136,7 +144,18 @@ export async function deliverAcceptedEstimateEmail(input: {
     schedule: paymentSchedule(total, input.company.payment_terms).map(
       (row) => `${row.label}: ${money(row.amount)}`,
     ),
-    paymentLink: normalizePaymentLink(input.proposal.payment_link || input.company.payment_link),
+    paymentLink: mxPaymentUrl(normalizePaymentLink(input.proposal.payment_link || input.company.payment_link), {
+      amount: checkoutAmount(total, input.company.payment_terms),
+      invoiceNumber: paymentInvoiceNumber(input.proposal.id),
+      customerCode: customerCode(input.property.invite_token),
+      name: input.property.homeowner_name,
+      email: input.property.homeowner_email,
+      phone: input.property.homeowner_phone,
+      address: input.property.address_line,
+      city: input.property.city,
+      state: input.property.state,
+      zip: input.property.zip,
+    }),
     proposalUrl: publicUrl(`/p/${input.proposal.share_token}/accepted`),
     pdf,
   });

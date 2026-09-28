@@ -1,5 +1,5 @@
 import { GUTTERS_PLUS_DRAINAGE_KIT } from "./kits";
-import { asPaymentTerms, paymentTermLabel } from "./payment";
+import { asPaymentTerms, customerCode, paymentInvoiceNumber, paymentTermLabel } from "./payment";
 import type { HouseCompany, InvoiceSalesRep, Property, Proposal, ProposalItem } from "./types";
 
 export type InvoiceView = {
@@ -12,7 +12,7 @@ export type InvoiceView = {
   property: Pick<
     Property,
     "homeowner_name" | "homeowner_email" | "homeowner_phone" | "address_line" | "city" | "state" | "zip"
-  >;
+  > & { invite_token?: string | null; id?: string };
   company: HouseCompany;
   salesRep: InvoiceSalesRep | null;
   salesReps?: InvoiceSalesRep[];
@@ -32,7 +32,11 @@ export function isDrainageInvoice(title: string | null | undefined) {
 
 export function invoiceNumber(proposal: Pick<Proposal, "id">) {
   if (proposal.id.startsWith("preview")) return "DRAFT";
-  return proposal.id.replace(/-/g, "").slice(-5).toUpperCase();
+  return paymentInvoiceNumber(proposal.id);
+}
+
+export function invoiceCustomerCode(property: { invite_token?: string | null; id?: string }) {
+  return customerCode(property.invite_token || property.id);
 }
 
 export function invoiceDateIso(proposal: Pick<Proposal, "sent_at" | "accepted_at" | "created_at">) {
@@ -82,12 +86,12 @@ export function invoicePaymentCopy(input: {
   const due = invoiceDueLabel(input.paymentTerms);
   const terms = paymentTermLabel(input.paymentTerms);
   const portal = input.hasPortal
-    ? "Pay online with the Payment Portal below. Use this invoice number as the purchase order."
-    : "Ask the shop how they take payment. Use this invoice number as the purchase order.";
+    ? "Pay online with the Payment Portal below. The amount, invoice number, and customer are already filled in. The card stays on the payment page."
+    : "Ask the shop how they take payment.";
   return [
     `Thank you for your business. Payment is ${due.toLowerCase()} (${terms}).`,
     portal,
-    `PO / Invoice # ${input.invoiceNo}.`,
+    `Invoice # ${input.invoiceNo}.`,
   ].join(" ");
 }
 

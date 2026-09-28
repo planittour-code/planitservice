@@ -7,12 +7,13 @@ import {
   invoiceDateIso,
   invoiceDueLabel,
   invoiceLines,
+  invoiceCustomerCode,
   invoiceNumber,
   invoicePaymentCopy,
   invoiceThankYou,
   invoiceTotal,
 } from "@/lib/housefile/invoice";
-import { normalizePaymentLink } from "@/lib/housefile/payment";
+import { checkoutAmount, mxPaymentUrl, normalizePaymentLink } from "@/lib/housefile/payment";
 import { lineShowsQuantity } from "@/lib/housefile/estimate-lines";
 import { invoiceSalesReps, type InvoiceView } from "@/lib/housefile/invoice";
 
@@ -22,12 +23,25 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
   const lines = invoiceLines(items);
   const total = invoiceTotal(items);
   const invoiceNo = invoiceNumber(proposal);
+  const houseCode = invoiceCustomerCode(property);
   const issued = invoiceDateIso(proposal);
   const due = invoiceDueLabel(company.payment_terms);
   const place = companyPlace(company);
   const websiteHref = companyWebsiteHref(company.website);
   const websiteLabel = companyWebsiteLabel(company.website);
-  const portal = normalizePaymentLink(proposal.payment_link || company.payment_link);
+  const portal = mxPaymentUrl(normalizePaymentLink(proposal.payment_link || company.payment_link), {
+    amount: checkoutAmount(total, company.payment_terms),
+    invoiceNumber: invoiceNo === "DRAFT" ? "" : invoiceNo,
+    customerCode: houseCode,
+    name: property.homeowner_name,
+    email: property.homeowner_email,
+    phone: property.homeowner_phone,
+    address: property.address_line,
+    city: property.city,
+    state: property.state,
+    zip: property.zip,
+    memo: `Customer ${houseCode} · invoice ${invoiceNo}`,
+  });
   const mailTo = [company.name, ...place].filter(Boolean);
 
   return (
@@ -106,6 +120,8 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
         <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm sm:text-right">
           <dt className="text-muted-foreground">Invoice #</dt>
           <dd className="font-medium tabular-nums">{invoiceNo}</dd>
+          <dt className="text-muted-foreground">Customer</dt>
+          <dd className="font-medium">{houseCode}</dd>
           <dt className="text-muted-foreground">Date</dt>
           <dd className="tabular-nums">{shortDate(issued)}</dd>
           <dt className="text-muted-foreground">Amount Due</dt>
