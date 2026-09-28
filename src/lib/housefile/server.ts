@@ -2137,6 +2137,20 @@ export const upsertProposalItem = createServerFn({ method: "POST" })
           review_status = ${nextReview}
         where id = ${data.itemId} and proposal_id = ${data.proposalId}
       `;
+      if (current[0]?.review_status === "change_review") {
+        const proposal = (
+          await sql<Proposal>`select * from proposals where id = ${data.proposalId} limit 1`
+        )[0];
+        if (proposal) {
+          await notifyEstimateReview(
+            sql,
+            proposal,
+            `${company.name} updated ${data.name.trim()} on ${proposal.title}. Review the estimate.`,
+            "file",
+            session?.email ? [session.email] : [],
+          );
+        }
+      }
       return { id: data.itemId };
     }
 
@@ -2177,6 +2191,18 @@ export const addContractorMessage = createServerFn({ method: "POST" })
       insert into proposal_messages (id, proposal_id, author_role, author_name, body)
       values (${crypto.randomUUID()}, ${data.proposalId}, ${"contractor"}, ${company.name}, ${body})
     `;
+    const proposal = (
+      await sql<Proposal>`select * from proposals where id = ${data.proposalId} limit 1`
+    )[0];
+    if (proposal) {
+      await notifyEstimateReview(
+        sql,
+        proposal,
+        `${company.name} left a note on ${proposal.title}: ${body}`,
+        "file",
+        session?.email ? [session.email] : [],
+      );
+    }
     return { ok: true as const };
   });
 
@@ -2689,11 +2715,11 @@ export const reviseProposalPublic = createServerFn({ method: "POST" })
     if (rows[0].status === "sent") {
       await sql`update proposals set status = ${"revised"} where id = ${rows[0].id}`;
     }
-    if (review === "change_review" && items[0].review_status !== "change_review") {
+    if (data.homeownerNote !== undefined && note && note !== items[0].homeowner_note) {
       await notifyEstimateReview(
         sql,
         rows[0],
-        `A change was requested on ${items[0].name} for ${rows[0].title}.`,
+        `A note on ${items[0].name} needs review: ${note}`,
         "shop",
       );
     }
@@ -2737,6 +2763,12 @@ export const addHomeownerMessage = createServerFn({ method: "POST" })
     if (rows[0].status === "sent") {
       await sql`update proposals set status = ${"revised"} where id = ${rows[0].id}`;
     }
+    await notifyEstimateReview(
+      sql,
+      rows[0],
+      `${property.homeowner_name} left a note on ${rows[0].title}: ${body}`,
+      "shop",
+    );
     return { ok: true as const };
   });
 

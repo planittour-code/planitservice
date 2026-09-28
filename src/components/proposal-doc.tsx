@@ -740,8 +740,8 @@ function NotifyReviewBar({
     <div className="flex flex-col gap-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-muted-foreground">
         {mode === "contractor"
-          ? "The shop Owner is emailed automatically when this estimate needs review. You can also email the homeowner and office."
-          : "Email the shop when this estimate needs their review."}
+          ? "A note emails the customer. This also sends a review notice to the homeowner and office."
+          : "A note emails the shop. This sends another review notice."}
       </p>
       <Button
         type="button"
@@ -1051,7 +1051,7 @@ function MessageForm({
         rows={3}
       />
       <Button type="submit">
-        {mode === "homeowner" ? "Send to the shop" : "Add to the history"}
+        {mode === "homeowner" ? "Send to the shop" : "Send to the customer"}
       </Button>
     </form>
   );
