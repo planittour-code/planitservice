@@ -59,7 +59,7 @@ export function statusLabel(status: string) {
     case "pending":
       return "Needs approval";
     case "draft":
-      return "Draft";
+      return "Saved";
     case "sent":
       return "Sent";
     case "revised":

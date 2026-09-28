@@ -190,6 +190,9 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
       {drafts.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Draft</h2>
+          <p className="text-sm text-muted-foreground">
+            Saved estimates you can reopen and finish before sending.
+          </p>
           <WorkRows rows={drafts} />
         </section>
       )}

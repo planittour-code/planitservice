@@ -1680,6 +1680,7 @@ export type WizardInput = {
   workInviteToken?: string;
   paymentLink?: string | null;
   salesEmails?: string[];
+  saveOnly?: boolean;
 };
 
 export const getQuoteHouse = createServerFn({ method: "GET" })
@@ -1791,12 +1792,13 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       return Boolean(item && item.cost == null);
     });
     if (
+      !data.saveOnly &&
       !estimateReady(estimate) &&
       catalogMissing.some((l) => !String(takeoff[`cost_${l.bookId}`] ?? "").trim())
     ) {
       throw new Error("Enter a cost for each product that does not have one.");
     }
-    if (!estimateReady(estimate) && priced.length === 0 && tItems.length === 0) {
+    if (!data.saveOnly && !estimateReady(estimate) && priced.length === 0 && tItems.length === 0) {
       throw new Error("Add a line item from materials before sending.");
     }
 
@@ -1807,7 +1809,8 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       const address = data.addressLine.trim();
       const name = data.homeownerName.trim();
       const email = data.homeownerEmail.trim().toLowerCase();
-      if (!address || !name || !email) throw new Error("Name, email, and address are required");
+      if (!address) throw new Error("Need a street address before this can be saved.");
+      if (!data.saveOnly && (!name || !email)) throw new Error("Name, email, and address are required");
       const zip = data.zip.trim() || "—";
       const shopRows = await sql<Property>`
         select * from properties where company_id = ${company.id}
@@ -1826,7 +1829,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
           ) values (
             ${id}, ${company.id}, ${slugToken()}, ${slugToken()}, ${"sent"},
             ${address}, ${data.city.trim() || "—"}, ${data.state.trim() || "—"}, ${zip},
-            ${name}, ${email}, ${data.homeownerPhone?.trim() || null}
+            ${name || "Homeowner"}, ${email || "draft@planitservice.local"}, ${data.homeownerPhone?.trim() || null}
           )
         `;
         property = (await sql<Property>`select * from properties where id = ${id}`)[0]!;
@@ -1835,7 +1838,8 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
 
     const proposalId = crypto.randomUUID();
     const title = data.title?.trim() || template?.name || work?.name || "Estimate";
-    const pending = role === "sales" && catalogMissing.length > 0;
+    const pending = !data.saveOnly && role === "sales" && catalogMissing.length > 0;
+    const status = data.saveOnly ? "draft" : pending ? "pending" : "sent";
     const directory = await teamDirectoryForShop(sql, company);
     const allowed = new Set(directory.map((m) => m.email.trim().toLowerCase()));
     const sessionMail = session?.email?.trim().toLowerCase() ?? "";
@@ -1850,8 +1854,8 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
         id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, created_by, payment_link, sales_emails
       ) values (
         ${proposalId}, ${company.id}, ${property.id}, ${template?.id ?? null}, ${slugToken()},
-        ${title}, ${pending ? "pending" : "sent"}, ${coverLetter(property.homeowner_name, work?.name ?? template?.trade ?? "work")},
-        ${pending ? null : new Date().toISOString()}, ${context.userId},
+        ${title}, ${status}, ${coverLetter(property.homeowner_name, work?.name ?? template?.trade ?? "work")},
+        ${status === "sent" ? new Date().toISOString() : null}, ${context.userId},
         ${paymentLink}, ${joinSalesEmails(picked)}
       )
     `;
@@ -1962,7 +1966,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
         ${`First draft for ${property.address_line}. Please review, add photos, and note anything we missed.`}
       )
     `;
-    if (!pending) {
+    if (status === "sent") {
       await sql`update properties set invite_status = ${"sent"} where id = ${property.id}`;
     }
     await attachHomeownerIfKnown(sql, property.id, property.homeowner_email);
@@ -1974,6 +1978,22 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     }
     const proposal = (await sql<Proposal>`select * from proposals where id = ${proposalId}`)[0]!;
     let emailed = false;
+    if (data.saveOnly) {
+      return {
+        propertyId: property.id,
+        proposalId: proposal.id,
+        houseToken: property.share_token,
+        inviteToken: property.invite_token,
+        proposalToken: proposal.share_token,
+        homeownerEmail: property.homeowner_email,
+        homeownerName: property.homeowner_name,
+        address: `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`,
+        companyName: company.name,
+        pending: false,
+        emailed: false,
+        saved: true as const,
+      };
+    }
     if (pending) {
       await notifyEstimateReview(
         sql,
@@ -2009,6 +2029,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       companyName: company.name,
       pending,
       emailed,
+      saved: false as const,
     };
   });
 

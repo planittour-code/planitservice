@@ -474,9 +474,10 @@ function NewQuote() {
   );
 
   const create = useMutation({
-    mutationFn: () =>
+    mutationFn: (saveOnly?: boolean) =>
       createProposalFromWizard({
         data: {
+          saveOnly: saveOnly === true,
           propertyId: propertyId || undefined,
           homeownerName: existing?.homeowner_name || homeownerName,
           homeownerEmail: existing?.homeowner_email || homeownerEmail,
@@ -499,11 +500,13 @@ function NewQuote() {
     onSuccess: (result) => {
       setSent(result);
       toast.success(
-        result.pending
-          ? "Sent to the owner for approval"
-          : result.emailed
-            ? `Estimate emailed to ${result.homeownerEmail}`
-            : "Estimate saved. Email did not go out — open the quote to try again.",
+        result.saved
+          ? "Estimate saved. It is under Draft on Jobs."
+          : result.pending
+            ? "Sent to the owner for approval"
+            : result.emailed
+              ? `Estimate emailed to ${result.homeownerEmail}`
+              : "Estimate saved. Email did not go out — open the quote to try again.",
       );
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send"),
@@ -627,6 +630,22 @@ function NewQuote() {
   const shownStep = !addressReady ? 1 : step;
 
   if (sent) {
+    if (sent.saved) {
+      return (
+        <div className="space-y-3">
+          <h1 className="font-display text-3xl font-medium tracking-tight">Estimate saved.</h1>
+          <p className="text-muted-foreground">
+            This stays a draft until you send it. Open it from Draft on Jobs when you have the rest of
+            the details.
+          </p>
+          <Button asChild>
+            <Link to="/app/proposals/$id" params={{ id: sent.proposalId }}>
+              Open the draft
+            </Link>
+          </Button>
+        </div>
+      );
+    }
     if (sent.pending) {
       return (
         <div className="space-y-3">
@@ -972,14 +991,22 @@ function NewQuote() {
             </p>
           )}
           <p className="font-display text-3xl font-medium tabular-nums">{money(total)}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button type="button" variant="ghost" onClick={() => goToStep(3)}>
               Back
             </Button>
             <Button
               type="button"
+              variant="outline"
+              disabled={create.isPending || !addressLine.trim()}
+              onClick={() => needShop(() => create.mutate(true))}
+            >
+              {create.isPending ? "Saving…" : "Save estimate"}
+            </Button>
+            <Button
+              type="button"
               disabled={user ? create.isPending || !canSend : false}
-              onClick={() => needShop(() => create.mutate())}
+              onClick={() => needShop(() => create.mutate(false))}
             >
               {create.isPending
                 ? "Sending…"
