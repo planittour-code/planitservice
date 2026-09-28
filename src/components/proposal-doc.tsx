@@ -69,10 +69,12 @@ export function ProposalTotals({
 export function ProposalDoc({
   bundle,
   mode,
+  shopRole,
   onChanged,
 }: {
   bundle: ProposalBundle;
   mode: "homeowner" | "contractor" | "accepted";
+  shopRole?: "owner" | "sales";
   onChanged: () => void;
 }) {
   const navigate = useNavigate();
@@ -97,6 +99,7 @@ export function ProposalDoc({
     zip: property.zip,
   });
   const locked = proposal.status === "completed" || mode === "accepted";
+  const notesOpen = items.some((item) => item.review_status === "change_review");
   const editMode: "homeowner" | "contractor" = mode === "contractor" ? "contractor" : "homeowner";
   const showInvoice = isDrainageInvoice(proposal.title);
 
@@ -105,6 +108,11 @@ export function ProposalDoc({
       <article className="space-y-8">
         {mode === "contractor" && !locked ? <ContractorMeta bundle={bundle} onChanged={onChanged} /> : null}
         <InvoiceDoc bundle={bundle} showLinePrices={mode === "contractor"} />
+        {notesOpen ? (
+          <p className="rounded-lg bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
+            Notes are still open. The estimate stays in review until they are accepted.
+          </p>
+        ) : null}
         {mode === "homeowner" && !locked ? (
           <div className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -224,9 +232,15 @@ export function ProposalDoc({
           </div>
         ) : null}
 
+        {notesOpen ? (
+          <p className="rounded-lg bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
+            Notes are still open. The estimate stays in review until they are accepted.
+          </p>
+        ) : null}
+
         {mode === "contractor" && (
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={proposal.status} />
+            <StatusBadge status={notesOpen ? "revised" : proposal.status} />
             {proposal.sent_at ? (
               <span className="text-sm text-muted-foreground">Sent {shortDate(proposal.sent_at)}</span>
             ) : null}
@@ -266,6 +280,7 @@ export function ProposalDoc({
             token={proposal.share_token}
             proposalId={proposal.id}
             locked={locked}
+            canEdit={shopRole === "owner"}
             onChanged={onChanged}
           />
         ))}
@@ -773,6 +788,7 @@ function ProposalLine({
   proposalId,
   locked,
   hideInclude = false,
+  canEdit = false,
   onChanged,
 }: {
   item: ProposalItem;
@@ -781,6 +797,7 @@ function ProposalLine({
   proposalId: string;
   locked: boolean;
   hideInclude?: boolean;
+  canEdit?: boolean;
   onChanged: () => void;
 }) {
   const [noteOpen, setNoteOpen] = useState(false);
@@ -837,6 +854,7 @@ function ProposalLine({
       className={cn(
         "rounded-xl bg-card p-4 shadow-[var(--shadow-border)]",
         !item.included && "opacity-60",
+        item.review_status === "change_review" && "bg-warning/15 ring-1 ring-warning",
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -924,7 +942,7 @@ function ProposalLine({
         </div>
       )}
 
-      {mode === "contractor" && !locked && item.review_status === "change_review" && (
+      {mode === "contractor" && !locked && (canEdit || item.review_status === "change_review") && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           {editing ? (
             <div className="grid gap-2 sm:grid-cols-2">

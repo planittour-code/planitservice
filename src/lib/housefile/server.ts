@@ -685,13 +685,12 @@ async function reviewPartiesForProposal(sql: Sql, proposal: Proposal, property: 
   const shopOwners: ReviewParty[] = [];
   const ownerSeen = new Set<string>();
   if (company) {
-    if (!fileSeen.has((company.email || "").trim().toLowerCase())) {
-      addReviewParty(shop, shopSeen, company.email, company.name);
+    const reps = await salesRepsForProposal(sql, proposal);
+    for (const rep of reps) {
+      addReviewParty(shop, shopSeen, rep.email, rep.name);
     }
-    const mailbox = await shopMailbox(sql, company, null);
-    for (const email of mailbox) {
-      if (fileSeen.has(email)) continue;
-      addReviewParty(shop, shopSeen, email, company.name);
+    if (shop.length === 0) {
+      addReviewParty(shop, shopSeen, company.email, company.name);
     }
     const ownerMembers = await sql<{ email: string }>`
       select email from company_members where company_id = ${company.id} and role = ${"owner"}
@@ -751,7 +750,7 @@ async function notifyEstimateReview(
       pushTarget(party, shopUrl);
     }
   }
-  if (audience === "file" || audience === "owner" || audience === "all") {
+  if (audience === "owner" || audience === "all") {
     for (const party of parties.shopOwners) {
       pushTarget(party, shopUrl);
     }
@@ -2145,7 +2144,7 @@ export const upsertProposalItem = createServerFn({ method: "POST" })
           await notifyEstimateReview(
             sql,
             proposal,
-            `${company.name} updated ${data.name.trim()} on ${proposal.title}. Review the estimate.`,
+            `${company.name} reviewed your note on ${data.name.trim()}. The estimate is updated.`,
             "file",
             session?.email ? [session.email] : [],
           );

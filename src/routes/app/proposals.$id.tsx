@@ -60,7 +60,12 @@ function ProposalPage() {
           </Link>
         </Button>
       </div>
-      <ProposalDoc bundle={bundle} mode="contractor" onChanged={() => q.refetch()} />
+      <ProposalDoc
+        bundle={bundle}
+        mode="contractor"
+        shopRole={team.data?.role === "owner" ? "owner" : "sales"}
+        onChanged={() => q.refetch()}
+      />
     </div>
   );
 }
