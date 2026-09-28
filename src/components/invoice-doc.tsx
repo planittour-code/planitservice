@@ -17,7 +17,13 @@ import { checkoutAmount, mxPaymentUrl, normalizePaymentLink } from "@/lib/housef
 import { lineShowsQuantity } from "@/lib/housefile/estimate-lines";
 import { invoiceSalesReps, type InvoiceView } from "@/lib/housefile/invoice";
 
-export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
+export function InvoiceDoc({
+  bundle,
+  showLinePrices = false,
+}: {
+  bundle: InvoiceView;
+  showLinePrices?: boolean;
+}) {
   const { proposal, items, property, company } = bundle;
   const reps = invoiceSalesReps(bundle);
   const lines = invoiceLines(items);
@@ -139,13 +145,13 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
               <tr className="border-b border-border text-left">
                 <th className="py-2 pr-3 font-medium">Item</th>
                 <th className="py-2 pr-3 font-medium">Description</th>
-                <th className="py-2 text-right font-medium">Amount</th>
+                {showLinePrices ? <th className="py-2 text-right font-medium">Amount</th> : null}
               </tr>
             </thead>
             <tbody>
               {lines.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="py-4 text-muted-foreground">
+                  <td colSpan={showLinePrices ? 3 : 2} className="py-4 text-muted-foreground">
                     No billed lines on this invoice.
                   </td>
                 </tr>
@@ -161,7 +167,9 @@ export function InvoiceDoc({ bundle }: { bundle: InvoiceView }) {
                         </span>
                       ) : null}
                     </td>
-                    <td className="py-3 text-right tabular-nums">{money(item.qty * item.unit_price)}</td>
+                    {showLinePrices ? (
+                      <td className="py-3 text-right tabular-nums">{money(item.qty * item.unit_price)}</td>
+                    ) : null}
                   </tr>
                 ))
               )}

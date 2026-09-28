@@ -104,7 +104,7 @@ export function ProposalDoc({
     return (
       <article className="space-y-8">
         {mode === "contractor" && !locked ? <ContractorMeta bundle={bundle} onChanged={onChanged} /> : null}
-        <InvoiceDoc bundle={bundle} />
+        <InvoiceDoc bundle={bundle} showLinePrices={mode === "contractor"} />
         {mode === "homeowner" && !locked ? (
           <div className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -883,7 +883,9 @@ function ProposalLine({
             <p className="text-sm">Note: {item.homeowner_note}</p>
           ) : null}
         </div>
-        <p className="font-medium tabular-nums">{money(line)}</p>
+        {mode === "contractor" ? (
+          <p className="font-medium tabular-nums">{money(line)}</p>
+        ) : null}
       </div>
 
       {mode === "homeowner" && !locked && (

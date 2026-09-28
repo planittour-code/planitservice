@@ -886,7 +886,7 @@ function NewQuote() {
             workId={work?.id}
             paintScope={takeoff.paint_scope}
           />
-          {invoicePreview ? <InvoiceDoc bundle={invoicePreview} /> : null}
+          {invoicePreview ? <InvoiceDoc bundle={invoicePreview} showLinePrices /> : null}
           {user ? (
             <div className="space-y-4 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
               <div className="space-y-0.5">

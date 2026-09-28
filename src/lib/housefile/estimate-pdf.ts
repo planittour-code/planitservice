@@ -126,8 +126,7 @@ async function estimatePdf(input: {
 
   write("Work", { size: 12, weight: "bold" });
   for (const item of input.items.filter((i) => i.included)) {
-    const lineTotal = money(item.qty * item.unit_price);
-    write(`${item.name}  ${item.qty} ${item.unit}  ${lineTotal}`, { size: 10 });
+    write(`${item.name}${item.qty ? `  ${item.qty} ${item.unit}` : ""}`, { size: 10 });
     if (item.description) {
       for (const line of wrap(item.description, 90).slice(0, 3)) {
         write(line, { size: 9, color: muted, x: 60 });
@@ -257,7 +256,7 @@ async function invoiceReceiptPdf(input: {
   y -= 8;
   write("Product/Service", { size: 12, weight: "bold" });
   for (const item of invoiceLines(input.items)) {
-    write(`${item.name}  ${money(item.qty * item.unit_price)}`, { size: 10, weight: "bold" });
+    write(item.name, { size: 10, weight: "bold" });
     if (item.description) {
       for (const line of wrap(item.description, 90).slice(0, 3)) {
         write(line, { size: 9, color: muted, x: 60 });
