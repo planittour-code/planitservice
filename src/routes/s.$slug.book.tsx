@@ -6,37 +6,59 @@ import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BOOKING_SERVICES } from "@/lib/housefile/calendar";
-import { bookPublicSlot, getPublicBookingSlots } from "@/lib/housefile/server";
+import { bookPublicSlot, getPublicBookingSlots, getPublicShop, startPublicProject } from "@/lib/housefile/server";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/s/$slug/book")({ component: ShopBook });
+export const Route = createFileRoute("/s/$slug/book")({ component: ShopOfferPage });
 
-function ShopBook() {
+type Offer = "visit" | "repeat";
+
+function ShopOfferPage() {
   const { slug } = Route.useParams();
+  const shop = useQuery({
+    queryKey: ["public-shop", slug],
+    queryFn: () => getPublicShop({ data: slug }),
+    retry: false,
+  });
   const slots = useQuery({
     queryKey: ["shop-slots", slug],
     queryFn: () => getPublicBookingSlots({ data: slug }),
+    enabled: Boolean(shop.data),
   });
-  const shopName = slots.data?.shop.name ?? "This shop";
+  const shopName = shop.data?.name ?? slots.data?.shop.name ?? "This shop";
+  const [offer, setOffer] = useState<Offer | null>(null);
   const [start, setStart] = useState("");
-  const [service, setService] = useState<(typeof BOOKING_SERVICES)[number]["id"]>("cleaning");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [booked, setBooked] = useState<{ when: string; code: string } | null>(null);
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("GA");
+  const [zip, setZip] = useState("");
+  const [done, setDone] = useState<string | null>(null);
 
-  const save = useMutation({
-    mutationFn: () => bookPublicSlot({ data: { slug, start, service, name, email, phone, address } }),
+  const book = useMutation({
+    mutationFn: () =>
+      bookPublicSlot({ data: { slug, start, service: "cleaning", name, email, phone, address } }),
     onSuccess: (res) => {
-      setBooked({ when: res.when, code: res.confirmationCode });
-      toast.success("You're on the calendar. Confirmation is in your email.");
+      setDone(`Booked for ${res.when}. Confirmation ${res.confirmationCode} is in your email.`);
+      toast.success("You're on the calendar.");
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "That time is not open.");
       void slots.refetch();
     },
+  });
+  const enroll = useMutation({
+    mutationFn: () =>
+      startPublicProject({
+        data: { slug, name, email, phone, addressLine: address, city, state, zip, workId: "gutters" },
+      }),
+    onSuccess: () => {
+      setDone(`${shopName} has your repeat-service signup. We'll write you to set the first visit.`);
+      toast.success("Signed up. The shop has the request.");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not sign you up."),
   });
 
   return (
@@ -44,109 +66,230 @@ function ShopBook() {
       <PublicHeader compact path="public">
         <Button asChild variant="outline" size="sm">
           <Link to="/s/$slug" params={{ slug }}>
-            {shopName}
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/s/$slug/project" params={{ slug }}>
-            Start a New Project
+            Shop
           </Link>
         </Button>
       </PublicHeader>
-      <main className="mx-auto max-w-xl space-y-6 px-4 py-8 sm:px-6">
-        <div className="space-y-2">
-          <p className="text-sm font-medium tracking-wide text-primary">{shopName}</p>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Schedule today</h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Openings on this shop’s calendar, with a few days held back so the crew can get there.
-            A time you see here is a time the phone line can book too.
-          </p>
-        </div>
+      <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
+        <header className="space-y-4">
+          {shop.data?.logo_src ? (
+            <img
+              src={shop.data.logo_src}
+              alt=""
+              className="h-16 w-auto max-w-[14rem] object-contain sm:h-20"
+            />
+          ) : null}
+          <div className="space-y-2">
+            <p className="text-sm font-medium tracking-wide text-primary">{shopName}</p>
+            <h1 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
+              Gutter cleaning, on your schedule
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Schedule one visit, or sign up for the year and keep a crew on the calendar.
+            </p>
+          </div>
+        </header>
 
-        {slots.error ? (
+        {shop.isError ? (
           <p className="text-sm text-destructive">This shop link is not live yet.</p>
-        ) : booked ? (
+        ) : done ? (
           <section className="space-y-2 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
-            <h2 className="font-display text-xl font-medium">Booked</h2>
-            <p className="text-sm">{booked.when}</p>
-            <p className="text-sm text-muted-foreground">Confirmation {booked.code}. Check your email.</p>
+            <h2 className="font-display text-xl font-medium">You're set</h2>
+            <p className="text-sm text-muted-foreground">{done}</p>
           </section>
         ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              save.mutate();
-            }}
-          >
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Visit</legend>
-              <div className="flex flex-wrap gap-2">
-                {BOOKING_SERVICES.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setService(item.id)}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-sm shadow-[var(--shadow-border)]",
-                      service === item.id ? "bg-primary text-primary-foreground" : "bg-card",
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Open times</legend>
-              {slots.isLoading ? (
-                <p className="text-sm text-muted-foreground">Checking the calendar…</p>
-              ) : slots.data?.slots.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {slots.data.slots.slice(0, 16).map((slot) => (
-                    <button
-                      key={slot.start}
-                      type="button"
-                      onClick={() => setStart(slot.start)}
-                      className={cn(
-                        "rounded-md px-3 py-2 text-left text-sm shadow-[var(--shadow-border)]",
-                        start === slot.start ? "bg-primary text-primary-foreground" : "bg-card",
-                      )}
-                    >
-                      {slot.label}
-                    </button>
-                  ))}
-                </div>
-              ) : (
+          <>
+            <section className="grid gap-3 sm:grid-cols-2">
+              <OfferCard
+                title="One visit"
+                points={["Seasonal gutter and downspout cleaning", "Pick an open day on the calendar"]}
+                action="Schedule one visit"
+                selected={offer === "visit"}
+                onChoose={() => setOffer("visit")}
+              />
+              <OfferCard
+                title="Repeat service"
+                points={[
+                  "20% off gutter and downspout cleaning",
+                  "3 visits: spring, fall, and as needed",
+                  "Priority scheduling through the year",
+                ]}
+                action="Sign up for the year"
+                selected={offer === "repeat"}
+                onChoose={() => setOffer("repeat")}
+              />
+            </section>
+
+            {offer === "visit" ? (
+              <form
+                className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  book.mutate();
+                }}
+              >
+                <h2 className="font-display text-xl font-medium">Schedule one visit</h2>
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">Open times</legend>
+                  {slots.isLoading ? (
+                    <p className="text-sm text-muted-foreground">Checking the calendar…</p>
+                  ) : slots.data?.slots.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {slots.data.slots.slice(0, 12).map((slot) => (
+                        <button
+                          key={slot.start}
+                          type="button"
+                          onClick={() => setStart(slot.start)}
+                          className={cn(
+                            "min-h-11 rounded-md px-3 py-2 text-left text-sm shadow-[var(--shadow-border)]",
+                            start === slot.start ? "bg-primary text-primary-foreground" : "bg-background",
+                          )}
+                        >
+                          {slot.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No openings in the next few weeks. Sign up for the year and the shop will find a day.
+                    </p>
+                  )}
+                </fieldset>
+                <ContactFields
+                  name={name}
+                  email={email}
+                  phone={phone}
+                  address={address}
+                  onName={setName}
+                  onEmail={setEmail}
+                  onPhone={setPhone}
+                  onAddress={setAddress}
+                />
+                <Button type="submit" disabled={!start || book.isPending}>
+                  {book.isPending ? "Booking…" : "Book this time"}
+                </Button>
+              </form>
+            ) : null}
+
+            {offer === "repeat" ? (
+              <form
+                className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  enroll.mutate();
+                }}
+              >
+                <h2 className="font-display text-xl font-medium">Sign up for the year</h2>
                 <p className="text-sm text-muted-foreground">
-                  No openings in the next few weeks. Reply to the shop and they will find a day.
+                  {shopName} will confirm the three visits and the 20% rate. The Property Record
+                  stays free while that estimate is open.
                 </p>
-              )}
-            </fieldset>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
-              </div>
-            </div>
-            <Button type="submit" disabled={!start || save.isPending}>
-              {save.isPending ? "Booking…" : "Book this time"}
-            </Button>
-          </form>
+                <ContactFields
+                  name={name}
+                  email={email}
+                  phone={phone}
+                  address={address}
+                  onName={setName}
+                  onEmail={setEmail}
+                  onPhone={setPhone}
+                  onAddress={setAddress}
+                />
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="city">City</Label>
+                    <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="state">State</Label>
+                    <Input id="state" value={state} onChange={(e) => setState(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="zip">ZIP</Label>
+                    <Input id="zip" value={zip} onChange={(e) => setZip(e.target.value)} />
+                  </div>
+                </div>
+                <Button type="submit" disabled={enroll.isPending}>
+                  {enroll.isPending ? "Sending…" : "Sign up for the year"}
+                </Button>
+              </form>
+            ) : null}
+          </>
         )}
       </main>
+    </div>
+  );
+}
+
+function OfferCard({
+  title,
+  points,
+  action,
+  selected,
+  onChoose,
+}: {
+  title: string;
+  points: string[];
+  action: string;
+  selected: boolean;
+  onChoose: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChoose}
+      className={cn(
+        "flex min-h-44 flex-col items-start gap-3 rounded-xl bg-card p-5 text-left shadow-[var(--shadow-border)]",
+        selected && "ring-2 ring-primary",
+      )}
+    >
+      <h2 className="font-display text-xl font-medium">{title}</h2>
+      <ul className="space-y-1 text-sm text-muted-foreground">
+        {points.map((point) => (
+          <li key={point}>{point}</li>
+        ))}
+      </ul>
+      <span className="mt-auto text-sm font-medium text-primary">{selected ? "Selected" : action}</span>
+    </button>
+  );
+}
+
+function ContactFields({
+  name,
+  email,
+  phone,
+  address,
+  onName,
+  onEmail,
+  onPhone,
+  onAddress,
+}: {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  onName: (value: string) => void;
+  onEmail: (value: string) => void;
+  onPhone: (value: string) => void;
+  onAddress: (value: string) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-1">
+        <Label htmlFor="name">Name</Label>
+        <Input id="name" value={name} onChange={(e) => onName(e.target.value)} required />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" type="email" value={email} onChange={(e) => onEmail(e.target.value)} required />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="phone">Phone</Label>
+        <Input id="phone" value={phone} onChange={(e) => onPhone(e.target.value)} required />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="address">Street address</Label>
+        <Input id="address" value={address} onChange={(e) => onAddress(e.target.value)} required />
+      </div>
     </div>
   );
 }
