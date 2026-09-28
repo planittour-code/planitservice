@@ -59,6 +59,8 @@ import { Route as ApiVoiceSplatRouteImport } from './routes/api/voice/$'
 import { Route as AppPropertiesIdRouteImport } from './routes/app/properties.$id'
 import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
 import { Route as PTokenAcceptedRouteImport } from './routes/p.$token.accepted'
+import { Route as SSlugBookRouteImport } from './routes/s.$slug.book'
+import { Route as SSlugProjectRouteImport } from './routes/s.$slug.project'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -310,6 +312,16 @@ const PTokenAcceptedRoute = PTokenAcceptedRouteImport.update({
   path: '/accepted',
   getParentRoute: () => PTokenRoute,
 } as any)
+const SSlugBookRoute = SSlugBookRouteImport.update({
+  id: '/book',
+  path: '/book',
+  getParentRoute: () => SSlugRoute,
+} as any)
+const SSlugProjectRoute = SSlugProjectRouteImport.update({
+  id: '/project',
+  path: '/project',
+  getParentRoute: () => SSlugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -349,7 +361,7 @@ export interface FileRoutesByFullPath {
   '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
-  '/s/$slug': typeof SSlugRoute
+  '/s/$slug': typeof SSlugRouteWithChildren
   '/shop/open': typeof ShopOpenRoute
   '/start/project': typeof StartProjectRoute
   '/u/$slug': typeof USlugRoute
@@ -362,6 +374,8 @@ export interface FileRoutesByFullPath {
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
+  '/s/$slug/book': typeof SSlugBookRoute
+  '/s/$slug/project': typeof SSlugProjectRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -398,7 +412,7 @@ export interface FileRoutesByTo {
   '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
-  '/s/$slug': typeof SSlugRoute
+  '/s/$slug': typeof SSlugRouteWithChildren
   '/shop/open': typeof ShopOpenRoute
   '/start/project': typeof StartProjectRoute
   '/u/$slug': typeof USlugRoute
@@ -411,6 +425,8 @@ export interface FileRoutesByTo {
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
+  '/s/$slug/book': typeof SSlugBookRoute
+  '/s/$slug/project': typeof SSlugProjectRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -451,7 +467,7 @@ export interface FileRoutesById {
   '/manage/settings': typeof ManageSettingsRoute
   '/p/$token': typeof PTokenRouteWithChildren
   '/rfp/$token': typeof RfpTokenRoute
-  '/s/$slug': typeof SSlugRoute
+  '/s/$slug': typeof SSlugRouteWithChildren
   '/shop/open': typeof ShopOpenRoute
   '/start/project': typeof StartProjectRoute
   '/u/$slug': typeof USlugRoute
@@ -464,6 +480,8 @@ export interface FileRoutesById {
   '/app/properties/$id': typeof AppPropertiesIdRoute
   '/app/proposals/$id': typeof AppProposalsIdRoute
   '/p/$token/accepted': typeof PTokenAcceptedRoute
+  '/s/$slug/book': typeof SSlugBookRoute
+  '/s/$slug/project': typeof SSlugProjectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -518,6 +536,8 @@ export interface FileRouteTypes {
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
+    | '/s/$slug/book'
+    | '/s/$slug/project'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -567,6 +587,8 @@ export interface FileRouteTypes {
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
+    | '/s/$slug/book'
+    | '/s/$slug/project'
   id:
     | '__root__'
     | '/'
@@ -619,6 +641,8 @@ export interface FileRouteTypes {
     | '/app/properties/$id'
     | '/app/proposals/$id'
     | '/p/$token/accepted'
+    | '/s/$slug/book'
+    | '/s/$slug/project'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -642,7 +666,7 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRouteWithChildren
   RfpTokenRoute: typeof RfpTokenRoute
-  SSlugRoute: typeof SSlugRoute
+  SSlugRoute: typeof SSlugRouteWithChildren
   StartProjectRoute: typeof StartProjectRoute
   USlugRoute: typeof USlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -1002,6 +1026,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PTokenAcceptedRouteImport
       parentRoute: typeof PTokenRoute
     }
+    '/s/$slug/book': {
+      id: '/s/$slug/book'
+      path: '/book'
+      fullPath: '/s/$slug/book'
+      preLoaderRoute: typeof SSlugBookRouteImport
+      parentRoute: typeof SSlugRoute
+    }
+    '/s/$slug/project': {
+      id: '/s/$slug/project'
+      path: '/project'
+      fullPath: '/s/$slug/project'
+      preLoaderRoute: typeof SSlugProjectRouteImport
+      parentRoute: typeof SSlugRoute
+    }
   }
 }
 
@@ -1110,6 +1148,18 @@ const PTokenRouteChildren: PTokenRouteChildren = {
 const PTokenRouteWithChildren =
   PTokenRoute._addFileChildren(PTokenRouteChildren)
 
+interface SSlugRouteChildren {
+  SSlugBookRoute: typeof SSlugBookRoute
+  SSlugProjectRoute: typeof SSlugProjectRoute
+}
+
+const SSlugRouteChildren: SSlugRouteChildren = {
+  SSlugBookRoute: SSlugBookRoute,
+  SSlugProjectRoute: SSlugProjectRoute,
+}
+
+const SSlugRouteWithChildren = SSlugRoute._addFileChildren(SSlugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
@@ -1131,7 +1181,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRouteWithChildren,
   RfpTokenRoute: RfpTokenRoute,
-  SSlugRoute: SSlugRoute,
+  SSlugRoute: SSlugRouteWithChildren,
   StartProjectRoute: StartProjectRoute,
   USlugRoute: USlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

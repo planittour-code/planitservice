@@ -328,6 +328,16 @@ function SettingsPage() {
                 View public shop
               </a>
             </Button>
+            <Button asChild variant="outline">
+              <a href={`/s/${company.slug}/book`} target="_blank" rel="noreferrer">
+                Schedule Today
+              </a>
+            </Button>
+            <Button asChild variant="outline">
+              <a href={`/s/${company.slug}/project`} target="_blank" rel="noreferrer">
+                Start a New Project
+              </a>
+            </Button>
             <Button
               type="button"
               variant="outline"

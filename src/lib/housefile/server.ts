@@ -1072,14 +1072,17 @@ export const getDashboard = createServerFn({ method: "GET" })
     };
   });
 
-export const getPublicBookingSlots = createServerFn({ method: "GET" }).handler(async () => {
-  const { listOpenSlots } = await import("./booking");
-  return listOpenSlots();
-});
+export const getPublicBookingSlots = createServerFn({ method: "GET" })
+  .validator((slug: string) => slug)
+  .handler(async ({ data: slug }) => {
+    const { listOpenSlots } = await import("./booking");
+    return listOpenSlots(slug);
+  });
 
 export const bookPublicSlot = createServerFn({ method: "POST" })
   .validator(
     (input: {
+      slug: string;
       start: string;
       service: string;
       name: string;
@@ -1096,6 +1099,7 @@ export const bookPublicSlot = createServerFn({ method: "POST" })
 export const startPublicProject = createServerFn({ method: "POST" })
   .validator(
     (input: {
+      slug: string;
       name: string;
       email: string;
       phone?: string;

@@ -33,7 +33,7 @@ export function ShopBookings({ items }: { items: Booking[] }) {
       <div>
         <h2 className="font-display text-lg font-medium">Booked visits</h2>
         <p className="text-sm text-muted-foreground">
-          Times taken from the mailer page or the voice agent. They sit on Albin’s Google calendar.
+          Times taken from this shop’s public page or the voice agent.
         </p>
       </div>
       <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">

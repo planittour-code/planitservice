@@ -6,6 +6,8 @@ import {
 } from "@/lib/auth/mail.server";
 import {
   ALBIN_CALENDAR_EMAIL,
+  ALBIN_FROM,
+  ALBIN_REPLY_TO,
   BOOKING_SERVICES,
   PROJECT_SERVICES,
   SLOTS_PER_DAY,
@@ -55,34 +57,85 @@ function isMail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function guttersPlusCompany(sql: Sql) {
-  const rows = await sql<{ id: string; name: string; email: string | null }>`
-    select id, name, email from companies
-    where lower(email) = ${ALBIN_CALENDAR_EMAIL}
-       or lower(name) like ${"%gutters plus%"}
-       or lower(name) like ${"%guttersplus%"}
-    order by case when lower(email) = ${ALBIN_CALENDAR_EMAIL} then 0 else 1 end
-    limit 1
-  `;
-  return rows[0] ?? null;
+export type ShopDesk = {
+  id: string;
+  name: string;
+  slug: string;
+  email: string | null;
+  phone: string | null;
+  calendarEmail: string;
+  from: string;
+  replyTo: string;
+};
+
+function mailLocal(email: string) {
+  const local = email.split("@")[0]?.replace(/[^a-z0-9]/gi, "") || "shop";
+  return `${local}@mail.planitservice.com`;
 }
 
-async function liveBookings(sql: Sql, fromIso: string): Promise<BookingRow[]> {
+function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] || name;
+}
+
+export async function shopBySlug(sql: Sql, slug: string): Promise<ShopDesk> {
+  const needle = slug.trim().toLowerCase();
+  if (!needle) throw new Error("Shop not found");
+  const rows = await sql<{ id: string; name: string; slug: string | null; email: string | null; phone: string | null }>`
+    select c.id, c.name, c.slug, c.email, c.phone
+    from companies c
+    where c.shop_paid_at is not null
+      and c.id <> ${HOUSEHOLD}
+      and (
+        c.slug = ${needle}
+        or exists (
+          select 1 from shop_slug_aliases a
+          where a.company_id = c.id and a.slug = ${needle}
+        )
+      )
+    limit 1
+  `;
+  const row = rows[0];
+  if (!row?.slug) throw new Error("Shop not found");
+  const email = row.email?.trim().toLowerCase() || null;
+  const calendarEmail =
+    email === ALBIN_CALENDAR_EMAIL || needle.includes("gutter") ? ALBIN_CALENDAR_EMAIL : email || ALBIN_CALENDAR_EMAIL;
+  const replyTo = email || ALBIN_REPLY_TO;
+  const from =
+    calendarEmail === ALBIN_CALENDAR_EMAIL
+      ? ALBIN_FROM
+      : `${firstName(row.name)} at ${row.name} <${mailLocal(replyTo)}>`;
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    email,
+    phone: row.phone,
+    calendarEmail,
+    from,
+    replyTo,
+  };
+}
+
+async function liveBookings(sql: Sql, shopEmail: string, fromIso: string): Promise<BookingRow[]> {
   return sql<BookingRow>`
     select * from shop_bookings
-    where shop_email = ${ALBIN_CALENDAR_EMAIL}
+    where shop_email = ${shopEmail}
       and status = ${"booked"}
       and slot_start >= ${fromIso}::timestamptz
     order by slot_start
   `;
 }
 
-export async function listOpenSlots() {
+export async function listOpenSlots(slug: string) {
   const sql = await getSql();
+  const shop = await shopBySlug(sql, slug);
   const now = new Date();
   const horizon = new Date(now.getTime() + 40 * 24 * 60 * 60 * 1000);
-  const local = await liveBookings(sql, now.toISOString());
-  const google = await googleBusy(now.toISOString(), horizon.toISOString());
+  const local = await liveBookings(sql, shop.calendarEmail, now.toISOString());
+  const google =
+    shop.calendarEmail === ALBIN_CALENDAR_EMAIL
+      ? await googleBusy(now.toISOString(), horizon.toISOString())
+      : [];
   const busy: GoogleBusy[] = [
     ...google,
     ...local.map((row) => ({ start: row.slot_start, end: row.slot_end })),
@@ -97,8 +150,9 @@ export async function listOpenSlots() {
     return true;
   });
   return {
-    calendar: ALBIN_CALENDAR_EMAIL,
-    googleConnected: calendarConfigured(),
+    shop: { slug: shop.slug, name: shop.name },
+    calendar: shop.calendarEmail,
+    googleConnected: shop.calendarEmail === ALBIN_CALENDAR_EMAIL && calendarConfigured(),
     slots: capped,
     services: BOOKING_SERVICES,
   };
@@ -112,17 +166,18 @@ export async function bookSlot(input: {
   phone?: string;
   address?: string;
   source: "web" | "voice";
+  slug: string;
 }) {
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
   if (name.length < 2) throw new Error("Need a name.");
   if (!isMail(email)) throw new Error("Need an email for the confirmation.");
-  const offered = await listOpenSlots();
+  const offered = await listOpenSlots(input.slug);
   const slot = offered.slots.find((s) => s.start === input.start);
   if (!slot) throw new Error("That time was just taken. Pick another opening.");
   const service = serviceLabel(input.service);
   const sql = await getSql();
-  const company = await guttersPlusCompany(sql);
+  const shop = await shopBySlug(sql, input.slug);
   const id = crypto.randomUUID();
   const code = confirmationCode();
   const address = input.address?.trim() || null;
@@ -146,7 +201,7 @@ export async function bookSlot(input: {
         id, company_id, shop_email, calendar_event_id, slot_start, slot_end,
         service, name, email, phone, address_line, confirmation_code, source, status
       ) values (
-        ${id}, ${company?.id ?? null}, ${ALBIN_CALENDAR_EMAIL}, ${eventId},
+        ${id}, ${shop.id}, ${shop.calendarEmail}, ${eventId},
         ${slot.start}::timestamptz, ${slot.end}::timestamptz,
         ${service}, ${name}, ${email}, ${input.phone?.trim() || null}, ${address},
         ${code}, ${input.source}, ${"booked"}
@@ -169,6 +224,9 @@ export async function bookSlot(input: {
       service,
       code,
       address: address ?? undefined,
+      shopName: shop.name,
+      from: shop.from,
+      replyTo: shop.replyTo,
     });
   } catch (err) {
     console.error("[mail] booking confirmation failed", err);
@@ -180,7 +238,8 @@ export async function bookSlot(input: {
     start: slot.start,
     end: slot.end,
     service,
-    calendar: ALBIN_CALENDAR_EMAIL,
+    calendar: shop.calendarEmail,
+    shop: shop.name,
   };
 }
 
@@ -197,7 +256,12 @@ export async function moveBooking(input: {
   `;
   const row = rows[0];
   if (!row) throw new Error("Booking not found.");
-  const offered = await listOpenSlots();
+  const shopRows = await sql<{ slug: string | null }>`
+    select slug from companies where id = ${input.companyId} limit 1
+  `;
+  const slug = shopRows[0]?.slug;
+  if (!slug) throw new Error("Shop not found.");
+  const offered = await listOpenSlots(slug);
   const slot = offered.slots.find((s) => s.start === input.start);
   if (!slot) throw new Error("That time is not open.");
   await sql`
@@ -222,6 +286,7 @@ export async function moveBooking(input: {
   }
   const when = slotLabel(slot.start);
   try {
+    const movedShop = await shopBySlug(sql, slug);
     await sendBookingConfirmationEmail({
       to: row.email,
       name: row.name,
@@ -230,6 +295,9 @@ export async function moveBooking(input: {
       code: row.confirmation_code,
       address: row.address_line ?? undefined,
       moved: true,
+      shopName: movedShop.name,
+      from: movedShop.from,
+      replyTo: movedShop.replyTo,
     });
   } catch (err) {
     console.error("[mail] move confirmation failed", err);
@@ -261,12 +329,23 @@ export async function listShopBookings(companyId: string) {
 }
 
 export async function notifyOwnerTransfer(input: {
+  slug: string;
   callerName: string;
   callerPhone: string;
   note: string;
 }) {
-  await sendTransferToOwnerEmail(input);
-  return { ok: true as const, transferredTo: ALBIN_CALENDAR_EMAIL };
+  const sql = await getSql();
+  const shop = await shopBySlug(sql, input.slug);
+  await sendTransferToOwnerEmail({
+    to: shop.replyTo,
+    from: shop.from,
+    replyTo: shop.replyTo,
+    shopName: shop.name,
+    callerName: input.callerName,
+    callerPhone: input.callerPhone,
+    note: input.note,
+  });
+  return { ok: true as const, transferredTo: shop.replyTo, shop: shop.name };
 }
 
 async function seedFile(sql: Sql, propertyId: string) {
@@ -296,6 +375,7 @@ export async function openProjectLead(input: {
   zip?: string;
   workId: ProjectServiceId | string;
   source: "web" | "voice";
+  slug: string;
 }) {
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
@@ -305,9 +385,9 @@ export async function openProjectLead(input: {
   if (address.length < 4) throw new Error("Need the street address.");
   const work = PROJECT_SERVICES.find((s) => s.id === input.workId) ?? PROJECT_SERVICES[0];
   const sql = await getSql();
-  const company = await guttersPlusCompany(sql);
-  const shopId = company?.id ?? null;
-  const shopName = company?.name ?? "Gutters Plus";
+  const shop = await shopBySlug(sql, input.slug);
+  const shopId = shop.id;
+  const shopName = shop.name;
 
   const shopRows = shopId
     ? await sql<{ id: string; address_line: string; zip: string; invite_token: string }>`
@@ -379,7 +459,7 @@ export async function openProjectLead(input: {
     insert into file_work_invites (
       id, property_id, invited_by_user_id, shop_email, shop_name, title, body, share_token, status
     ) values (
-      ${inviteId}, ${fileId}, ${"mailer"}, ${ALBIN_CALENDAR_EMAIL}, ${shopName},
+      ${inviteId}, ${fileId}, ${"mailer"}, ${shop.replyTo}, ${shopName},
       ${work.label},
       ${`${name} asked Gutters Plus to quote ${work.label} at ${address}. Opened from the seasonal mailer (${input.source}). The Property Record is free until 30 days after Start Work.`},
       ${share}, ${"open"}
@@ -394,6 +474,9 @@ export async function openProjectLead(input: {
       address,
       work: work.label,
       inviteUrl,
+      shopName: shop.name,
+      from: shop.from,
+      replyTo: shop.replyTo,
     });
   } catch (err) {
     console.error("[mail] project opened email failed", err);

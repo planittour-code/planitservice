@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Wordmark } from "@/components/logo";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,14 @@ export const Route = createFileRoute("/s/$slug")({
       return null;
     }
   },
-  component: PublicShopPage,
+  component: PublicShopLayout,
 });
+
+function PublicShopLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname.endsWith("/book") || pathname.endsWith("/project")) return <Outlet />;
+  return <PublicShopPage />;
+}
 
 function PublicShopPage() {
   const { slug } = Route.useParams();
@@ -100,6 +106,18 @@ function PublicShopPage() {
             </ul>
           </section>
         )}
+        <section className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/s/$slug/book" params={{ slug: shop.slug }}>
+              Schedule Today
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/s/$slug/project" params={{ slug: shop.slug }}>
+              Start a New Project
+            </Link>
+          </Button>
+        </section>
         {(shop.phone || shop.email || shop.website) && (
           <section className="space-y-2 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
             <h2 className="font-display text-xl font-medium">Contact</h2>

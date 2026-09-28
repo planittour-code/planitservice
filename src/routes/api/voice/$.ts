@@ -6,10 +6,10 @@ import { bookSlot, listOpenSlots, notifyOwnerTransfer, openProjectLead } from "@
  * The agent keeps its voice and transfer. These endpoints are the calendar and the file.
  *
  * Auth: Authorization: Bearer <VOICE_AGENT_SECRET>
- *   POST /api/voice/check_availability   {}
- *   POST /api/voice/book_appointment     { start, service, name, email, phone?, address? }
- *   POST /api/voice/start_project        { name, email, phone?, addressLine, city?, state?, zip?, workId }
- *   POST /api/voice/transfer_to_owner    { callerName, callerPhone, note }
+ *   POST /api/voice/check_availability   { slug }
+ *   POST /api/voice/book_appointment     { slug, start, service, name, email, phone?, address? }
+ *   POST /api/voice/start_project        { slug, name, email, phone?, addressLine, city?, state?, zip?, workId }
+ *   POST /api/voice/transfer_to_owner    { slug, callerName, callerPhone, note }
  */
 
 function authorized(request: Request) {
@@ -37,8 +37,9 @@ export const Route = createFileRoute("/api/voice/$")({
         const tool = params._splat ?? "";
         const body = await readJson(request);
         try {
+          const slug = body.slug || "painting-plus";
           if (tool === "check_availability") {
-            const data = await listOpenSlots();
+            const data = await listOpenSlots(slug);
             return Response.json({
               calendar: data.calendar,
               googleConnected: data.googleConnected,
@@ -51,6 +52,7 @@ export const Route = createFileRoute("/api/voice/$")({
           }
           if (tool === "book_appointment") {
             const booked = await bookSlot({
+              slug,
               start: body.start ?? "",
               service: body.service || "cleaning",
               name: body.name ?? "",
@@ -66,6 +68,7 @@ export const Route = createFileRoute("/api/voice/$")({
           }
           if (tool === "start_project") {
             const opened = await openProjectLead({
+              slug,
               name: body.name ?? "",
               email: body.email ?? "",
               phone: body.phone,
@@ -80,6 +83,7 @@ export const Route = createFileRoute("/api/voice/$")({
           }
           if (tool === "transfer_to_owner") {
             const sent = await notifyOwnerTransfer({
+              slug,
               callerName: body.callerName || body.name || "",
               callerPhone: body.callerPhone || body.phone || "",
               note: body.note || "",
