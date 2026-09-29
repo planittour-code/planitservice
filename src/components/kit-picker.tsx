@@ -56,7 +56,11 @@ export function KitPicker({
                 <span className="min-w-0 flex-1">
                   <p className="font-display text-lg font-medium">{kit.name}</p>
                   <p className={cn("text-sm", on ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                    {kit.items.length} {kit.items.length === 1 ? "line item" : "line items"}
+                    {kit.items
+                      .map((item) => item.name.trim())
+                      .filter(Boolean)
+                      .slice(0, 4)
+                      .join(" · ") || "No lines yet"}
                   </p>
                 </span>
               </button>
