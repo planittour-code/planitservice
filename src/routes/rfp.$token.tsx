@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { HomeownerHeader } from "@/components/homeowner-chrome";
+import { HomeownerCopyright } from "@/components/site-chrome";
 import { workLabel } from "@/components/rfp-panel";
 import { Wordmark } from "@/components/logo";
 import { StatusBadge } from "@/components/status-badge";
@@ -150,6 +151,7 @@ function RfpPage() {
           )}
         </section>
       </main>
+      <HomeownerCopyright />
     </div>
   );
 }

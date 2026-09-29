@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { NamedShopInvite } from "@/components/named-shop-invite";
-import { AppNavLink, SignedInHeader } from "@/components/site-chrome";
+import { AppNavLink, HomeownerCopyright, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { justSignedOut } from "@/lib/auth/client";
@@ -52,6 +52,7 @@ function HomeLayout() {
       <div className="mx-auto max-w-5xl px-5 py-6 sm:px-6 sm:py-8">
         <Outlet />
       </div>
+      <HomeownerCopyright />
     </div>
   );
 }

@@ -12,7 +12,7 @@ import {
 import { EstimateGroups, HomeownerHeader } from "@/components/homeowner-chrome";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import { SampleLock } from "@/components/sample-lock";
-import { FileNav } from "@/components/site-chrome";
+import { FileNav, HomeownerCopyright } from "@/components/site-chrome";
 import { Wordmark } from "@/components/logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isSampleHouseToken } from "@/lib/housefile/sample";
@@ -157,6 +157,7 @@ function HousePage() {
         company={file.company.name}
       />
       {sample ? <SampleLock>{body}</SampleLock> : body}
+      <HomeownerCopyright />
     </div>
   );
 }

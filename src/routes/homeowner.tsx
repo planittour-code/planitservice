@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { TermsAgree } from "@/components/legal-doc";
 import { PaidLanding } from "@/components/paid-landing";
-import { PageFooter, PublicHeader, AuthSlot, SignInCta } from "@/components/site-chrome";
+import { HomeownerCopyright, PublicHeader, AuthSlot, SignInCta } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -305,7 +305,7 @@ function StartHouseRecord() {
           </div>
         </section>
       </main>
-      <PageFooter />
+      <HomeownerCopyright />
     </div>
   );
 }

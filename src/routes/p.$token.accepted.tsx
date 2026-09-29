@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { HomeownerHeader } from "@/components/homeowner-chrome";
+import { HomeownerCopyright } from "@/components/site-chrome";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getProposalByToken } from "@/lib/housefile/server";
@@ -37,6 +38,7 @@ function AcceptedEstimate() {
         </div>
         <ProposalDoc bundle={bundle} mode="accepted" onChanged={() => q.refetch()} />
       </main>
+      <HomeownerCopyright />
     </div>
   );
 }

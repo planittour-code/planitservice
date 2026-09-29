@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Wordmark } from "@/components/logo";
-import { PublicHeader } from "@/components/site-chrome";
+import { HomeownerCopyright, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserButton } from "@/lib/auth/gates";
@@ -153,6 +153,7 @@ function InvitePage() {
           </p>
         )}
       </main>
+      <HomeownerCopyright />
     </div>
   );
 }

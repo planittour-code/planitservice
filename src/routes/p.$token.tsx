@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { HomeownerHeader } from "@/components/homeowner-chrome";
+import { HomeownerCopyright } from "@/components/site-chrome";
 import { Wordmark } from "@/components/logo";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { SampleLock } from "@/components/sample-lock";
@@ -89,6 +90,7 @@ function PublicProposal() {
           <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />
         )}
       </main>
+      <HomeownerCopyright />
     </div>
   );
 }

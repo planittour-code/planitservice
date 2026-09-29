@@ -177,6 +177,18 @@ function HeaderLink({
   );
 }
 
+export function HomeownerCopyright() {
+  return (
+    <footer className="border-t border-border">
+      <div className="mx-auto max-w-5xl px-5 py-6 text-sm text-muted-foreground sm:px-6">
+        <Link to="/terms" className="underline-offset-4 hover:underline">
+          PlanItContract.com copyright 2009/2026
+        </Link>
+      </div>
+    </footer>
+  );
+}
+
 export function PageFooter({ shop = false }: { shop?: boolean }) {
   return (
     <footer className="border-t border-border">

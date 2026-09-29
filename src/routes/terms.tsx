@@ -18,6 +18,14 @@ function TermsPage() {
   return (
     <LegalShell kicker={LEGAL_NAME} title="Terms of Service">
       <p>
+        PlanItContract.com is a one-of-a-kind, proprietary live-document computer program,
+        registered with the United States Copyright Office in 2009 as TXu 1-630-125. This website
+        is the original — and only authorized — SaaS for that program. Copying the software,
+        cloning the live-document system, or operating an unauthorized lookalike is copyright
+        infringement and is illegal.
+      </p>
+      <p>Online since 2007©. Computer program registered 2009.</p>
+      <p>
         These Terms of Service (“Terms”) are the agreement between you and {LEGAL_NAME} for the
         cloud software at {LEGAL_SITE} (the “Service”). By creating an account, paying for a plan,
         or using the Service, you agree to these Terms and to the exhibits that are part of them:
