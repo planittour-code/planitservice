@@ -123,6 +123,7 @@ export type Proposal = {
   status: ProposalStatus;
   cover_note: string | null;
   cover_photo_src?: string | null;
+  logo_src?: string | null;
   created_at: string;
   sent_at: string | null;
   accepted_at: string | null;

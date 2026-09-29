@@ -42,7 +42,7 @@ import {
   upsertProposalItem,
 } from "@/lib/housefile/server";
 import { sundayOfWeek } from "@/lib/housefile/maintain";
-import { estimateBrandLogo, parseTradeLogos } from "@/lib/housefile/quote";
+import { estimateBrandLogo, parseTradeLogos, shopLogoChoices } from "@/lib/housefile/quote";
 import type { ProposalBundle, ProposalItem, ProposalMessage } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +84,7 @@ export function ProposalDoc({
     templateId: proposal.template_id,
     title: proposal.title,
     shopLogo: company.logo_src,
+    chosen: proposal.logo_src,
   });
   const includedTotal = items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
   const payHref = mxPaymentUrl(normalizePaymentLink(proposal.payment_link || company.payment_link), {
@@ -445,6 +446,11 @@ function ContractorMeta({
   const [title, setTitle] = useState(bundle.proposal.title);
   const [cover, setCover] = useState(bundle.proposal.cover_note ?? "");
   const [photo, setPhoto] = useState<string | null>(bundle.proposal.cover_photo_src ?? null);
+  const [logo, setLogo] = useState<string | null>(bundle.proposal.logo_src ?? null);
+  const logoChoices = shopLogoChoices(
+    bundle.company.logo_src,
+    parseTradeLogos(bundle.company.trade_logos),
+  );
   const [pay, setPay] = useState(bundle.proposal.payment_link || bundle.company.payment_link || "");
   const [salesEmails, setSalesEmails] = useState(
     (bundle.salesReps ?? []).map((r) => r.email.trim().toLowerCase()).filter(Boolean).slice(0, 2),
@@ -461,6 +467,35 @@ function ContractorMeta({
       <div className="space-y-1">
         <Label htmlFor="pc">Cover note</Label>
         <Textarea id="pc" value={cover} onChange={(e) => setCover(e.target.value)} rows={4} />
+      </div>
+      <div className="space-y-2">
+        <Label>Logo on this estimate</Label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setLogo(null)}
+            className={cn(
+              "h-7 rounded-md px-2 text-xs shadow-[var(--shadow-border)]",
+              logo === null ? "bg-primary text-primary-foreground" : "bg-card",
+            )}
+          >
+            Match the category
+          </button>
+          {logoChoices.map((choice) => (
+            <button
+              key={choice.src}
+              type="button"
+              onClick={() => setLogo(choice.src)}
+              className={cn(
+                "flex items-center gap-2 rounded-md bg-card px-2 py-1 shadow-[var(--shadow-border)]",
+                logo === choice.src && "ring-2 ring-ring",
+              )}
+            >
+              <img src={choice.src} alt="" className="h-8 w-auto max-w-16 object-contain" />
+              <span className="text-xs">{choice.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Featured photo</Label>
@@ -517,6 +552,7 @@ function ContractorMeta({
                 title,
                 coverNote: cover,
                 coverPhoto: photo,
+                logoSrc: logo,
                 paymentLink: pay,
                 salesEmails,
               },

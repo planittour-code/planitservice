@@ -2068,6 +2068,7 @@ export const updateProposalMeta = createServerFn({ method: "POST" })
       title: string;
       coverNote: string;
       coverPhoto?: string | null;
+      logoSrc?: string | null;
       paymentLink?: string | null;
       salesEmails?: string[];
     }) => input,
@@ -2092,6 +2093,11 @@ export const updateProposalMeta = createServerFn({ method: "POST" })
         update proposals
         set title = ${data.title.trim()}, cover_note = ${data.coverNote}
         where id = ${data.id} and company_id = ${company.id}
+      `;
+    }
+    if (data.logoSrc !== undefined) {
+      await sql`
+        update proposals set logo_src = ${data.logoSrc} where id = ${data.id} and company_id = ${company.id}
       `;
     }
     if (paymentLink !== undefined) {
@@ -2983,11 +2989,11 @@ async function cloneProperty(sql: Sql, source: Property, companyId: string): Pro
     const newPrId = crypto.randomUUID();
     await sql`
       insert into proposals (
-        id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, accepted_at, created_by, scheduled_on, scheduled_note, payment_link, sales_emails
+        id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, accepted_at, created_by, scheduled_on, scheduled_note, payment_link, sales_emails, logo_src
       ) values (
         ${newPrId}, ${companyId}, ${id}, ${pr.template_id}, ${slugToken()},
         ${pr.title}, ${pr.status}, ${pr.cover_note}, ${pr.sent_at}, ${pr.accepted_at}, ${pr.created_by},
-        ${pr.scheduled_on ?? null}, ${pr.scheduled_note ?? null}, ${pr.payment_link ?? null}, ${pr.sales_emails ?? null}
+        ${pr.scheduled_on ?? null}, ${pr.scheduled_note ?? null}, ${pr.payment_link ?? null}, ${pr.sales_emails ?? null}, ${pr.logo_src ?? null}
       )
     `;
     const items = await sql<ProposalItem>`

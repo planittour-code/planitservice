@@ -523,13 +523,31 @@ export function serializeTradeLogos(logos: Record<string, string>): string | nul
   return Object.keys(clean).length ? JSON.stringify(clean) : null;
 }
 
-/** Logo printed on an estimate for this job’s category; falls back to the shop logo. */
+/** Loaded shop and category logos, in a stable order, for picking on an estimate or the shop front. */
+export function shopLogoChoices(shopLogo: string | null | undefined, tradeLogos: Record<string, string>) {
+  const out: { src: string; label: string }[] = [];
+  const seen = new Set<string>();
+  const add = (src: string | null | undefined, label: string) => {
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    out.push({ src, label });
+  };
+  add(shopLogo, "Shop logo");
+  for (const [id, src] of Object.entries(tradeLogos)) {
+    add(src, workFromId(id)?.name ?? "Category logo");
+  }
+  return out;
+}
+
+/** Logo printed on an estimate. An explicit pick wins; otherwise the category logo, then the shop logo. */
 export function estimateBrandLogo(opts: {
   tradeLogos: Record<string, string>;
   templateId: string | null | undefined;
   title: string;
   shopLogo: string | null;
+  chosen?: string | null;
 }): string | null {
+  if (opts.chosen) return opts.chosen;
   const fromTemplate = opts.templateId ? workForTemplate(opts.templateId) : undefined;
   if (fromTemplate) {
     const logo = opts.tradeLogos[fromTemplate.id] ?? opts.tradeLogos[canonicalTradeId(fromTemplate.id)];

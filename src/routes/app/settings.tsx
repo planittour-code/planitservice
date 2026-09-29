@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
 import { depositPercent, paymentTermLabel } from "@/lib/housefile/payment";
 import { SEAT_MONTHLY, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
-import { parseTradeLogos, parseTradeTokens, workTypesFor, type WorkType } from "@/lib/housefile/quote";
+import { parseTradeLogos, parseTradeTokens, shopLogoChoices, workTypesFor, type WorkType } from "@/lib/housefile/quote";
 import {
   addTeamMember,
   getDashboard,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/housefile/server";
 import { shopSeatKind } from "@/lib/housefile/stripe";
 import { confirmShopSeatCheckout, startBillingPortal, startCheckout } from "@/lib/housefile/stripe-billing";
+import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
   session_id: z.string().optional(),
@@ -263,6 +264,31 @@ function SettingsPage() {
             {save.isPending ? "Saving…" : "Save name"}
           </Button>
         </form>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Shop front logo</p>
+          <p className="text-sm text-muted-foreground">
+            This is the logo on the public shop page. Pick one you have already loaded, or upload another.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {shopLogoChoices(logo, tradeLogos).map((choice) => (
+              <button
+                key={choice.src}
+                type="button"
+                onClick={() => {
+                  setLogo(choice.src);
+                  saveLogo.mutate(choice.src);
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-md bg-card px-2 py-1 shadow-[var(--shadow-border)]",
+                  logo === choice.src && "ring-2 ring-ring",
+                )}
+              >
+                <img src={choice.src} alt="" className="h-10 w-auto max-w-20 object-contain" />
+                <span className="text-xs">{choice.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           {logo ? (
             <img src={logo} alt="" className="h-14 w-auto max-w-[12rem] object-contain sm:h-16" />
