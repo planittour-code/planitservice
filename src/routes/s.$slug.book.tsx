@@ -82,10 +82,10 @@ function ShopOfferPage() {
           <div className="space-y-2">
             <p className="text-sm font-medium tracking-wide text-primary">{shopName}</p>
             <h1 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
-              Gutter cleaning, on your schedule
+              Annual service package
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Schedule one visit, or sign up for the year and keep a crew on the calendar.
+              20% off, three visits, and priority scheduling. A one-time visit is on the other side.
             </p>
           </div>
         </header>
@@ -101,14 +101,7 @@ function ShopOfferPage() {
           <>
             <section className="grid gap-3 sm:grid-cols-2">
               <OfferCard
-                title="One visit"
-                points={["Seasonal gutter and downspout cleaning", "Pick an open day on the calendar"]}
-                action="Schedule one visit"
-                selected={offer === "visit"}
-                onChoose={() => setOffer("visit")}
-              />
-              <OfferCard
-                title="Repeat service"
+                title="Annual service package"
                 points={[
                   "20% off gutter and downspout cleaning",
                   "3 visits: spring, fall, and as needed",
@@ -116,7 +109,15 @@ function ShopOfferPage() {
                 ]}
                 action="Sign up for the year"
                 selected={offer === "repeat"}
+                featured
                 onChoose={() => setOffer("repeat")}
+              />
+              <OfferCard
+                title="One visit"
+                points={["Seasonal gutter and downspout cleaning", "Pick an open day on the calendar"]}
+                action="Schedule one visit"
+                selected={offer === "visit"}
+                onChoose={() => setOffer("visit")}
               />
             </section>
 
@@ -225,12 +226,14 @@ function OfferCard({
   points,
   action,
   selected,
+  featured = false,
   onChoose,
 }: {
   title: string;
   points: string[];
   action: string;
   selected: boolean;
+  featured?: boolean;
   onChoose: () => void;
 }) {
   return (
@@ -238,17 +241,21 @@ function OfferCard({
       type="button"
       onClick={onChoose}
       className={cn(
-        "flex min-h-44 flex-col items-start gap-3 rounded-xl bg-card p-5 text-left shadow-[var(--shadow-border)]",
-        selected && "ring-2 ring-primary",
+        "flex min-h-44 flex-col items-start gap-3 rounded-xl p-5 text-left shadow-[var(--shadow-border)]",
+        featured ? "bg-primary text-primary-foreground sm:min-h-56" : "bg-card",
+        selected && !featured && "ring-2 ring-primary",
+        selected && featured && "ring-2 ring-primary-foreground",
       )}
     >
       <h2 className="font-display text-xl font-medium">{title}</h2>
-      <ul className="space-y-1 text-sm text-muted-foreground">
+      <ul className={cn("space-y-1 text-sm", featured ? "text-primary-foreground/85" : "text-muted-foreground")}>
         {points.map((point) => (
           <li key={point}>{point}</li>
         ))}
       </ul>
-      <span className="mt-auto text-sm font-medium text-primary">{selected ? "Selected" : action}</span>
+      <span className={cn("mt-auto text-sm font-medium", featured ? "text-primary-foreground" : "text-primary")}>
+        {selected ? "Selected" : action}
+      </span>
     </button>
   );
 }
