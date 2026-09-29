@@ -187,25 +187,19 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                     </Button>
                   </div>
                 ) : null}
-                <ul className="grid w-full grid-cols-2 gap-1.5">
+                <ul className="flex flex-wrap gap-1.5">
                   {rows.map((kit) => {
                     const on = selected?.id === kit.id;
                     return (
-                      <li key={kit.id} className="min-w-0">
-                        <button
+                      <li key={kit.id}>
+                        <Button
                           type="button"
+                          variant={on ? "default" : "outline"}
                           onClick={() => setEditing(on ? null : kit)}
-                          className={
-                            on
-                              ? "flex aspect-square w-full max-w-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-primary px-1 text-center text-[11px] font-medium leading-tight text-primary-foreground"
-                              : "flex aspect-square w-full max-w-[1.5in] flex-col items-center justify-center gap-0.5 rounded-md bg-card px-1 text-center text-[11px] font-medium leading-tight shadow-[var(--shadow-border)]"
-                          }
                         >
-                          <span className="line-clamp-3">{kit.name}</span>
-                          <span className={on ? "text-[10px] font-normal tabular-nums opacity-90" : "text-[10px] font-normal tabular-nums text-muted-foreground"}>
-                            {money(kitTotal(kit.items))}
-                          </span>
-                        </button>
+                          {kit.name}
+                          <span className="tabular-nums">{money(kitTotal(kit.items))}</span>
+                        </Button>
                       </li>
                     );
                   })}
