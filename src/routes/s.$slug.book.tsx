@@ -26,8 +26,7 @@ function ShopOfferPage() {
     enabled: Boolean(shop.data),
   });
   const shopName = shop.data?.name ?? slots.data?.shop.name ?? "This shop";
-  const planName = "GuttersPlus Annual Service Plan";
-  const [offer, setOffer] = useState<Offer>("repeat");
+  const [offer, setOffer] = useState<Offer | null>(null);
   const [start, setStart] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -56,7 +55,7 @@ function ShopOfferPage() {
         data: { slug, name, email, phone, addressLine: address, city, state, zip, workId: "gutters" },
       }),
     onSuccess: () => {
-      setDone(`${shopName} has your ${planName} signup. We'll write you to set the first visit.`);
+      setDone(`${shopName} has your repeat-service signup. We'll write you to set the first visit.`);
       toast.success("Signed up. The shop has the request.");
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not sign you up."),
@@ -82,12 +81,11 @@ function ShopOfferPage() {
           ) : null}
           <div className="space-y-2">
             <p className="text-sm font-medium tracking-wide text-primary">{shopName}</p>
-            <h1 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              {planName}
+            <h1 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
+              Gutter cleaning, on your schedule
             </h1>
-            <p className="max-w-xl text-base leading-relaxed text-muted-foreground">
-              20% off gutter and downspout cleaning. Three visits — spring, fall, and as needed —
-              with priority scheduling through the year.
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Schedule one visit, or sign up for the year and keep a crew on the calendar.
             </p>
           </div>
         </header>
@@ -101,22 +99,28 @@ function ShopOfferPage() {
           </section>
         ) : (
           <>
-            <section className="space-y-4 rounded-xl bg-primary p-6 text-primary-foreground shadow-[var(--shadow-border)] sm:p-8">
-              <p className="text-sm font-medium tracking-wide uppercase">The plan</p>
-              <h2 className="font-display text-3xl font-medium">{planName}</h2>
-              <ul className="space-y-1 text-base">
-                <li>20% off gutter and downspout cleaning</li>
-                <li>3 visits: spring, fall, and as needed</li>
-                <li>Priority scheduling through the year</li>
-              </ul>
-              {offer !== "repeat" ? (
-                <Button type="button" variant="secondary" onClick={() => setOffer("repeat")}>
-                  Join the {planName}
-                </Button>
-              ) : null}
+            <section className="grid gap-3 sm:grid-cols-2">
+              <OfferCard
+                title="One visit"
+                points={["Seasonal gutter and downspout cleaning", "Pick an open day on the calendar"]}
+                action="Schedule one visit"
+                selected={offer === "visit"}
+                onChoose={() => setOffer("visit")}
+              />
+              <OfferCard
+                title="Repeat service"
+                points={[
+                  "20% off gutter and downspout cleaning",
+                  "3 visits: spring, fall, and as needed",
+                  "Priority scheduling through the year",
+                ]}
+                action="Sign up for the year"
+                selected={offer === "repeat"}
+                onChoose={() => setOffer("repeat")}
+              />
             </section>
 
-            {offer === "repeat" ? (
+            {offer === "visit" ? (
               <form
                 className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]"
                 onSubmit={(e) => {
@@ -175,7 +179,7 @@ function ShopOfferPage() {
                   enroll.mutate();
                 }}
               >
-                <h2 className="font-display text-xl font-medium">Join the {planName}</h2>
+                <h2 className="font-display text-xl font-medium">Sign up for the year</h2>
                 <p className="text-sm text-muted-foreground">
                   {shopName} will confirm the three visits and the 20% rate. The Property Record
                   stays free while that estimate is open.
@@ -204,78 +208,48 @@ function ShopOfferPage() {
                     <Input id="zip" value={zip} onChange={(e) => setZip(e.target.value)} />
                   </div>
                 </div>
-                <Button type="submit" className="min-h-12 w-full text-base" disabled={enroll.isPending}>
-                  {enroll.isPending ? "Sending…" : `Join the ${planName}`}
+                <Button type="submit" disabled={enroll.isPending}>
+                  {enroll.isPending ? "Sending…" : "Sign up for the year"}
                 </Button>
               </form>
             ) : null}
-
-            <section className="space-y-3 border-t border-border pt-6">
-              <p className="text-sm text-muted-foreground">Need a single cleaning instead?</p>
-              {offer !== "visit" ? (
-                <Button type="button" variant="ghost" onClick={() => setOffer("visit")}>
-                  Schedule one visit
-                </Button>
-              ) : (
-                <form
-                  className="space-y-4"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    book.mutate();
-                  }}
-                >
-                  <h2 className="font-display text-lg font-medium">Schedule one visit</h2>
-                  <fieldset className="space-y-2">
-                    <legend className="text-sm font-medium">Open times</legend>
-                    {slots.isLoading ? (
-                      <p className="text-sm text-muted-foreground">Checking the calendar…</p>
-                    ) : slots.data?.slots.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {slots.data.slots.slice(0, 12).map((slot) => (
-                          <button
-                            key={slot.start}
-                            type="button"
-                            onClick={() => setStart(slot.start)}
-                            className={cn(
-                              "min-h-11 rounded-md px-3 py-2 text-left text-sm shadow-[var(--shadow-border)]",
-                              start === slot.start ? "bg-primary text-primary-foreground" : "bg-card",
-                            )}
-                          >
-                            {slot.label}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No openings in the next few weeks. The annual plan lets the shop find a day.
-                      </p>
-                    )}
-                  </fieldset>
-                  <ContactFields
-                    name={name}
-                    email={email}
-                    phone={phone}
-                    address={address}
-                    onName={setName}
-                    onEmail={setEmail}
-                    onPhone={setPhone}
-                    onAddress={setAddress}
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="submit" variant="outline" disabled={!start || book.isPending}>
-                      {book.isPending ? "Booking…" : "Book this time"}
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => setOffer("repeat")}>
-                      Back to the annual plan
-                    </Button>
-                  </div>
-                </form>
-              )}
-            </section>
           </>
         )}
       </main>
     </div>
+  );
+}
+
+function OfferCard({
+  title,
+  points,
+  action,
+  selected,
+  onChoose,
+}: {
+  title: string;
+  points: string[];
+  action: string;
+  selected: boolean;
+  onChoose: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChoose}
+      className={cn(
+        "flex min-h-44 flex-col items-start gap-3 rounded-xl bg-card p-5 text-left shadow-[var(--shadow-border)]",
+        selected && "ring-2 ring-primary",
+      )}
+    >
+      <h2 className="font-display text-xl font-medium">{title}</h2>
+      <ul className="space-y-1 text-sm text-muted-foreground">
+        {points.map((point) => (
+          <li key={point}>{point}</li>
+        ))}
+      </ul>
+      <span className="mt-auto text-sm font-medium text-primary">{selected ? "Selected" : action}</span>
+    </button>
   );
 }
 
