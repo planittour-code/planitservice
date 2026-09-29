@@ -811,9 +811,32 @@ function NewQuote() {
       {shownStep === 3 && (
         <div className="space-y-3">
           <p className="text-muted-foreground">
-            Photos, then measurements, then the job from this category’s pre-saved templates. Work
-            category is optional.
+            Pick the work category, then the photos, measurements, and pre-saved templates for that job.
           </p>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Work category</p>
+            <TradeGrid
+              types={offered}
+              onPick={afterWorkPicked}
+              onAddCustom={() => setAddingWork(true)}
+            />
+            <CustomWorkDialog
+              open={addingWork}
+              onClose={() => setAddingWork(false)}
+              onSave={async (name) => {
+                if (user) {
+                  await addWork.mutateAsync(name);
+                  afterWorkPicked(customWorkId(name));
+                  return;
+                }
+                const id = customWorkId(name);
+                setLocalCustom((cur) => (cur.includes(id) ? cur : [...cur, id]));
+                setAddingWork(false);
+                afterWorkPicked(id);
+              }}
+              busy={addWork.isPending}
+            />
+          </div>
           {workKits.length > 0 && work ? (
             <KitPicker
               kits={workKits}
@@ -839,42 +862,13 @@ function NewQuote() {
               kits={workKits}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Skip the category if you already know the lines. Add them on the next screen from
-              materials.
-            </p>
+            <p className="text-sm text-muted-foreground">Pick a work category to continue.</p>
           )}
-          <details className="rounded-xl bg-card p-4 text-sm shadow-[var(--shadow-border)]">
-            <summary className="cursor-pointer font-medium">Work category (optional)</summary>
-            <div className="mt-3 space-y-3">
-              <TradeGrid
-                types={offered}
-                onPick={afterWorkPicked}
-                onAddCustom={() => setAddingWork(true)}
-              />
-              <CustomWorkDialog
-                open={addingWork}
-                onClose={() => setAddingWork(false)}
-                onSave={async (name) => {
-                  if (user) {
-                    await addWork.mutateAsync(name);
-                    afterWorkPicked(customWorkId(name));
-                    return;
-                  }
-                  const id = customWorkId(name);
-                  setLocalCustom((cur) => (cur.includes(id) ? cur : [...cur, id]));
-                  setAddingWork(false);
-                  afterWorkPicked(id);
-                }}
-                busy={addWork.isPending}
-              />
-            </div>
-          </details>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => goToStep(1)}>
               Back
             </Button>
-            <Button type="button" onClick={() => goToStep(4)}>
+            <Button type="button" disabled={!work} onClick={() => goToStep(4)}>
               Pre-View before sending
             </Button>
           </div>
