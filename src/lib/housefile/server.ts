@@ -1312,6 +1312,9 @@ export const sendRepeatServiceCampaign = createServerFn({ method: "POST" })
         note,
         fileUrl: `${(process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "")}/invite/${property.invite_token}`,
         homeUrl: `${(process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "")}/homeowner`,
+        projectUrl: company.slug
+          ? `${(process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "")}/s/${company.slug}/project`
+          : undefined,
       });
       emailed += 1;
     }

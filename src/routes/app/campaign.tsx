@@ -99,8 +99,9 @@ function CampaignPage() {
         </p>
         <h1 className="font-display text-2xl font-medium tracking-tight">Schedule the next visit</h1>
         <p className="mt-1 text-muted-foreground">
-          A repeat-business campaign for people you already worked. Offer only the categories this
-          shop pays for — ${dollars(SHOP_MONTHLY)}/month each. New Request Estimates stay on Leads.
+          A repeat-business campaign for people you already worked. The offers are the categories
+          this shop quotes — ${dollars(SHOP_MONTHLY)}/month each. The email sends them to this shop’s
+          project page. New Request Estimates stay on Leads.
         </p>
       </div>
 

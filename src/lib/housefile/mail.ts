@@ -68,6 +68,7 @@ export async function deliverRepeatServiceEmail(input: {
   note: string;
   fileUrl: string;
   homeUrl: string;
+  projectUrl?: string;
 }) {
   const { sendRepeatServiceEmail } = await import("@/lib/auth/mail.server");
   await sendRepeatServiceEmail(input);

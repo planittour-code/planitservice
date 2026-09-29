@@ -6,8 +6,8 @@ import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PROJECT_SERVICES } from "@/lib/housefile/calendar";
 import { getPublicShop, startPublicProject } from "@/lib/housefile/server";
+import { workTypesFor } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/s/$slug/project")({ component: ShopProject });
@@ -20,7 +20,8 @@ function ShopProject() {
     retry: false,
   });
   const shopName = shop.data?.name ?? "This shop";
-  const [workId, setWorkId] = useState<(typeof PROJECT_SERVICES)[number]["id"]>("gutters");
+  const offered = workTypesFor((shop.data?.trades ?? []).join(","));
+  const [workId, setWorkId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -87,22 +88,26 @@ function ShopProject() {
             }}
           >
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Work</legend>
-              <div className="flex flex-wrap gap-2">
-                {PROJECT_SERVICES.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setWorkId(item.id)}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-sm shadow-[var(--shadow-border)]",
-                      workId === item.id ? "bg-primary text-primary-foreground" : "bg-card",
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+              <legend className="text-sm font-medium">Work {shopName} offers</legend>
+              {offered.length === 0 ? (
+                <p className="text-sm text-muted-foreground">This shop has not published categories yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {offered.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setWorkId(item.id)}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-sm shadow-[var(--shadow-border)]",
+                        workId === item.id ? "bg-primary text-primary-foreground" : "bg-card",
+                      )}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </fieldset>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
@@ -136,7 +141,7 @@ function ShopProject() {
                 </div>
               </div>
             </div>
-            <Button type="submit" disabled={save.isPending || shop.isLoading}>
+            <Button type="submit" disabled={save.isPending || shop.isLoading || !workId}>
               {save.isPending ? "Opening the file…" : "Start a New Project"}
             </Button>
           </form>

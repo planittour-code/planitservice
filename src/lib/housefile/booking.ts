@@ -27,6 +27,7 @@ import {
   googleMoveEvent,
 } from "@/lib/housefile/google-calendar";
 import { slugToken } from "@/lib/housefile/format";
+import { workTypesFor } from "@/lib/housefile/quote";
 import { MAINTENANCE_LIBRARY, nextDue } from "@/lib/housefile/maintain";
 
 const HOUSEHOLD = "co_household";
@@ -63,6 +64,7 @@ export type ShopDesk = {
   slug: string;
   email: string | null;
   phone: string | null;
+  trades: string | null;
   calendarEmail: string;
   from: string;
   replyTo: string;
@@ -80,8 +82,8 @@ function firstName(name: string) {
 export async function shopBySlug(sql: Sql, slug: string): Promise<ShopDesk> {
   const needle = slug.trim().toLowerCase();
   if (!needle) throw new Error("Shop not found");
-  const rows = await sql<{ id: string; name: string; slug: string | null; email: string | null; phone: string | null }>`
-    select c.id, c.name, c.slug, c.email, c.phone
+  const rows = await sql<{ id: string; name: string; slug: string | null; email: string | null; phone: string | null; trades: string | null }>`
+    select c.id, c.name, c.slug, c.email, c.phone, c.trades
     from companies c
     where c.shop_paid_at is not null
       and c.id <> ${HOUSEHOLD}
@@ -110,6 +112,7 @@ export async function shopBySlug(sql: Sql, slug: string): Promise<ShopDesk> {
     slug: row.slug,
     email,
     phone: row.phone,
+    trades: row.trades,
     calendarEmail,
     from,
     replyTo,
@@ -395,9 +398,12 @@ export async function openProjectLead(input: {
   if (name.length < 2) throw new Error("Need a name.");
   if (!isMail(email)) throw new Error("Need an email.");
   if (address.length < 4) throw new Error("Need the street address.");
-  const work = PROJECT_SERVICES.find((s) => s.id === input.workId) ?? PROJECT_SERVICES[0];
   const sql = await getSql();
   const shop = await shopBySlug(sql, input.slug);
+  const offered = workTypesFor(shop.trades);
+  const picked = offered.find((item) => item.id === input.workId);
+  if (!picked) throw new Error("That work is not offered by this shop.");
+  const work = { id: picked.id, label: picked.name };
   const shopId = shop.id;
   const shopName = shop.name;
 

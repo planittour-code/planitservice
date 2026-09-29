@@ -232,6 +232,7 @@ export async function sendRepeatServiceEmail(data: {
   note: string;
   fileUrl: string;
   homeUrl: string;
+  projectUrl?: string;
 }) {
   const first = data.name.trim().split(/\s+/)[0] || "there";
   const extras = data.extraWork.filter(Boolean);
@@ -250,6 +251,7 @@ export async function sendRepeatServiceEmail(data: {
     data.fileUrl,
     "",
     extraLine,
+    data.projectUrl ? `Start that work with ${data.company}: ${data.projectUrl}` : "",
     extras.length
       ? "Open the File to request that work from us. Request Estimates is for other shops that offer those same categories on your street."
       : "Keep the File so the next visit is not a guess. Request Estimates if you want bids from other shops that offer this work in the area.",
@@ -267,6 +269,7 @@ export async function sendRepeatServiceEmail(data: {
       : `${data.company} already worked ${data.address}.`,
   )} When you are ready, schedule your next ${escapeHtml(data.repeatWork.toLowerCase())} from the Property Record.</p>
 <p><a href="${escapeHtml(data.fileUrl)}">Open the Property Record</a></p>
+${data.projectUrl ? `<p><a href="${escapeHtml(data.projectUrl)}">Start a new project with ${escapeHtml(data.company)}</a></p>` : ""}
 ${
   extras.length
     ? `<p>We also offer ${escapeHtml(extras.join(", "))} at this address — work this shop quotes. Open the File to request that work from us. Request Estimates is for other shops that offer those same categories on your street.</p>`
