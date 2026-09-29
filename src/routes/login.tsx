@@ -123,6 +123,9 @@ function Login() {
       }
       return <Navigate to="/manage/open" />;
     }
+    if (homeowner) {
+      return <Navigate to="/home" />;
+    }
     if (audience.hats.contractor) {
       return <Navigate to="/app" />;
     }

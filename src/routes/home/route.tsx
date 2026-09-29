@@ -33,12 +33,6 @@ function HomeLayout() {
     );
   }
   if (!user) return <Navigate to="/login" search={{ role: "homeowner", next: "/home" }} />;
-  if (audience.hats.contractor && !audience.hats.homeowner) {
-    return <Navigate to="/app" />;
-  }
-  if (audience.hats.manager && !audience.hats.homeowner) {
-    return <Navigate to="/manage" />;
-  }
 
   return (
     <div className="min-h-screen bg-background">
