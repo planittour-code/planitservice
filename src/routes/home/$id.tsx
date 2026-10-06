@@ -16,17 +16,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
-import { MaintenanceBadge } from "@/components/status-badge";
 import { HomeownerSectionNav } from "@/components/homeowner-section-nav";
+import { MaintenanceChecklist } from "@/components/maintenance-checklist";
 import { MeasureGuidePanel } from "@/components/measure-guide";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import { UpgradeToPro } from "@/components/upgrade-to-pro";
 import {
+  addHomeMaintenance,
   completeMaintenance,
   confirmPropertyTransfer,
   getHomeRecord,
+  removeHomeMaintenance,
   startPropertyTransfer,
 } from "@/lib/housefile/server";
 import { confirmHomeownerCheckout } from "@/lib/housefile/stripe-billing";
@@ -78,6 +79,23 @@ function HomeRecord() {
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not log"),
+  });
+  const addTask = useMutation({
+    mutationFn: (input: { title: string; system: string; cadence: string }) =>
+      addHomeMaintenance({ data: { propertyId: id, ...input } }),
+    onSuccess: () => {
+      toast.success("Added to the checklist.");
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
+  });
+  const removeTask = useMutation({
+    mutationFn: (taskId: string) => removeHomeMaintenance({ data: { taskId } }),
+    onSuccess: () => {
+      toast.success("Removed from this house.");
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
   });
 
   if (q.isLoading) return <Skeleton className="h-64 w-full" />;
@@ -141,7 +159,7 @@ function HomeRecord() {
       <RecordSection
         id="maintenance"
         title="Maintenance"
-        blurb={`${due.length} due in the next two weeks. Log the work so the next season is not a guess.`}
+        blurb={`${due.length} due in the next two weeks. Add your own checklist, or remove what this house does not need.`}
         photo={CATEGORY_PHOTO.systems}
         countLabel={`${open.length} open`}
         chips={
@@ -156,34 +174,15 @@ function HomeRecord() {
           ) : undefined
         }
       >
-        <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
-          {open.map((t) => (
-            <li key={t.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium">{t.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t.system_name} · {cadenceLabel(t.cadence)} · due {shortDate(t.due_on)}
-                  {t.scheduled_on ? ` · scheduled ${shortDate(t.scheduled_on)}` : ""}
-                </p>
-                {t.scheduled_note ? (
-                  <p className="text-sm text-muted-foreground">{t.scheduled_note}</p>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <MaintenanceBadge status={taskStatus(t, todayIso())} />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={done.isPending}
-                  onClick={() => done.mutate(t.id)}
-                >
-                  Mark done
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <MaintenanceChecklist
+          tasks={open}
+          donePending={done.isPending}
+          removePending={removeTask.isPending}
+          addPending={addTask.isPending}
+          onDone={(taskId) => done.mutate(taskId)}
+          onRemove={(taskId) => removeTask.mutate(taskId)}
+          onAdd={(input) => addTask.mutate(input)}
+        />
       </RecordSection>
 
       <RecordSection

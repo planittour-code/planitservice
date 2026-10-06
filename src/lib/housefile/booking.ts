@@ -28,7 +28,7 @@ import {
 } from "@/lib/housefile/google-calendar";
 import { slugToken } from "@/lib/housefile/format";
 import { workTypesFor } from "@/lib/housefile/quote";
-import { MAINTENANCE_LIBRARY, nextDue } from "@/lib/housefile/maintain";
+import { missingMaintenanceItems, nextDue } from "@/lib/housefile/maintain";
 
 const HOUSEHOLD = "co_household";
 
@@ -364,12 +364,22 @@ export async function notifyOwnerTransfer(input: {
 }
 
 async function seedFile(sql: Sql, propertyId: string) {
-  const existing = await sql<{ c: number }>`
-    select count(*)::int as c from maintenance_tasks where property_id = ${propertyId}
+  const existing = await sql<{ title: string }>`
+    select title from maintenance_tasks where property_id = ${propertyId}
   `;
-  if (Number(existing[0]?.c ?? 0) > 0) return;
+  let removed: { title: string }[] = [];
+  try {
+    removed = await sql<{ title: string }>`
+      select title from maintenance_removed where property_id = ${propertyId}
+    `;
+  } catch {
+    removed = [];
+  }
   const start = new Date();
-  for (const item of MAINTENANCE_LIBRARY) {
+  for (const item of missingMaintenanceItems(
+    existing.map((row) => row.title),
+    removed.map((row) => row.title),
+  )) {
     await sql`
       insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
       values (

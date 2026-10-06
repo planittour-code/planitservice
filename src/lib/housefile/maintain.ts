@@ -17,7 +17,41 @@ export const MAINTENANCE_LIBRARY: MaintenanceTemplate[] = [
   { title: "Exercise shutoff valves", system: "Plumbing", cadence: "annual" },
   { title: "Check caulk and exterior paint", system: "Exterior", cadence: "annual" },
   { title: "Test sump pump / basement drain", system: "Plumbing", cadence: "annual" },
+  { title: "Mow and edge the lawn", system: "Lawn/Grounds", cadence: "monthly" },
+  { title: "Refresh mulch or pine straw", system: "Lawn/Grounds", cadence: "semiannual" },
+  { title: "Check irrigation and beds", system: "Lawn/Grounds", cadence: "quarterly" },
+  { title: "Test pool equipment and chemistry", system: "Pool", cadence: "monthly" },
+  { title: "Open or close the pool", system: "Pool", cadence: "semiannual" },
+  { title: "Check the mail box", system: "Exterior", cadence: "monthly" },
+  { title: "Clean house / dust", system: "House", cadence: "monthly" },
+  { title: "Blow the leaves from deck/driveway", system: "Lawn/Grounds", cadence: "monthly" },
 ];
+
+export const MAINTENANCE_SYSTEMS = [
+  "Climate",
+  "Safety",
+  "Exterior",
+  "Plumbing",
+  "Roof",
+  "Electrical",
+  "Lawn/Grounds",
+  "Pool",
+  "House",
+  "Custom",
+] as const;
+
+export function isCadence(value: string): value is Cadence {
+  return value === "monthly" || value === "quarterly" || value === "semiannual" || value === "annual";
+}
+
+export function missingMaintenanceItems(existingTitles: string[], removedTitles: string[] = []) {
+  const have = new Set(
+    [...existingTitles, ...removedTitles]
+      .map((title) => title.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return MAINTENANCE_LIBRARY.filter((item) => !have.has(item.title.toLowerCase()));
+}
 
 export function nextDue(cadence: Cadence, from = new Date()) {
   const d = new Date(from);

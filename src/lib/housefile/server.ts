@@ -93,10 +93,11 @@ import type {
   UserProfileRow,
 } from "./types";
 import {
-  MAINTENANCE_LIBRARY,
   houseMaintenanceStatus,
+  isCadence,
   isUpcomingTask,
   maintenanceRank,
+  missingMaintenanceItems,
   nextDue,
   nextOpenTask,
   parseIsoDate,
@@ -4276,12 +4277,22 @@ function renewsOn(cadence: "monthly" | "annual") {
 }
 
 async function seedMaintenance(sql: Sql, propertyId: string) {
-  const existing = await sql<{ c: number }>`
-    select count(*)::int as c from maintenance_tasks where property_id = ${propertyId}
+  const existing = await sql<{ title: string }>`
+    select title from maintenance_tasks where property_id = ${propertyId}
   `;
-  if (num(existing[0]?.c) > 0) return;
+  let removed: { title: string }[] = [];
+  try {
+    removed = await sql<{ title: string }>`
+      select title from maintenance_removed where property_id = ${propertyId}
+    `;
+  } catch {
+    removed = [];
+  }
   const start = new Date();
-  for (const item of MAINTENANCE_LIBRARY) {
+  for (const item of missingMaintenanceItems(
+    existing.map((row) => row.title),
+    removed.map((row) => row.title),
+  )) {
     await sql`
       insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
       values (
@@ -4576,6 +4587,127 @@ export const completeMaintenance = createServerFn({ method: "POST" })
         ${nextDue(task.cadence as "monthly" | "quarterly" | "semiannual" | "annual")}
       )
     `;
+    return { ok: true as const };
+  });
+
+export const addHomeMaintenance = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string; title: string; system: string; cadence: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const property = (
+      await sql<Property>`
+        select * from properties where id = ${data.propertyId} and homeowner_user_id = ${context.userId} limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    const title = data.title.trim();
+    if (!title) throw new Error("Name the checklist item.");
+    const system = data.system.trim() || "Custom";
+    if (!isCadence(data.cadence)) throw new Error("Pick how often this comes due.");
+    const existing = (
+      await sql<{ id: string }>`
+        select id from maintenance_tasks
+        where property_id = ${property.id} and lower(title) = ${title.toLowerCase()} and completed_at is null
+        limit 1
+      `
+    )[0];
+    if (existing) throw new Error("That item is already on this checklist.");
+    await sql`delete from maintenance_removed where property_id = ${property.id} and lower(title) = ${title.toLowerCase()}`;
+    await sql`
+      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
+      values (
+        ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${data.cadence},
+        ${nextDue(data.cadence)}
+      )
+    `;
+    return { ok: true as const };
+  });
+
+export const removeHomeMaintenance = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { taskId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const task = (
+      await sql<MaintenanceTask & { homeowner_user_id: string }>`
+        select t.*, p.homeowner_user_id
+        from maintenance_tasks t
+        join properties p on p.id = t.property_id
+        where t.id = ${data.taskId} limit 1
+      `
+    )[0];
+    if (!task || task.homeowner_user_id !== context.userId) throw new Error("Task not found");
+    await sql`
+      insert into maintenance_removed (property_id, title)
+      values (${task.property_id}, ${task.title})
+      on conflict (property_id, title) do update set removed_at = now()
+    `;
+    await sql`delete from maintenance_tasks where id = ${task.id}`;
+    return { ok: true as const };
+  });
+
+export const addPortfolioMaintenance = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string; title: string; system: string; cadence: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { portfolio } = await requirePaidPortfolio(sql, context.userId);
+    const property = (
+      await sql<Property>`
+        select p.*
+        from properties p
+        join portfolio_properties pp on pp.property_id = p.id
+        where p.id = ${data.propertyId} and pp.portfolio_id = ${portfolio.id}
+        limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    const title = data.title.trim();
+    if (!title) throw new Error("Name the checklist item.");
+    const system = data.system.trim() || "Custom";
+    if (!isCadence(data.cadence)) throw new Error("Pick how often this comes due.");
+    const existing = (
+      await sql<{ id: string }>`
+        select id from maintenance_tasks
+        where property_id = ${property.id} and lower(title) = ${title.toLowerCase()} and completed_at is null
+        limit 1
+      `
+    )[0];
+    if (existing) throw new Error("That item is already on this checklist.");
+    await sql`delete from maintenance_removed where property_id = ${property.id} and lower(title) = ${title.toLowerCase()}`;
+    await sql`
+      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
+      values (
+        ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${data.cadence},
+        ${nextDue(data.cadence)}
+      )
+    `;
+    return { ok: true as const };
+  });
+
+export const removePortfolioMaintenance = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { taskId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { portfolio } = await requirePaidPortfolio(sql, context.userId);
+    const task = (
+      await sql<MaintenanceTask>`
+        select t.*
+        from maintenance_tasks t
+        join portfolio_properties pp on pp.property_id = t.property_id
+        where t.id = ${data.taskId} and pp.portfolio_id = ${portfolio.id}
+        limit 1
+      `
+    )[0];
+    if (!task) throw new Error("Task not found");
+    await sql`
+      insert into maintenance_removed (property_id, title)
+      values (${task.property_id}, ${task.title})
+      on conflict (property_id, title) do update set removed_at = now()
+    `;
+    await sql`delete from maintenance_tasks where id = ${task.id}`;
     return { ok: true as const };
   });
 
@@ -5707,7 +5839,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
       group by p.id
     `;
     for (const row of seeded) {
-      if (num(row.c) === 0) await seedMaintenance(sql, row.property_id);
+      await seedMaintenance(sql, row.property_id);
     }
     const openTasks = (
       await sql<

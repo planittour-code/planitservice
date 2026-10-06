@@ -15,16 +15,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MaintenanceBadge } from "@/components/status-badge";
-import { cadenceLabel, taskStatus, todayIso } from "@/lib/housefile/maintain";
 import { shortDate } from "@/lib/housefile/format";
 import { managerInviteLetter, managerInviteSubject } from "@/lib/housefile/invite";
 import { FileSectionNav, MANAGER_SECTIONS } from "@/components/file-section-nav";
+import { MaintenanceChecklist } from "@/components/maintenance-checklist";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import {
+  addPortfolioMaintenance,
   completePortfolioMaintenance,
   getPortfolioRecord,
   invitePortfolioOwner,
+  removePortfolioMaintenance,
   schedulePortfolioMaintenance,
 } from "@/lib/housefile/server";
 import type { MaintenanceTask } from "@/lib/housefile/types";
@@ -58,6 +60,23 @@ function ManageRecord() {
       refresh();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not schedule"),
+  });
+  const addTask = useMutation({
+    mutationFn: (input: { title: string; system: string; cadence: string }) =>
+      addPortfolioMaintenance({ data: { propertyId: id, ...input } }),
+    onSuccess: () => {
+      toast.success("Added to the checklist.");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
+  });
+  const removeTask = useMutation({
+    mutationFn: (taskId: string) => removePortfolioMaintenance({ data: { taskId } }),
+    onSuccess: () => {
+      toast.success("Removed from this house.");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
   });
 
   if (q.isLoading) return <Skeleton className="h-64 w-full" />;
@@ -218,7 +237,7 @@ function ManageRecord() {
       <RecordSection
         id="maintenance"
         title="Maintenance"
-        blurb={`${due.length} due in the next two weeks. Set a date when the work is agreed, then log it when it is done.`}
+        blurb={`${due.length} due in the next two weeks. Add your own checklist, or remove what this house does not need.`}
         photo={CATEGORY_PHOTO.systems}
         countLabel={`${open.length} open`}
         chips={
@@ -233,39 +252,24 @@ function ManageRecord() {
           ) : undefined
         }
       >
-        <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
-          {open.map((t) => (
-            <li key={t.id} className="space-y-3 px-4 py-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="font-medium">{t.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t.system_name} · {cadenceLabel(t.cadence)} · due {shortDate(t.due_on)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <MaintenanceBadge status={taskStatus(t, todayIso())} />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={done.isPending}
-                    onClick={() => done.mutate(t.id)}
-                  >
-                    Mark done
-                  </Button>
-                </div>
-              </div>
-              <ScheduleTask
-                task={t}
-                pending={schedule.isPending}
-                onSave={(scheduledOn, scheduledNote) =>
-                  schedule.mutate({ taskId: t.id, scheduledOn, scheduledNote })
-                }
-              />
-            </li>
-          ))}
-        </ul>
+        <MaintenanceChecklist
+          tasks={open}
+          donePending={done.isPending}
+          removePending={removeTask.isPending}
+          addPending={addTask.isPending}
+          onDone={(taskId) => done.mutate(taskId)}
+          onRemove={(taskId) => removeTask.mutate(taskId)}
+          onAdd={(input) => addTask.mutate(input)}
+          extra={(t) => (
+            <ScheduleTask
+              task={t}
+              pending={schedule.isPending}
+              onSave={(scheduledOn, scheduledNote) =>
+                schedule.mutate({ taskId: t.id, scheduledOn, scheduledNote })
+              }
+            />
+          )}
+        />
       </RecordSection>
     </div>
   );
