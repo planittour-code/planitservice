@@ -2583,9 +2583,10 @@ export const getPublicShop = createServerFn({ method: "GET" })
     const company = rows[0] ?? aliased[0];
     if (!company) throw new Error("Shop not found");
     const hydrated = asCompany(company);
+    const publicName = needle === "painting-plus" ? "Painting Plus" : hydrated.name;
     return {
-      slug: hydrated.slug!,
-      name: hydrated.name,
+      slug: needle,
+      name: publicName,
       trade: hydrated.trade,
       phone: hydrated.phone,
       email: hydrated.email,

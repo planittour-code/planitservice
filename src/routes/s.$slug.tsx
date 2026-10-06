@@ -124,12 +124,12 @@ function PublicShopPage() {
         )}
         <section className="flex flex-wrap gap-2">
           <Button asChild>
-            <Link to="/s/$slug/book" params={{ slug: shop.slug }}>
+            <Link to="/s/$slug/book" params={{ slug }}>
               Schedule Today
             </Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/s/$slug/project" params={{ slug: shop.slug }}>
+            <Link to="/s/$slug/project" params={{ slug }}>
               Start a New Project
             </Link>
           </Button>
