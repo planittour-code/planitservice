@@ -344,18 +344,18 @@ function NewQuote() {
       const presetIds = search.kit
         ? search.kit
             .split(",")
-            .map((id) => id.trim())
+            .map((id: string) => id.trim())
             .filter(Boolean)
         : [];
       const presets = presetIds
-        .map((id) => workKits.find((kit) => kit.id === id))
-        .filter((kit): kit is WorkKit => Boolean(kit));
+        .map((id: string) => workKits.find((kit: WorkKit) => kit.id === id))
+        .filter((kit: WorkKit | undefined): kit is WorkKit => Boolean(kit));
       if (presets.length) {
         return {
           __work: work.id,
           paint_scope: work.id === "paint" ? scope : "",
-          __kit: joinKitIds(presets.map((kit) => kit.id)),
-          __kit_name: kitNamesLabel(presets.map((kit) => kit.name)),
+          __kit: joinKitIds(presets.map((kit: WorkKit) => kit.id)),
+          __kit_name: kitNamesLabel(presets.map((kit: WorkKit) => kit.name)),
           [ESTIMATE_KEY]: serializeEstimateLines(linesFromKits(presets, items)),
         };
       }

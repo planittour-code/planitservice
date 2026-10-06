@@ -228,6 +228,12 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
               </Link>
             </>
           )}
+          <Link to="/about" className="hover:text-foreground">
+            About
+          </Link>
+          <Link to="/privacy" className="hover:text-foreground">
+            Privacy
+          </Link>
           <Link to="/terms" className="hover:text-foreground">
             Terms
           </Link>
@@ -240,11 +246,11 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
           <Link to="/sla" className="hover:text-foreground">
             SLA
           </Link>
+          <a className="hover:text-foreground" href="mailto:support@planitservice.com">
+            Support
+          </a>
           <Link to="/login" className="hover:text-foreground">
             Sign in
-          </Link>
-          <Link to="/forgot-password" className="hover:text-foreground">
-            Reset password
           </Link>
         </nav>
       </div>

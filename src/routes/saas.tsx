@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalShell, SaasContent } from "@/components/legal-doc";
 import { LEGAL_NAME, LEGAL_SITE } from "@/lib/legal";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/saas")({
-  head: () => ({
-    meta: [{ title: `SaaS Agreement — ${LEGAL_NAME}` }],
-  }),
+  head: () =>
+    pageHead({
+      title: "SaaS Agreement",
+      description: `${LEGAL_NAME} Software as a Service Agreement for hosted shop, homeowner, and portfolio plans.`,
+      path: "/saas",
+    }),
   component: SaasPage,
 });
 

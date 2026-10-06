@@ -6,7 +6,7 @@ import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { SocialMark } from "@/components/social-mark";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicProfile } from "@/lib/housefile/server";
-import { initialsFrom } from "@/lib/housefile/profile";
+import { initialsFrom, type PublicProfile } from "@/lib/housefile/profile";
 
 export const Route = createFileRoute("/u/$slug")({
   loader: async ({ params }) => {
@@ -101,7 +101,7 @@ function PublicProfilePage() {
             ) : null}
             {profile.links.length > 0 ? (
               <ul className="mt-6 flex flex-wrap gap-2">
-                {profile.links.map((link) => (
+                {profile.links.map((link: PublicProfile["links"][number]) => (
                   <li key={link.key}>
                     <a
                       href={link.href}

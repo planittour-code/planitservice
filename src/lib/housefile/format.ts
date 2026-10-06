@@ -54,6 +54,37 @@ export function fullAddress(p: {
   return `${p.address_line}, ${p.city}, ${p.state} ${p.zip}`;
 }
 
+export function formatPhone(raw: string | null | undefined) {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return (raw ?? "").trim();
+}
+
+export function telHref(raw: string | null | undefined) {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) return `tel:+${digits}`;
+  if (digits.length === 10) return `tel:+1${digits}`;
+  return digits ? `tel:${digits}` : "";
+}
+
+export function formatPlace(parts: Array<string | null | undefined>) {
+  return parts
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .join(", ")
+    .replace(/\bSe\b/g, "SE")
+    .replace(/\bNe\b/g, "NE")
+    .replace(/\bNw\b/g, "NW")
+    .replace(/\bSw\b/g, "SW")
+    .replace(/\bRd,\s/g, "Rd, ")
+    .replace(/\bPowersferry\b/gi, "Powers Ferry");
+}
+
 export function statusLabel(status: string) {
   switch (status) {
     case "pending":

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { shortDate } from "@/lib/housefile/format";
 import { closeRfp, getRfpByToken } from "@/lib/housefile/server";
+import type { RfpQuote } from "@/lib/housefile/types";
 import { useAudience } from "@/lib/housefile/use-audience";
 
 export const Route = createFileRoute("/rfp/$token")({
@@ -128,7 +129,7 @@ function RfpPage() {
             <p className="text-sm text-muted-foreground">No shops have quoted yet.</p>
           ) : (
             <ul className="space-y-2">
-              {quotes.map((bid) => (
+              {quotes.map((bid: RfpQuote) => (
                 <li
                   key={bid.id}
                   className="flex flex-col gap-2 rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between"

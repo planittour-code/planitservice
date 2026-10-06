@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { JsonLd } from "@/components/json-ld";
 import { Wordmark } from "@/components/logo";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { workFromId } from "@/lib/housefile/quote";
+import { formatPhone, formatPlace, telHref } from "@/lib/housefile/format";
+import { workFromId, type WorkType } from "@/lib/housefile/quote";
 import { getPublicShop } from "@/lib/housefile/server";
+import { localBusinessJsonLd, pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/s/$slug")({
   loader: async ({ params }) => {
@@ -15,6 +18,14 @@ export const Route = createFileRoute("/s/$slug")({
       return null;
     }
   },
+  head: ({ loaderData, params }) =>
+    pageHead({
+      title: loaderData?.name ?? "Shop",
+      description: loaderData
+        ? `${loaderData.name} quotes on PlanitService. Schedule a visit or start a new project.`
+        : "Public shop on PlanitService.",
+      path: `/s/${loaderData?.slug ?? params.slug}`,
+    }),
   component: PublicShopLayout,
 });
 
@@ -55,8 +66,12 @@ function PublicShopPage() {
   }
 
   const shop = q.data;
-  const place = [shop.street, shop.city, shop.state, shop.zip].filter(Boolean).join(", ");
-  const trades = shop.trades.map((id) => workFromId(id)).filter((w): w is NonNullable<typeof w> => Boolean(w));
+  const place = formatPlace([shop.street, shop.city, shop.state, shop.zip]);
+  const phone = formatPhone(shop.phone);
+  const call = telHref(shop.phone);
+  const trades = shop.trades
+    .map((id: string) => workFromId(id))
+    .filter((w: WorkType | undefined): w is WorkType => Boolean(w));
   const asHref = (href: string) => (/^https?:\/\//i.test(href) ? href : `https://${href}`);
   const reviews = [
     shop.review_google ? { label: "Google", href: asHref(shop.review_google) } : null,
@@ -66,7 +81,7 @@ function PublicShopPage() {
   ].filter((row): row is { label: string; href: string } => Boolean(row));
   const associations = (shop.associations ?? "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
 
   return (
@@ -76,12 +91,13 @@ function PublicShopPage() {
           <Link to="/login">Sign in</Link>
         </Button>
       </PublicHeader>
+      <JsonLd data={localBusinessJsonLd(shop)} />
       <main className="mx-auto max-w-3xl space-y-8 px-5 py-10">
         <div className="space-y-2">
           {shop.logo_src ? (
             <img
               src={shop.logo_src}
-              alt=""
+              alt={`${shop.name} logo`}
               className="h-12 w-auto max-w-[10rem] object-contain sm:h-14"
             />
           ) : null}
@@ -95,7 +111,7 @@ function PublicShopPage() {
           <section className="space-y-3">
             <h2 className="font-display text-xl font-medium">Work we quote</h2>
             <ul className="flex flex-wrap gap-2">
-              {trades.map((work) => (
+              {trades.map((work: WorkType) => (
                 <li
                   key={work.id}
                   className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
@@ -121,7 +137,15 @@ function PublicShopPage() {
         {(shop.phone || shop.email || shop.website) && (
           <section className="space-y-2 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
             <h2 className="font-display text-xl font-medium">Contact</h2>
-            {shop.phone ? <p>{shop.phone}</p> : null}
+            {phone && call ? (
+              <p>
+                <a className="underline underline-offset-4" href={call}>
+                  {phone}
+                </a>
+              </p>
+            ) : phone ? (
+              <p>{phone}</p>
+            ) : null}
             {shop.email ? (
               <p>
                 <a className="underline underline-offset-4" href={`mailto:${shop.email}`}>

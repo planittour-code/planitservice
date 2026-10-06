@@ -1,0 +1,35 @@
+User-agent: *
+Allow: /
+Allow: /homeowner
+Allow: /shop
+Allow: /shop/open
+Allow: /manage
+Allow: /manage/open
+Allow: /about
+Allow: /privacy
+Allow: /terms
+Allow: /saas
+Allow: /aup
+Allow: /sla
+Allow: /s/
+Allow: /login
+
+Disallow: /app
+Disallow: /app/
+Disallow: /home/
+Disallow: /account
+Disallow: /api/
+Disallow: /p/
+Disallow: /house/
+Disallow: /invite/
+Disallow: /rfp/
+Disallow: /claim/
+Disallow: /auth/
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /u/
+Disallow: /manage/add
+Disallow: /manage/estimates
+Disallow: /manage/settings
+
+Sitemap: https://planitservice.com/sitemap.xml

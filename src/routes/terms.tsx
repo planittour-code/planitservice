@@ -6,11 +6,15 @@ import {
   LEGAL_NAME,
   LEGAL_SITE,
 } from "@/lib/legal";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/terms")({
-  head: () => ({
-    meta: [{ title: `Terms of Service — ${LEGAL_NAME}` }],
-  }),
+  head: () =>
+    pageHead({
+      title: "Terms of Service",
+      description: `${LEGAL_NAME} Terms of Service for the cloud software at planitservice.com.`,
+      path: "/terms",
+    }),
   component: TermsPage,
 });
 
@@ -28,7 +32,11 @@ function TermsPage() {
       <p>
         These Terms of Service (“Terms”) are the agreement between you and {LEGAL_NAME} for the
         cloud software at {LEGAL_SITE} (the “Service”). By creating an account, paying for a plan,
-        or using the Service, you agree to these Terms and to the exhibits that are part of them:
+        or using the Service, you agree to these Terms, the{" "}
+        <Link to="/privacy" className="underline underline-offset-2">
+          Privacy Policy
+        </Link>
+        , and the exhibits that are part of them:
         the{" "}
         <Link to="/saas" className="underline underline-offset-2">
           SaaS Agreement

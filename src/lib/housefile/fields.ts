@@ -85,13 +85,13 @@ export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo
     id: "pool",
     label: "Pool service",
     blurb: "Type, year, and the equipment on this pool.",
-    photo: "/houses/cat-house.jpg",
+    photo: "/houses/cat-windows.jpg",
   },
   {
     id: "lawn",
     label: "Lawn/Grounds",
     blurb: "Lot, mow, irrigation, and beds.",
-    photo: "/houses/cat-house.jpg",
+    photo: "/houses/cat-porches.jpg",
   },
 ];
 
@@ -107,12 +107,12 @@ export const CATEGORY_PHOTO: Record<string, string> = {
   deck: "/houses/cat-decks.jpg",
   porches: "/houses/cat-porches.jpg",
   porch: "/houses/cat-porches.jpg",
-  flooring: "/houses/cat-house.jpg",
+  flooring: "/houses/cat-decks.jpg",
   systems: "/houses/cat-systems.jpg",
   plumbing: "/houses/cat-systems.jpg",
   hvac: "/houses/cat-systems.jpg",
-  pool: "/houses/cat-house.jpg",
-  lawn: "/houses/cat-house.jpg",
+  pool: "/houses/cat-windows.jpg",
+  lawn: "/houses/cat-porches.jpg",
   drainage: "/houses/cat-gutters.jpg",
 };
 

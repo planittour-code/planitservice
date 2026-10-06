@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { claimInvite, getHouseByToken } from "@/lib/housefile/server";
+import type { PropertyPhoto, ProposalListRow } from "@/lib/housefile/types";
 
 export const Route = createFileRoute("/invite/$token")({
   loader: async ({ params }) => {
@@ -66,8 +67,8 @@ function InvitePage() {
 
   const file = q.data;
   const p = file.property;
-  const open = file.proposals.find((pr) => pr.status !== "completed");
-  const hero = file.photos.find((ph) => ph.category === "exterior") ?? file.photos[0];
+  const open = file.proposals.find((pr: ProposalListRow) => pr.status !== "completed");
+  const hero = file.photos.find((ph: PropertyPhoto) => ph.category === "exterior") ?? file.photos[0];
   const claimed = Boolean(user && p.homeowner_user_id === user.id);
 
   return (

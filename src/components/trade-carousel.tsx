@@ -67,7 +67,9 @@ export function TradeCarousel() {
                     <img src={photo} alt="" className="absolute inset-0 size-full object-cover" />
                     <span className="absolute inset-0 bg-ink/65" />
                   </>
-                ) : null}
+                ) : (
+                  <span className={`absolute inset-0 ${face.surface}`} />
+                )}
                 <Icon className="relative size-8" aria-hidden />
                 <p className="relative mt-4 font-display text-2xl font-bold">{work.name}</p>
                 <p className="relative mt-2 text-sm leading-relaxed text-white/85">{work.blurb}</p>

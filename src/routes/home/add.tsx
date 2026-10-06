@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
   tier: z.enum(["standard", "pro"]).optional(),
+  address: z.string().optional(),
 });
 
 export const Route = createFileRoute("/home/add")({
@@ -33,7 +34,7 @@ function AddProperty() {
   const { user } = useCurrentUserState();
   const houses = useQuery({ queryKey: ["household"], queryFn: () => getHousehold() });
   const accountEmail = user?.primaryEmail?.trim() || houses.data?.profile?.email?.trim() || "";
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(search.address ?? "");
   const [city, setCity] = useState("");
   const [state, setState] = useState("GA");
   const [zip, setZip] = useState("");

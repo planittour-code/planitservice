@@ -11,6 +11,7 @@ import { GROK_PROVIDERS, authClient, authEnabled, clearSignedOutFlag, grokOauthO
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { namedShopInviteToken, safeNextPath } from "@/lib/housefile/invite";
 import { useAudience } from "@/lib/housefile/use-audience";
+import { pageHead } from "@/lib/seo";
 
 const searchSchema = z.object({
   invite: z.preprocess((v) => namedShopInviteToken(v), z.string().optional()),
@@ -21,6 +22,12 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s) => searchSchema.parse(s),
+  head: () =>
+    pageHead({
+      title: "Sign in",
+      description: "Sign in to PlanitService as a homeowner, contractor, or property manager.",
+      path: "/login",
+    }),
   component: Login,
 });
 

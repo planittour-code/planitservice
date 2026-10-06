@@ -479,7 +479,7 @@ export async function openProjectLead(input: {
     ) values (
       ${inviteId}, ${fileId}, ${"mailer"}, ${shop.replyTo}, ${shopName},
       ${work.label},
-      ${`${name} asked Gutters Plus to quote ${work.label} at ${address}. Opened from the seasonal mailer (${input.source}). The Property Record is free until 30 days after Start Work.`},
+      ${`${name} asked ${shopName} to quote ${work.label} at ${address}. Opened from the seasonal mailer (${input.source}). The Property Record is free until 30 days after Start Work.`},
       ${share}, ${"open"}
     )
   `;

@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalShell, SlaContent } from "@/components/legal-doc";
 import { LEGAL_NAME, LEGAL_SITE } from "@/lib/legal";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/sla")({
-  head: () => ({
-    meta: [{ title: `Service Level Agreement — ${LEGAL_NAME}` }],
-  }),
+  head: () =>
+    pageHead({
+      title: "Service Level Agreement",
+      description: `${LEGAL_NAME} cloud uptime, credits, backups, and support response times.`,
+      path: "/sla",
+    }),
   component: SlaPage,
 });
 

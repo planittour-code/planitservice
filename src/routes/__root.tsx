@@ -17,7 +17,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "The file for the house. Jobs, products, warranties, and the shop you call back.",
+          "Keep the house file. Call the shop that already knows it. Jobs, products, warranties, and the next visit — at the address.",
       },
     ],
     links: [

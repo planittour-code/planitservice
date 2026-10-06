@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AupContent, LegalShell } from "@/components/legal-doc";
 import { LEGAL_NAME, LEGAL_SITE } from "@/lib/legal";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/aup")({
-  head: () => ({
-    meta: [{ title: `Acceptable Use Policy — ${LEGAL_NAME}` }],
-  }),
+  head: () =>
+    pageHead({
+      title: "Acceptable Use Policy",
+      description: `${LEGAL_NAME} Acceptable Use Policy for accounts, Property Records, and estimates.`,
+      path: "/aup",
+    }),
   component: AupPage,
 });
 

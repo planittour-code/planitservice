@@ -17,6 +17,7 @@ import { Wordmark } from "@/components/logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isSampleHouseToken } from "@/lib/housefile/sample";
 import { getHouseByToken } from "@/lib/housefile/server";
+import type { PropertyPhoto, ProposalListRow } from "@/lib/housefile/types";
 
 export const Route = createFileRoute("/house/$token")({
   loader: async ({ params }) => {
@@ -62,9 +63,9 @@ function HousePage() {
   const file = q.data;
   const p = file.property;
   const sample = isSampleHouseToken(token) || isSampleHouseToken(p.share_token);
-  const hero = file.photos.find((ph) => ph.category === "exterior") ?? file.photos[0];
+  const hero = file.photos.find((ph: PropertyPhoto) => ph.category === "exterior") ?? file.photos[0];
   const latest = file.proposals.find(
-    (pr) => pr.status !== "completed" && pr.status !== "pending" && pr.status !== "draft",
+    (pr: ProposalListRow) => pr.status !== "completed" && pr.status !== "pending" && pr.status !== "draft",
   );
 
   const body = (

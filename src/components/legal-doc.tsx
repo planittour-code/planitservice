@@ -70,7 +70,11 @@ export function TermsAgree({ id = "agree-terms" }: { id?: string }) {
         <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
           Terms of Service
         </Link>
-        , including the{" "}
+        {" "}and{" "}
+        <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+          Privacy Policy
+        </Link>
+        . The Terms include the{" "}
         <Link to="/saas" className="underline underline-offset-2 hover:text-foreground">
           SaaS Agreement
         </Link>

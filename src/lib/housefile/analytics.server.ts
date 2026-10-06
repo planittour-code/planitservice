@@ -11,7 +11,8 @@ export type AnalyticsEventName =
   | "portfolio_signup_started"
   | "portfolio_paid"
   | "address_mapped"
-  | "quote_created";
+  | "quote_created"
+  | "public_cta";
 
 export type TrackEventInput = {
   name: AnalyticsEventName;

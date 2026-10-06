@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { TermsAgree } from "@/components/legal-doc";
 import { PaidLanding } from "@/components/paid-landing";
+import { ProductPreview } from "@/components/product-preview";
 import { HomeownerCopyright, PublicHeader, AuthSlot, SignInCta } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,8 @@ import {
   PRO_UPGRADE_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
+import { pageHead } from "@/lib/seo";
+import { trackCta } from "@/lib/track-cta";
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
@@ -25,6 +28,13 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/homeowner")({
   validateSearch: (s) => searchSchema.parse(s),
+  head: () =>
+    pageHead({
+      title: "For homeowners",
+      description:
+        "Start a Property Record at your address. Keep photos, jobs, warranties, and the shops who already worked the house. From $7.99 a month.",
+      path: "/homeowner",
+    }),
   component: StartHouseRecord,
 });
 
@@ -34,12 +44,15 @@ function StartHouseRecord() {
   const { user } = useCurrentUserState();
   const [tier, setTier] = useState<"standard" | "pro">(search.tier ?? "standard");
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
+  const [street, setStreet] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const next = `/home/add?tier=${tier}`;
+  const next = street.trim()
+    ? `/home/add?tier=${tier}&address=${encodeURIComponent(street.trim())}`
+    : `/home/add?tier=${tier}`;
   const monthly = tier === "pro" ? PRO_MONTHLY : PROPERTY_MONTHLY;
   const annual = tier === "pro" ? PRO_ANNUAL : PROPERTY_ANNUAL;
 
@@ -89,18 +102,35 @@ function StartHouseRecord() {
                 For the homeowner
               </p>
               <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white md:text-5xl">
-                The house keeps the record. The shops who worked it stay on it.
+                Start with the address. The file stays with the house.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
-                Photos, jobs, warranties, and maintenance at this address — and who already did the
-                work, so you call them back. You do not wait on a shop to start the file. Pro adds
-                Request Estimates when you want bids from shops that service this street.
+                Photos, jobs, warranties, and who already did the work. You do not wait on a shop
+                to start the file. A named shop you know stays on Standard. Request Estimates is
+                Pro, and only asks shops that already service this street.
               </p>
-              <ul className="space-y-3 text-sm text-primary-foreground/80">
-                <li>Standard: the Property Record, known shops, and maintenance due dates.</li>
-                <li>Pro: Request Estimates — one job, shops that can do that work at this address.</li>
-                <li>A named shop you already know stays on Standard. The market is Pro.</li>
-              </ul>
+              <form
+                className="flex max-w-xl flex-col gap-2 sm:flex-row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  trackCta("homeowner_address");
+                  document.getElementById("signup")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <Label htmlFor="start-street" className="sr-only">
+                  Street address
+                </Label>
+                <Input
+                  id="start-street"
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  placeholder="Street address"
+                  className="min-h-12 bg-card text-foreground"
+                />
+                <Button type="submit" className="min-h-12 bg-go text-go-foreground hover:opacity-90">
+                  Keep this file
+                </Button>
+              </form>
               <SignInCta
                 signedInTo="/home"
                 className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
@@ -235,7 +265,12 @@ function StartHouseRecord() {
                 )}
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 {!user && <TermsAgree id="home-agree-terms" />}
-                <Button type="submit" className="min-h-12 w-full" disabled={busy}>
+                <Button
+                  type="submit"
+                  className="min-h-12 w-full"
+                  disabled={busy}
+                  onClick={() => trackCta("homeowner_signup", { tier })}
+                >
                   {busy
                     ? "Working…"
                     : user
@@ -269,17 +304,12 @@ function StartHouseRecord() {
 
         <section className="border-t border-border">
           <div className="mx-auto grid max-w-5xl gap-8 px-4 py-16 sm:px-5 md:grid-cols-3">
-            <Proof
-              photo="/houses/maple-front.jpg"
-              kicker="Keep the file"
-              title="The house remembers the last job."
-              body="Photos, products, warranties, and who did the work. Call that shop back when it is due again."
-            />
+            <ProductPreview />
             <Proof
               photo="/houses/maple-siding.jpg"
               kicker="Request Estimates"
               title="Pro asks shops that can service this street."
-              body="One job, one address. Bids come from PlanitService shops that offer that trade in this area — not a dump of every request."
+              body="One job, one address. If no shop on PlanitService covers that trade here yet, the request stays open. A named shop you already know still works on Standard."
             />
             <Proof
               photo="/houses/maple-roof.jpg"
@@ -299,7 +329,7 @@ function StartHouseRecord() {
               Who did the gutters, when the roof is due, what paint is on the trim — that lives at
               the address. Request Estimates when you need new bids.
             </p>
-            <Button asChild size="lg" className="min-h-12">
+            <Button asChild size="lg" className="min-h-12 bg-go text-go-foreground hover:opacity-90">
               <a href="#signup">Create the account</a>
             </Button>
           </div>
@@ -323,7 +353,7 @@ function Proof({
 }) {
   return (
     <article className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-      <img src={photo} alt="" className="aspect-[16/9] w-full object-cover" />
+      <img src={photo} alt="" className="aspect-[16/9] w-full object-cover" aria-hidden />
       <div className="space-y-2 p-5">
         <p className="text-sm tracking-wide text-muted-foreground uppercase">{kicker}</p>
         <h2 className="font-display text-xl font-bold tracking-tight">{title}</h2>

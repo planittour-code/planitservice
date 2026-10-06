@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as AupRouteImport } from './routes/aup'
@@ -18,11 +19,13 @@ import { Route as HomeRouteRouteImport } from './routes/home/route'
 import { Route as HomeownerRouteImport } from './routes/homeowner'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ManageRouteRouteImport } from './routes/manage/route'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SaasRouteImport } from './routes/saas'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SlaRouteImport } from './routes/sla'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ApiCtaRouteImport } from './routes/api/cta'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
 import { Route as AppCampaignRouteImport } from './routes/app/campaign'
@@ -68,6 +71,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -108,6 +116,11 @@ const ManageRouteRoute = ManageRouteRouteImport.update({
   path: '/manage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -131,6 +144,11 @@ const SlaRoute = SlaRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCtaRoute = ApiCtaRouteImport.update({
+  id: '/api/cta',
+  path: '/api/cta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -334,16 +352,19 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/manage': typeof ManageRouteRouteWithChildren
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/aup': typeof AupRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/homeowner': typeof HomeownerRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/saas': typeof SaasRoute
   '/shop': typeof ShopRouteWithChildren
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
+  '/api/cta': typeof ApiCtaRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -386,16 +407,19 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/aup': typeof AupRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/homeowner': typeof HomeownerRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/saas': typeof SaasRoute
   '/shop': typeof ShopRouteWithChildren
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
+  '/api/cta': typeof ApiCtaRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -442,16 +466,19 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/home': typeof HomeRouteRouteWithChildren
   '/manage': typeof ManageRouteRouteWithChildren
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/aup': typeof AupRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/homeowner': typeof HomeownerRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/saas': typeof SaasRoute
   '/shop': typeof ShopRouteWithChildren
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
+  '/api/cta': typeof ApiCtaRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -499,16 +526,19 @@ export interface FileRouteTypes {
     | '/app'
     | '/home'
     | '/manage'
+    | '/about'
     | '/account'
     | '/aup'
     | '/forgot-password'
     | '/homeowner'
     | '/login'
+    | '/privacy'
     | '/reset-password'
     | '/saas'
     | '/shop'
     | '/sla'
     | '/terms'
+    | '/api/cta'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -551,16 +581,19 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/account'
     | '/aup'
     | '/forgot-password'
     | '/homeowner'
     | '/login'
+    | '/privacy'
     | '/reset-password'
     | '/saas'
     | '/shop'
     | '/sla'
     | '/terms'
+    | '/api/cta'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -606,16 +639,19 @@ export interface FileRouteTypes {
     | '/app'
     | '/home'
     | '/manage'
+    | '/about'
     | '/account'
     | '/aup'
     | '/forgot-password'
     | '/homeowner'
     | '/login'
+    | '/privacy'
     | '/reset-password'
     | '/saas'
     | '/shop'
     | '/sla'
     | '/terms'
+    | '/api/cta'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -662,16 +698,19 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   HomeRouteRoute: typeof HomeRouteRouteWithChildren
   ManageRouteRoute: typeof ManageRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
   AccountRoute: typeof AccountRoute
   AupRoute: typeof AupRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HomeownerRoute: typeof HomeownerRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SaasRoute: typeof SaasRoute
   ShopRoute: typeof ShopRouteWithChildren
   SlaRoute: typeof SlaRoute
   TermsRoute: typeof TermsRoute
+  ApiCtaRoute: typeof ApiCtaRoute
   BookAlbinRoute: typeof BookAlbinRoute
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
@@ -693,6 +732,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -751,6 +797,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManageRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -784,6 +837,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cta': {
+      id: '/api/cta'
+      path: '/api/cta'
+      fullPath: '/api/cta'
+      preLoaderRoute: typeof ApiCtaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -1186,16 +1246,19 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   HomeRouteRoute: HomeRouteRouteWithChildren,
   ManageRouteRoute: ManageRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
   AccountRoute: AccountRoute,
   AupRoute: AupRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HomeownerRoute: HomeownerRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SaasRoute: SaasRoute,
   ShopRoute: ShopRouteWithChildren,
   SlaRoute: SlaRoute,
   TermsRoute: TermsRoute,
+  ApiCtaRoute: ApiCtaRoute,
   BookAlbinRoute: BookAlbinRoute,
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,

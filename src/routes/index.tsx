@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { JsonLd } from "@/components/json-ld";
 import { PaidLanding } from "@/components/paid-landing";
+import { ProductPreview } from "@/components/product-preview";
 import { justSignedOut } from "@/lib/auth/client";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -9,8 +11,18 @@ import {
   SHOP_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
+import { organizationJsonLd, pageHead, SITE_DESCRIPTION, softwareJsonLd } from "@/lib/seo";
+import { trackCta } from "@/lib/track-cta";
 
-export const Route = createFileRoute("/")({ component: WelcomeSite });
+export const Route = createFileRoute("/")({
+  head: () =>
+    pageHead({
+      title: "PlanitService",
+      description: SITE_DESCRIPTION,
+      path: "/",
+    }),
+  component: WelcomeSite,
+});
 
 function WelcomeSite() {
   return (
@@ -18,37 +30,52 @@ function WelcomeSite() {
       {justSignedOut() ? null : <PaidLanding />}
       <PublicHeader path="choose" />
 
+      <JsonLd data={organizationJsonLd()} />
+      <JsonLd data={softwareJsonLd()} />
       <main>
         <section className="relative isolate overflow-hidden bg-ink text-primary-foreground">
           <img
             src="/houses/cover-hero.jpg"
-            alt=""
+            alt="A house with a kept record of jobs, products, and warranties"
             className="absolute inset-0 size-full object-cover outline-none"
           />
           <div className="absolute inset-0 bg-ink/55" />
-          <div className="relative mx-auto max-w-3xl space-y-6 px-4 py-16 text-center sm:px-6 md:py-24">
-            <p className="text-sm font-medium tracking-wide text-primary">
-              PlanitService
-            </p>
-            <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl md:text-6xl">
-              The file for the house. The service with a plan.
-            </h1>
-            <p className="mx-auto max-w-xl text-lg leading-relaxed text-white/90">
-              Jobs, Products, Warranties & Request Estimates.
-            </p>
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button asChild size="lg">
-                  <Link to="/homeowner">I’m a homeowner</Link>
+          <div className="relative mx-auto grid max-w-5xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-20">
+            <div className="space-y-6 text-left">
+              <p className="text-sm font-medium tracking-wide text-primary">PlanitService</p>
+              <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl">
+                Keep the house file. Call the shop that already knows it.
+              </h1>
+              <p className="max-w-xl text-lg leading-relaxed text-white/90">
+                Photos, jobs, products, and warranties live at the address. A shop quotes onto that
+                file and stays the known shop for the next visit.
+              </p>
+              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                <Button asChild size="lg" className="min-h-12 bg-go text-go-foreground hover:opacity-90">
+                  <Link to="/homeowner" onClick={() => trackCta("homeowner_start")}>
+                    Start a Property Record
+                  </Link>
                 </Button>
-                <Button asChild size="lg" variant="secondary">
-                  <Link to="/shop">I’m a contractor</Link>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="min-h-12 border-white/40 bg-white/10 text-white hover:border-white hover:bg-white/20 hover:text-white"
+                >
+                  <Link to="/shop" onClick={() => trackCta("contractor_lane")}>
+                    Open a shop
+                  </Link>
                 </Button>
               </div>
-              <Button asChild size="lg" variant="outline" className="border-white/40 bg-white/10 text-white hover:border-white hover:bg-white/20 hover:text-white">
-                <Link to="/manage">I’m a property manager</Link>
-              </Button>
+              <p className="text-sm text-white/75">
+                Property managers:{" "}
+                <Link to="/manage" className="underline underline-offset-4" onClick={() => trackCta("manager_lane")}>
+                  run a portfolio of the same files
+                </Link>
+                .
+              </p>
             </div>
+            <ProductPreview />
           </div>
         </section>
 

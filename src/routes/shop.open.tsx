@@ -11,6 +11,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SEAT_MONTHLY, SHOP_ANNUAL, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { confirmShopCheckout } from "@/lib/housefile/stripe-billing";
 import { useAudience } from "@/lib/housefile/use-audience";
+import { pageHead } from "@/lib/seo";
 
 const searchSchema = z.object({
   session_id: z.string().optional(),
@@ -19,6 +20,12 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/shop/open")({
   validateSearch: (s) => searchSchema.parse(s),
+  head: () =>
+    pageHead({
+      title: "Open a shop",
+      description: "Open a PlanitService shop. $10 a month per category you offer. Extra seats $5 a month.",
+      path: "/shop/open",
+    }),
   component: OpenShop,
 });
 

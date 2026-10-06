@@ -18,6 +18,7 @@ import {
 } from "@/lib/housefile/pricing";
 import { confirmManageCheckout } from "@/lib/housefile/stripe-billing";
 import { useAudience } from "@/lib/housefile/use-audience";
+import { pageHead } from "@/lib/seo";
 
 const searchSchema = z.object({
   session_id: z.string().optional(),
@@ -26,6 +27,12 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/manage/open")({
   validateSearch: (s) => searchSchema.parse(s),
+  head: () =>
+    pageHead({
+      title: "Start a portfolio",
+      description: "Start a PlanitService property-manager portfolio. 10 houses on the base plan.",
+      path: "/manage/open",
+    }),
   component: OpenPortfolio,
 });
 

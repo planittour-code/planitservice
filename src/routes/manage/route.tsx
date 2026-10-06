@@ -14,8 +14,18 @@ import {
   dollars,
 } from "@/lib/housefile/pricing";
 import { useAudience } from "@/lib/housefile/use-audience";
+import { pageHead } from "@/lib/seo";
 
-export const Route = createFileRoute("/manage")({ component: ManageFrame });
+export const Route = createFileRoute("/manage")({
+  head: () =>
+    pageHead({
+      title: "For property managers",
+      description:
+        "A portfolio of Property Records with a maintenance calendar. From $39.99 a month for 10 houses.",
+      path: "/manage",
+    }),
+  component: ManageFrame,
+});
 
 function ManageFrame() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -93,7 +103,7 @@ function ManageMarketing() {
                 For property managers
               </p>
               <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white md:text-5xl">
-                Records, a calendar, and Request Estimates.
+                One office. Ten house files. A calendar for the work.
               </h1>
               <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
                 One file per house — photos, jobs, warranties, known shops. A maintenance calendar

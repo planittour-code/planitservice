@@ -17,8 +17,19 @@ import {
   dollars,
 } from "@/lib/housefile/pricing";
 import type { AddressTease } from "@/lib/housefile/types";
+import { pageHead } from "@/lib/seo";
+import { trackCta } from "@/lib/track-cta";
 
-export const Route = createFileRoute("/shop")({ component: ShopFrame });
+export const Route = createFileRoute("/shop")({
+  head: () =>
+    pageHead({
+      title: "For contractors",
+      description:
+        "Quote onto the Property Record so you become the known shop for repeat work. $10 a month per category you offer.",
+      path: "/shop",
+    }),
+  component: ShopFrame,
+});
 
 function ShopFrame() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -50,15 +61,32 @@ function HomePage() {
                   For contractors
                 </p>
                 <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl md:text-6xl">
-                  Turn one job into the next visit.
+                  Look up the house. Quote onto the file.
                 </h1>
                 <p className="max-w-xl text-lg leading-relaxed text-pretty text-primary-foreground/80">
-                  Quote onto the File so you are the known shop for repeat work. Choose the
-                  categories you offer — ${dollars(SHOP_MONTHLY)}/month each — and catch Request
-                  Estimates that match those trades in your service area.
+                  If a Property Record exists, you are not guessing from the curb. Open a shop for $
+                  {dollars(SHOP_MONTHLY)}/month per category, then catch Request Estimates that match
+                  the work you offer.
                 </p>
                 <div className="rounded-xl bg-card p-2 text-left text-foreground shadow-[var(--shadow-border)]">
-                  <AddressLookup onTease={setTease} />
+                  <AddressLookup
+                    onTease={(next) => {
+                      trackCta("shop_lookup");
+                      setTease(next);
+                    }}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild className="min-h-12 bg-go text-go-foreground hover:opacity-90">
+                    <Link to="/shop/open" search={{ intent: "up" }} onClick={() => trackCta("shop_open")}>
+                      Open a shop
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="min-h-12 border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                    <Link to="/login" search={{ role: "contractor", next: "/app" }}>
+                      Sign in
+                    </Link>
+                  </Button>
                 </div>
               </div>
               <div className="rounded-xl bg-card p-5 text-foreground shadow-[var(--shadow-border)] sm:p-6">
@@ -110,7 +138,7 @@ function HomePage() {
                     <span className="text-muted-foreground">2023</span>
                   </li>
                   <li className="flex justify-between gap-3">
-                    <span>LeafFilter gutter guards</span>
+                    <span>Roll Lock Gutter Guards</span>
                     <span className="text-muted-foreground">Lifetime</span>
                   </li>
                 </ul>
