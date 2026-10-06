@@ -43,7 +43,7 @@ export function PathSignInForm({
     setError(null);
     setBusy(true);
     try {
-      const res = await authClient.signIn.email({ email, password, callbackURL: next });
+      const res = await authClient.signIn.email({ email, password });
       if (res.error) throw new Error(res.error.message || "Could not sign in");
       clearSignedOutFlag();
       window.location.href = next;

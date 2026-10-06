@@ -45,6 +45,10 @@ function isHouseDestination(path: string) {
   return path === "/home" || path.startsWith("/home/");
 }
 
+function isTransferDestination(path: string) {
+  return path.startsWith("/claim/") || path.startsWith("/transfer/confirm/");
+}
+
 function isManageDestination(path: string) {
   return path === "/manage" || path.startsWith("/manage/");
 }
@@ -61,6 +65,8 @@ function Login() {
     search.role === "contractor" || Boolean(search.next?.startsWith("/app"));
   const homeowner =
     search.role === "homeowner" ||
+    Boolean(search.next?.startsWith("/claim/")) ||
+    Boolean(search.next?.startsWith("/transfer/confirm/")) ||
     (Boolean(search.invite) && !contractor && !manager);
   const next = safeNextPath(search.next, homeowner ? "/home" : manager ? "/manage" : "/app");
   const shopInvite =
@@ -72,7 +78,10 @@ function Login() {
     ? `/app/new?invite=${encodeURIComponent(shopInvite)}`
     : houseInvite
       ? `/invite/${houseInvite}`
-      : isShopDestination(next) || isManageDestination(next) || next.startsWith("/home/add")
+      : isShopDestination(next) ||
+          isManageDestination(next) ||
+          next.startsWith("/home/add") ||
+          isTransferDestination(next)
         ? next
         : "/login";
   const invitedSales = contractor && Boolean(search.email) && !shopInvite;
@@ -85,7 +94,7 @@ function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (isPending || (user && audiencePending)) {
+  if (isPending) {
     return (
       <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-5xl px-5 py-8">
@@ -123,15 +132,38 @@ function Login() {
         />
       );
     }
+    if (next.startsWith("/claim/")) {
+      const token = next.slice("/claim/".length).split(/[?#]/)[0];
+      if (token) return <Navigate to="/claim/$token" params={{ token }} />;
+    }
+    if (next.startsWith("/transfer/confirm/")) {
+      const token = next.slice("/transfer/confirm/".length).split(/[?#]/)[0];
+      if (token) return <Navigate to="/transfer/confirm/$token" params={{ token }} />;
+    }
     if (isManageDestination(next) || manager) {
+      if (audiencePending) {
+        return (
+          <main className="min-h-screen bg-background">
+            <div className="mx-auto max-w-5xl px-5 py-8">
+              <div className="h-10 w-40 animate-pulse rounded-md bg-muted" />
+            </div>
+          </main>
+        );
+      }
       if (audience.hats.manager) {
         if (next.startsWith("/manage/add")) return <Navigate to="/manage/add" />;
         return <Navigate to="/manage" />;
       }
       return <Navigate to="/manage/open" />;
     }
-    if (homeowner) {
+    if (homeowner || isHouseDestination(next)) {
       return <Navigate to="/home" />;
+    }
+    if (contractor || isShopDestination(next)) {
+      return <Navigate to="/app" />;
+    }
+    if (audiencePending) {
+      return <Navigate to="/app" />;
     }
     if (audience.hats.contractor) {
       return <Navigate to="/app" />;
@@ -144,9 +176,6 @@ function Login() {
       return <Navigate to="/home" />;
     }
     if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
-    if (homeowner || isHouseDestination(next)) {
-      return <Navigate to="/home" />;
-    }
     return <Navigate to="/app" />;
   }
 
@@ -160,11 +189,10 @@ function Login() {
           email,
           password,
           name: name || email.split("@")[0],
-          callbackURL: after,
         });
         if (res.error) throw new Error(res.error.message || "Could not create account");
       } else {
-        const res = await authClient.signIn.email({ email, password, callbackURL: after });
+        const res = await authClient.signIn.email({ email, password });
         if (res.error) throw new Error(res.error.message || "Could not sign in");
       }
       clearSignedOutFlag();

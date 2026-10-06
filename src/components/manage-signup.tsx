@@ -145,7 +145,6 @@ export function ManageClaimForm({ sessionId }: { sessionId: string }) {
       const signed = await authClient.signIn.email({
         email: claimed.email,
         password,
-        callbackURL: "/manage",
       });
       if (signed.error) throw new Error(signed.error.message || "Account created. Sign in to continue.");
       clearSignedOutFlag();

@@ -646,6 +646,69 @@ export async function sendProjectOpenedEmail(data: {
   });
 }
 
+export async function sendTransferConfirmEmail(data: {
+  to: string;
+  name: string;
+  address: string;
+  toEmail: string;
+  confirmUrl: string;
+  code: string;
+}) {
+  const first = data.name.trim().split(/\s+/)[0] || "there";
+  const subject = `Confirm transfer of ${data.address}`;
+  const text = [
+    `Hi ${first},`,
+    "",
+    `Someone asked to transfer the Property Record for ${data.address} to ${data.toEmail}.`,
+    "",
+    "Confirm this transfer with two steps: you are signed in, and you open this email.",
+    "",
+    `Confirm transfer: ${data.confirmUrl}`,
+    `Or enter this code on the Property Record: ${data.code}`,
+    "",
+    "The code expires in 30 minutes. If you did not ask to transfer this house, ignore this email. The record stays with you.",
+    "",
+    LEGAL_NAME,
+    LEGAL_SITE,
+    LEGAL_EMAIL,
+  ].join("\n");
+  const html = `<p>Hi ${escapeHtml(first)},</p>
+<p>Someone asked to transfer the Property Record for ${escapeHtml(data.address)} to ${escapeHtml(data.toEmail)}.</p>
+<p>Confirm this transfer with two steps: you are signed in, and you open this email.</p>
+<p><a href="${escapeHtml(data.confirmUrl)}">Confirm transfer</a></p>
+<p>Or enter this code on the Property Record: <strong>${escapeHtml(data.code)}</strong></p>
+<p>The code expires in 30 minutes. If you did not ask to transfer this house, ignore this email. The record stays with you.</p>
+<p>${escapeHtml(LEGAL_NAME)}<br>${escapeHtml(LEGAL_SITE)}<br>${escapeHtml(LEGAL_EMAIL)}</p>`;
+  await sendResendEmail({ to: data.to, subject, text, html, replyTo: LEGAL_EMAIL });
+}
+
+export async function sendTransferClaimEmail(data: {
+  to: string;
+  address: string;
+  fromName: string;
+  claimUrl: string;
+}) {
+  const subject = `Take the Property Record for ${data.address}`;
+  const text = [
+    `Hi,`,
+    "",
+    `${data.fromName} confirmed the transfer of the Property Record for ${data.address}.`,
+    "",
+    `Sign in with this email and accept the record: ${data.claimUrl}`,
+    "",
+    "Jobs, warranties, and maintenance stay with the address.",
+    "",
+    LEGAL_NAME,
+    LEGAL_SITE,
+  ].join("\n");
+  const html = `<p>Hi,</p>
+<p>${escapeHtml(data.fromName)} confirmed the transfer of the Property Record for ${escapeHtml(data.address)}.</p>
+<p><a href="${escapeHtml(data.claimUrl)}">Take this Property Record</a></p>
+<p>Sign in with this email. Jobs, warranties, and maintenance stay with the address.</p>
+<p>${escapeHtml(LEGAL_NAME)}<br>${escapeHtml(LEGAL_SITE)}</p>`;
+  await sendResendEmail({ to: data.to, subject, text, html, replyTo: LEGAL_EMAIL });
+}
+
 export async function fetchReceivedEmail(emailId: string) {
   const key = resendKey();
   if (!key) throw new Error("RESEND_API_KEY is not set");

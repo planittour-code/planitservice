@@ -19,6 +19,7 @@ export function useAudience() {
     queryFn: () => getAudience(),
     enabled: Boolean(user) && !isPending && !signedOut,
     retry: false,
+    staleTime: 30_000,
   });
   const raw = user && !signedOut ? (q.data ?? GUEST) : GUEST;
   const audience: Audience = {

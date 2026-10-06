@@ -117,6 +117,28 @@ export async function deliverServiceDateEmail(input: {
   await sendServiceDateEmail(input);
 }
 
+export async function deliverTransferConfirmEmail(input: {
+  to: string;
+  name: string;
+  address: string;
+  toEmail: string;
+  confirmUrl: string;
+  code: string;
+}) {
+  const { sendTransferConfirmEmail } = await import("@/lib/auth/mail.server");
+  await sendTransferConfirmEmail(input);
+}
+
+export async function deliverTransferClaimEmail(input: {
+  to: string;
+  address: string;
+  fromName: string;
+  claimUrl: string;
+}) {
+  const { sendTransferClaimEmail } = await import("@/lib/auth/mail.server");
+  await sendTransferClaimEmail(input);
+}
+
 export async function deliverAcceptedEstimateEmail(input: {
   property: Property;
   proposal: Proposal;

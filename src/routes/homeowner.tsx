@@ -69,7 +69,6 @@ function StartHouseRecord() {
         email,
         password,
         name: name.trim() || email.split("@")[0],
-        callbackURL: next,
       });
       if (res.error) throw new Error(res.error.message || "Could not create the account");
       clearSignedOutFlag();

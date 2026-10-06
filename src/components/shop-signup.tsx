@@ -184,7 +184,6 @@ export function ShopClaimForm({ sessionId }: { sessionId: string }) {
       const signed = await authClient.signIn.email({
         email: claimed.email,
         password,
-        callbackURL: "/app/onboard",
       });
       if (signed.error) throw new Error(signed.error.message || "Account created. Sign in to continue.");
       clearSignedOutFlag();

@@ -25,6 +25,7 @@ import { RfpForm, RfpList } from "@/components/rfp-panel";
 import { UpgradeToPro } from "@/components/upgrade-to-pro";
 import {
   completeMaintenance,
+  confirmPropertyTransfer,
   getHomeRecord,
   startPropertyTransfer,
 } from "@/lib/housefile/server";
@@ -188,7 +189,7 @@ function HomeRecord() {
       <RecordSection
         id="transfer"
         title="Transfer this Property Record"
-        blurb="The Property Record moves with the house."
+        blurb="Create transfer link emails you a confirm code. The record moves after you confirm."
         photo={CATEGORY_PHOTO.house}
       >
         <TransferForm propertyId={p.id} pending={transfer} onDone={() => q.refetch()} />
@@ -248,24 +249,96 @@ function TransferForm({
   onDone,
 }: {
   propertyId: string;
-  pending: { to_email: string; token: string } | null;
+  pending: {
+    to_email: string;
+    token: string | null;
+    awaiting_confirm: boolean;
+    from_email: string;
+    confirm_expires_at: string | null;
+  } | null;
   onDone: () => void;
 }) {
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const send = useMutation({
     mutationFn: () => startPropertyTransfer({ data: { propertyId, toEmail: email } }),
     onSuccess: (res) => {
-      toast.success("Transfer link ready");
+      toast.success(`Confirm transfer email sent to ${res.fromEmail}`);
       onDone();
-      void navigator.clipboard?.writeText(`${window.location.origin}/claim/${res.token}`);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not start transfer"),
   });
+  const confirm = useMutation({
+    mutationFn: () => confirmPropertyTransfer({ data: { propertyId, code } }),
+    onSuccess: (res) => {
+      toast.success(`Transfer confirmed. Waiting on ${res.toEmail}.`);
+      onDone();
+      if (res.token) {
+        void navigator.clipboard?.writeText(`${window.location.origin}/claim/${res.token}`);
+      }
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not confirm transfer"),
+  });
+  const resend = useMutation({
+    mutationFn: () =>
+      startPropertyTransfer({ data: { propertyId, toEmail: pending?.to_email ?? email } }),
+    onSuccess: (res) => {
+      toast.success(`Confirm transfer email sent to ${res.fromEmail}`);
+      onDone();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not resend"),
+  });
 
-  if (pending) {
+  if (pending?.awaiting_confirm) {
+    return (
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          confirm.mutate();
+        }}
+      >
+        <p className="text-sm text-muted-foreground">
+          Two-factor check: you are signed in, and we sent a confirm transfer email to{" "}
+          <span className="font-semibold text-foreground">{pending.from_email}</span>. Open that
+          email, or enter the 6-digit code here, before a claim link is created for{" "}
+          <span className="font-semibold text-foreground">{pending.to_email}</span>.
+        </p>
+        <div className="space-y-1">
+          <Label htmlFor="transfer-code">Code from the email</Label>
+          <Input
+            id="transfer-code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="123456"
+            required
+            minLength={6}
+            maxLength={6}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={confirm.isPending || code.trim().length !== 6}>
+            {confirm.isPending ? "Confirming…" : "Confirm transfer"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={resend.isPending}
+            onClick={() => resend.mutate()}
+          >
+            {resend.isPending ? "Sending…" : "Resend confirm email"}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  if (pending?.token) {
     return (
       <p className="text-sm text-muted-foreground">
-        Waiting on {pending.to_email}. Share{" "}
+        You confirmed the transfer. Waiting on {pending.to_email}. Share{" "}
         <Link to="/claim/$token" params={{ token: pending.token }} className="underline">
           the transfer link
         </Link>
@@ -283,14 +356,15 @@ function TransferForm({
       }}
     >
       <p className="text-sm text-muted-foreground">
-        The Property Record moves with the house. They sign in with this email and take the record.
+        The Property Record moves with the house. Create transfer link emails you a confirm code.
+        After you confirm, they sign in with this email and take the record.
       </p>
       <div className="space-y-1">
         <Label htmlFor="to">New owner email</Label>
         <Input id="to" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <Button type="submit" disabled={send.isPending}>
-        {send.isPending ? "Sending…" : "Create transfer link"}
+        {send.isPending ? "Sending confirm email…" : "Create transfer link"}
       </Button>
     </form>
   );

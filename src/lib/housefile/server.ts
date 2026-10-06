@@ -4526,13 +4526,22 @@ export const getHomeRecord = createServerFn({ method: "GET" })
       select * from maintenance_tasks where property_id = ${id}
       order by completed_at nulls first, due_on
     `).map(asMaintenanceTask);
-    const transfer = (
+    const transferRow = (
       await sql<PropertyTransfer>`
         select * from property_transfers
         where property_id = ${id} and status = ${"pending"}
         order by created_at desc limit 1
       `
     )[0] ?? null;
+    const transfer = transferRow
+      ? {
+          to_email: transferRow.to_email,
+          token: transferRow.confirmed_at ? transferRow.token : null,
+          awaiting_confirm: !transferRow.confirmed_at,
+          from_email: transferRow.from_email ?? rows[0].homeowner_email,
+          confirm_expires_at: transferRow.confirm_expires_at ?? null,
+        }
+      : null;
     const workInvites = await workInvitesForProperty(sql, id);
     const shopEstimates = await shopEstimatesAtAddress(sql, rows[0]);
     const knownProviders = await knownProvidersForProperty(sql, rows[0]);
@@ -4570,11 +4579,60 @@ export const completeMaintenance = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+function transferAddress(property: Property) {
+  return `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`;
+}
+
+function transferCode() {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 900000;
+  return String(100000 + n);
+}
+
+function publicOrigin() {
+  return (process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "");
+}
+
+async function sendTransferConfirmMail(input: {
+  to: string;
+  name: string;
+  address: string;
+  toEmail: string;
+  confirmToken: string;
+  code: string;
+}) {
+  const { deliverTransferConfirmEmail } = await import("./mail");
+  await deliverTransferConfirmEmail({
+    to: input.to,
+    name: input.name,
+    address: input.address,
+    toEmail: input.toEmail,
+    confirmUrl: `${publicOrigin()}/transfer/confirm/${input.confirmToken}`,
+    code: input.code,
+  });
+}
+
+async function sendTransferClaimMail(input: {
+  to: string;
+  address: string;
+  fromName: string;
+  claimToken: string;
+}) {
+  const { deliverTransferClaimEmail } = await import("./mail");
+  await deliverTransferClaimEmail({
+    to: input.to,
+    address: input.address,
+    fromName: input.fromName,
+    claimUrl: `${publicOrigin()}/claim/${input.claimToken}`,
+  });
+}
+
 export const startPropertyTransfer = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { propertyId: string; toEmail: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
     const property = (
       await sql<Property>`
         select * from properties where id = ${data.propertyId} and homeowner_user_id = ${context.userId} limit 1
@@ -4583,14 +4641,186 @@ export const startPropertyTransfer = createServerFn({ method: "POST" })
     if (!property) throw new Error("Property not found");
     const email = data.toEmail.trim().toLowerCase();
     if (!email.includes("@")) throw new Error("Need the new owner's email.");
-    const token = slugToken();
+    const fromEmail = session?.email?.trim().toLowerCase() || property.homeowner_email.trim().toLowerCase();
+    if (!fromEmail.includes("@")) {
+      throw new Error("Sign in with the email on this Property Record so we can send the confirm transfer email.");
+    }
+    if (email === fromEmail) {
+      throw new Error("Use a different email for the new owner.");
+    }
+    const existing = (
+      await sql<PropertyTransfer>`
+        select * from property_transfers
+        where property_id = ${property.id} and status = ${"pending"}
+        order by created_at desc limit 1
+      `
+    )[0];
+    if (existing?.confirmed_at) {
+      throw new Error("A transfer is already waiting on the new owner.");
+    }
+    const confirmToken = slugToken() + slugToken();
+    const code = transferCode();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    if (existing && !existing.confirmed_at) {
+      await sql`
+        update property_transfers
+        set to_email = ${email},
+            from_email = ${fromEmail},
+            confirm_token = ${confirmToken},
+            confirm_code = ${code},
+            confirm_expires_at = ${expiresAt},
+            confirmed_at = null,
+            token = ${slugToken()}
+        where id = ${existing.id}
+      `;
+    } else {
+      await sql`
+        insert into property_transfers (
+          id, property_id, from_user_id, to_email, reason, token, status,
+          confirm_token, confirm_code, confirm_expires_at, from_email
+        )
+        values (
+          ${crypto.randomUUID()}, ${property.id}, ${context.userId}, ${email}, ${"transfer"}, ${slugToken()}, ${"pending"},
+          ${confirmToken}, ${code}, ${expiresAt}, ${fromEmail}
+        )
+      `;
+    }
+    await sendTransferConfirmMail({
+      to: fromEmail,
+      name: property.homeowner_name || session?.email || "there",
+      address: transferAddress(property),
+      toEmail: email,
+      confirmToken,
+      code,
+    });
+    return { awaitingConfirm: true as const, toEmail: email, fromEmail };
+  });
+
+export const confirmPropertyTransfer = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId?: string; confirmToken?: string; code?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const code = data.code?.replace(/\s+/g, "").trim() ?? "";
+    const confirmToken = data.confirmToken?.trim() ?? "";
+    let row: PropertyTransfer | undefined;
+    if (confirmToken) {
+      row = (
+        await sql<PropertyTransfer>`
+          select * from property_transfers
+          where confirm_token = ${confirmToken} and status = ${"pending"}
+          limit 1
+        `
+      )[0];
+    } else if (data.propertyId && code) {
+      row = (
+        await sql<PropertyTransfer>`
+          select * from property_transfers
+          where property_id = ${data.propertyId}
+            and from_user_id = ${context.userId}
+            and status = ${"pending"}
+          order by created_at desc limit 1
+        `
+      )[0];
+    }
+    if (!row) throw new Error("Transfer not found");
+    const property = (
+      await sql<Property>`
+        select * from properties where id = ${row.property_id} and homeowner_user_id = ${context.userId} limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Sign in as the current owner to confirm this transfer.");
+    if (row.confirmed_at) {
+      return { token: row.token, toEmail: row.to_email, already: true as const };
+    }
+    if (row.confirm_expires_at && new Date(row.confirm_expires_at).getTime() < Date.now()) {
+      throw new Error("That confirm email expired. Create the transfer link again.");
+    }
+    if (code) {
+      if (!row.confirm_code || code !== row.confirm_code) {
+        throw new Error("That code does not match the confirm transfer email.");
+      }
+    } else if (!confirmToken || confirmToken !== row.confirm_token) {
+      throw new Error("Open the confirm transfer email, or enter the code from it.");
+    }
+    const claimToken = slugToken();
     await sql`
-      insert into property_transfers (id, property_id, from_user_id, to_email, reason, token, status)
-      values (
-        ${crypto.randomUUID()}, ${property.id}, ${context.userId}, ${email}, ${"transfer"}, ${token}, ${"pending"}
-      )
+      update property_transfers
+      set confirmed_at = now(),
+          token = ${claimToken},
+          confirm_code = null
+      where id = ${row.id}
     `;
-    return { token };
+    const fromName = property.homeowner_name?.trim() || session?.email || "The current owner";
+    try {
+      await sendTransferClaimMail({
+        to: row.to_email,
+        address: transferAddress(property),
+        fromName,
+        claimToken,
+      });
+    } catch (err) {
+      console.error("[transfer] claim email failed", err);
+    }
+    return { token: claimToken, toEmail: row.to_email, already: false as const };
+  });
+
+export const getTransferConfirm = createServerFn({ method: "GET" })
+  .middleware([optionalAuthMiddleware])
+  .validator((token: string) => token)
+  .handler(async ({ context, data: token }) => {
+    const sql = await getSql();
+    const row = (
+      await sql<PropertyTransfer>`
+        select * from property_transfers where confirm_token = ${token} and status = ${"pending"} limit 1
+      `
+    )[0];
+    if (!row) throw new Error("Confirm link not found");
+    const property = (
+      await sql<Property>`
+        select * from properties where id = ${row.property_id} limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    const expired = Boolean(row.confirm_expires_at && new Date(row.confirm_expires_at).getTime() < Date.now());
+    return {
+      toEmail: row.to_email,
+      address: transferAddress(property),
+      confirmed: Boolean(row.confirmed_at),
+      expired,
+      isOwner: Boolean(context.userId && property.homeowner_user_id === context.userId),
+      signedIn: Boolean(context.userId),
+      propertyId: property.id,
+    };
+  });
+
+export const getTransferClaim = createServerFn({ method: "GET" })
+  .middleware([optionalAuthMiddleware])
+  .validator((token: string) => token)
+  .handler(async ({ context, data: token }) => {
+    const sql = await getSql();
+    const row = (
+      await sql<PropertyTransfer>`
+        select * from property_transfers where token = ${token} limit 1
+      `
+    )[0];
+    if (!row) throw new Error("Transfer not found");
+    const property = (
+      await sql<Property>`
+        select * from properties where id = ${row.property_id} limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    return {
+      toEmail: row.to_email,
+      address: transferAddress(property),
+      status: row.status,
+      confirmed: Boolean(row.confirmed_at),
+      signedIn: Boolean(context.userId),
+      signedInEmail: context.email,
+    };
   });
 
 export const claimPropertyTransfer = createServerFn({ method: "POST" })
@@ -4604,12 +4834,22 @@ export const claimPropertyTransfer = createServerFn({ method: "POST" })
       select * from property_transfers where token = ${token} and status = ${"pending"} limit 1
     `;
     if (!rows[0]) throw new Error("Transfer not found");
+    if (!rows[0].confirmed_at) {
+      throw new Error("The current owner still needs to confirm this transfer from their email.");
+    }
     const mine = session?.email?.toLowerCase();
-    if (mine && mine !== rows[0].to_email) {
+    if (!mine) {
+      throw new Error("Sign in with the email this Property Record was sent to.");
+    }
+    if (mine !== rows[0].to_email) {
       throw new Error("Sign in with the email this Property Record was sent to.");
     }
     await sql`
-      update properties set homeowner_user_id = ${context.userId} where id = ${rows[0].property_id}
+      update properties
+      set homeowner_user_id = ${context.userId},
+          homeowner_email = ${rows[0].to_email},
+          invite_status = ${"claimed"}
+      where id = ${rows[0].property_id}
     `;
     await sql`update property_transfers set status = ${"accepted"} where id = ${rows[0].id}`;
     return { propertyId: rows[0].property_id };

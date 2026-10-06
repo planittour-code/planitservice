@@ -561,6 +561,11 @@ export type PropertyTransfer = {
   token: string;
   status: string;
   created_at: string;
+  confirm_token?: string | null;
+  confirm_code?: string | null;
+  confirm_expires_at?: string | null;
+  confirmed_at?: string | null;
+  from_email?: string | null;
 };
 
 

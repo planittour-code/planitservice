@@ -65,6 +65,7 @@ import { Route as AppProposalsIdRouteImport } from './routes/app/proposals.$id'
 import { Route as PTokenAcceptedRouteImport } from './routes/p.$token.accepted'
 import { Route as SSlugBookRouteImport } from './routes/s.$slug.book'
 import { Route as SSlugProjectRouteImport } from './routes/s.$slug.project'
+import { Route as TransferConfirmTokenRouteImport } from './routes/transfer.confirm.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -346,6 +347,11 @@ const SSlugProjectRoute = SSlugProjectRouteImport.update({
   path: '/project',
   getParentRoute: () => SSlugRoute,
 } as any)
+const TransferConfirmTokenRoute = TransferConfirmTokenRouteImport.update({
+  id: '/transfer/confirm/$token',
+  path: '/transfer/confirm/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -404,6 +410,7 @@ export interface FileRoutesByFullPath {
   '/p/$token/accepted': typeof PTokenAcceptedRoute
   '/s/$slug/book': typeof SSlugBookRoute
   '/s/$slug/project': typeof SSlugProjectRoute
+  '/transfer/confirm/$token': typeof TransferConfirmTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -459,6 +466,7 @@ export interface FileRoutesByTo {
   '/p/$token/accepted': typeof PTokenAcceptedRoute
   '/s/$slug/book': typeof SSlugBookRoute
   '/s/$slug/project': typeof SSlugProjectRoute
+  '/transfer/confirm/$token': typeof TransferConfirmTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -518,6 +526,7 @@ export interface FileRoutesById {
   '/p/$token/accepted': typeof PTokenAcceptedRoute
   '/s/$slug/book': typeof SSlugBookRoute
   '/s/$slug/project': typeof SSlugProjectRoute
+  '/transfer/confirm/$token': typeof TransferConfirmTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -578,6 +587,7 @@ export interface FileRouteTypes {
     | '/p/$token/accepted'
     | '/s/$slug/book'
     | '/s/$slug/project'
+    | '/transfer/confirm/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -633,6 +643,7 @@ export interface FileRouteTypes {
     | '/p/$token/accepted'
     | '/s/$slug/book'
     | '/s/$slug/project'
+    | '/transfer/confirm/$token'
   id:
     | '__root__'
     | '/'
@@ -691,6 +702,7 @@ export interface FileRouteTypes {
     | '/p/$token/accepted'
     | '/s/$slug/book'
     | '/s/$slug/project'
+    | '/transfer/confirm/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -723,6 +735,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiVoiceSplatRoute: typeof ApiVoiceSplatRoute
+  TransferConfirmTokenRoute: typeof TransferConfirmTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1119,6 +1132,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SSlugProjectRouteImport
       parentRoute: typeof SSlugRoute
     }
+    '/transfer/confirm/$token': {
+      id: '/transfer/confirm/$token'
+      path: '/transfer/confirm/$token'
+      fullPath: '/transfer/confirm/$token'
+      preLoaderRoute: typeof TransferConfirmTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1271,16 +1291,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiVoiceSplatRoute: ApiVoiceSplatRoute,
+  TransferConfirmTokenRoute: TransferConfirmTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

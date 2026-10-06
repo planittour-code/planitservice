@@ -31,8 +31,6 @@ export function HouseRoomsEditor({
 }) {
   const [counts, setCounts] = useState(() => ({
     room_count: facts.room_count?.value ?? "",
-    toilets: facts.toilets?.value ?? "",
-    sinks: facts.sinks?.value ?? "",
     closets: facts.closets?.value ?? "",
     foyer: facts.foyer?.value ?? "",
     mud_room: facts.mud_room?.value ?? "",
