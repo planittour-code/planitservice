@@ -72,15 +72,15 @@ function Login() {
   const shopInvite =
     inviteFromShopNext(next) || (contractor ? namedShopInviteToken(search.invite) : undefined);
   const houseInvite = !contractor && !manager ? namedShopInviteToken(search.invite) : undefined;
-  // Land back on /login after auth so a paid contractor is not sent to /home
-  // just because the public Sign in button asked for the house dashboard.
+  // Keep the path the form asked for. Dual-hat logins (paid shop + houses) must
+  // still land on Houses when this page was opened as a homeowner sign-in.
   const after = shopInvite
     ? `/app/new?invite=${encodeURIComponent(shopInvite)}`
     : houseInvite
       ? `/invite/${houseInvite}`
       : isShopDestination(next) ||
           isManageDestination(next) ||
-          next.startsWith("/home/add") ||
+          isHouseDestination(next) ||
           isTransferDestination(next)
         ? next
         : "/login";
@@ -156,6 +156,7 @@ function Login() {
       }
       return <Navigate to="/manage/open" />;
     }
+    if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
     if (homeowner || isHouseDestination(next)) {
       return <Navigate to="/home" />;
     }
@@ -175,7 +176,6 @@ function Login() {
     if (audience.hats.homeowner) {
       return <Navigate to="/home" />;
     }
-    if (next.startsWith("/home/add")) return <Navigate to="/home/add" />;
     return <Navigate to="/app" />;
   }
 
