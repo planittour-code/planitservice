@@ -520,6 +520,7 @@ export type PortfolioHouse = HomeownerHouse & {
   scheduledCount: number;
   nextTask: PortfolioNextTask | null;
   acceptedEstimates: PortfolioAcceptedEstimate[];
+  tasks: MaintenanceTask[];
 };
 
 export type PortfolioOwner = {

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,6 +158,70 @@ export function MaintenanceChecklist({
         </Button>
       </form>
     </div>
+  );
+}
+
+export function ScheduleTask({
+  task,
+  pending,
+  onSave,
+}: {
+  task: MaintenanceTask;
+  pending: boolean;
+  onSave: (scheduledOn: string | null, scheduledNote?: string) => void;
+}) {
+  const [date, setDate] = useState(task.scheduled_on ?? "");
+  const [note, setNote] = useState(task.scheduled_note ?? "");
+
+  useEffect(() => {
+    setDate(task.scheduled_on ?? "");
+    setNote(task.scheduled_note ?? "");
+  }, [task.scheduled_on, task.scheduled_note]);
+
+  return (
+    <form
+      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(date || null, note);
+      }}
+    >
+      <div className="space-y-1">
+        <Label htmlFor={`sched-${task.id}`}>Scheduled date</Label>
+        <Input
+          id={`sched-${task.id}`}
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full sm:w-44"
+        />
+      </div>
+      <div className="min-w-0 flex-1 space-y-1">
+        <Label htmlFor={`note-${task.id}`}>Note (optional)</Label>
+        <Input
+          id={`note-${task.id}`}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Vendor, window, or who agreed"
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" disabled={pending || !date}>
+          {task.scheduled_on ? "Update" : "Schedule"}
+        </Button>
+        {task.scheduled_on ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={pending}
+            onClick={() => onSave(null)}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </div>
+    </form>
   );
 }
 

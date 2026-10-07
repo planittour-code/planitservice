@@ -5907,6 +5907,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
         scheduledCount,
         nextTask,
         acceptedEstimates,
+        tasks,
       };
     });
     listed.sort((a, b) => {

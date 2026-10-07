@@ -1,14 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { RecordSection } from "@/components/house-panels";
+import { MaintenanceChecklist, ScheduleTask } from "@/components/maintenance-checklist";
 import { MaintenanceBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import { shortDate } from "@/lib/housefile/format";
-import { getPortfolio } from "@/lib/housefile/server";
+import {
+  addPortfolioMaintenance,
+  completePortfolioMaintenance,
+  getPortfolio,
+  removePortfolioMaintenance,
+  schedulePortfolioMaintenance,
+} from "@/lib/housefile/server";
 import type { MaintenanceStatus } from "@/lib/housefile/maintain";
 import type { PortfolioHouse, PortfolioOwner } from "@/lib/housefile/types";
 import { PortfolioLookup } from "@/components/portfolio-lookup";
@@ -21,6 +29,7 @@ type Filter = "all" | MaintenanceStatus;
 
 function ManageDashboard() {
   const [filter, setFilter] = useState<Filter>("all");
+  const [houseId, setHouseId] = useState<string | null>(null);
   const portfolio = useQuery({ queryKey: ["portfolio"], queryFn: () => getPortfolio() });
 
   const houses = useMemo(() => {
@@ -53,6 +62,9 @@ function ManageDashboard() {
   const count = portfolio.data.houseCount;
   const name = portfolio.data.name;
   const counts = portfolio.data.counts;
+  const selectedId =
+    houseId && houses.some((h) => h.id === houseId) ? houseId : (houses[0]?.id ?? null);
+  const selectedHouse = houses.find((h) => h.id === selectedId) ?? null;
 
   return (
     <div className="space-y-10">
@@ -162,6 +174,28 @@ function ManageDashboard() {
               <PortfolioWorkBoard houses={houses} upcoming={upcoming} />
             </RecordSection>
             <RecordSection
+              id="maintenance"
+              title="Maintenance checklists"
+              blurb="Add your own checklist, or remove what this house does not need. Open the house for photos, jobs, and the full record."
+              photo={CATEGORY_PHOTO.systems}
+              countLabel={selectedHouse ? `${(selectedHouse.tasks ?? []).length} open` : "Pick a house"}
+              chips={
+                selectedHouse ? (
+                  <ul className="flex flex-wrap gap-1.5">
+                    <li className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+                      {selectedHouse.address_line}
+                    </li>
+                  </ul>
+                ) : undefined
+              }
+            >
+              <PortfolioChecklists
+                houses={houses}
+                selectedId={selectedId}
+                onSelect={setHouseId}
+              />
+            </RecordSection>
+            <RecordSection
               title="By owner"
               blurb="Open a house to log work or set a scheduled date once the owner has agreed."
               photo={CATEGORY_PHOTO.systems}
@@ -251,6 +285,115 @@ function ManageDashboard() {
         </Link>
         .
       </p>
+    </div>
+  );
+}
+
+function PortfolioChecklists({
+  houses,
+  selectedId,
+  onSelect,
+}: {
+  houses: PortfolioHouse[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const selected = houses.find((h) => h.id === selectedId) ?? null;
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+    void queryClient.invalidateQueries({ queryKey: ["portfolio-record"] });
+  };
+  const done = useMutation({
+    mutationFn: (taskId: string) => completePortfolioMaintenance({ data: { taskId } }),
+    onSuccess: () => {
+      toast.success("Logged. Next due date is on the Property Record.");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not log"),
+  });
+  const schedule = useMutation({
+    mutationFn: (input: { taskId: string; scheduledOn: string | null; scheduledNote?: string }) =>
+      schedulePortfolioMaintenance({ data: input }),
+    onSuccess: () => {
+      toast.success("Schedule updated");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not schedule"),
+  });
+  const addTask = useMutation({
+    mutationFn: (input: { title: string; system: string; cadence: string }) =>
+      addPortfolioMaintenance({ data: { propertyId: selectedId as string, ...input } }),
+    onSuccess: () => {
+      toast.success("Added to the checklist.");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
+  });
+  const removeTask = useMutation({
+    mutationFn: (taskId: string) => removePortfolioMaintenance({ data: { taskId } }),
+    onSuccess: () => {
+      toast.success("Removed from this house.");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
+  });
+
+  if (houses.length === 0) {
+    return <p className="text-sm text-muted-foreground">Add a property first.</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {houses.map((h) => (
+          <button
+            key={h.id}
+            type="button"
+            onClick={() => onSelect(h.id)}
+            className={cn(
+              "inline-flex min-h-11 items-center rounded-full px-3 text-sm shadow-[var(--shadow-border)]",
+              selectedId === h.id
+                ? "bg-secondary text-secondary-foreground"
+                : "bg-background hover:shadow-[var(--shadow-border-hover)]",
+            )}
+          >
+            {h.address_line}
+          </button>
+        ))}
+      </div>
+      {selected ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            {selected.city}, {selected.state} {selected.zip}
+            {selected.homeowner_name ? ` · ${selected.homeowner_name}` : ""}
+            {" · "}
+            <Link to="/manage/$id" params={{ id: selected.id }} className="underline underline-offset-2">
+              Open Property Record
+            </Link>
+          </p>
+          <MaintenanceChecklist
+            tasks={selected.tasks ?? []}
+            donePending={done.isPending}
+            removePending={removeTask.isPending}
+            addPending={addTask.isPending}
+            onDone={(taskId) => done.mutate(taskId)}
+            onRemove={(taskId) => removeTask.mutate(taskId)}
+            onAdd={(input) => addTask.mutate(input)}
+            extra={(t) => (
+              <ScheduleTask
+                task={t}
+                pending={schedule.isPending}
+                onSave={(scheduledOn, scheduledNote) =>
+                  schedule.mutate({ taskId: t.id, scheduledOn, scheduledNote })
+                }
+              />
+            )}
+          />
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">Pick a house.</p>
+      )}
     </div>
   );
 }
