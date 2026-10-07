@@ -932,6 +932,64 @@ function collapseSameAddress<T extends {
   return [...by.values()];
 }
 
+type AccountHouseRow = {
+  id: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  cadence: string | null;
+  tier: string | null;
+  status: string | null;
+  renewsOn: string | null;
+};
+
+function accountHouseKey(house: { address: string }) {
+  return normalizeStreetKey(house.address);
+}
+
+function accountHouseRank(house: { tier: string | null; status: string | null }) {
+  const paid = house.tier ? 2 : 0;
+  const live =
+    house.status === "active" ||
+    house.status === "paid" ||
+    house.status === "trialing" ||
+    house.status === "complimentary"
+      ? 1
+      : 0;
+  return paid + live;
+}
+
+function renewsAt(iso: string | null) {
+  if (!iso) return Number.MAX_SAFE_INTEGER;
+  const t = Date.parse(`${String(iso).slice(0, 10)}T12:00:00`);
+  return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
+}
+
+function preferAccountHouse(a: AccountHouseRow, b: AccountHouseRow) {
+  const ra = accountHouseRank(a);
+  const rb = accountHouseRank(b);
+  if (rb !== ra) return rb > ra ? b : a;
+  const da = renewsAt(a.renewsOn);
+  const db = renewsAt(b.renewsOn);
+  if (db !== da) return db < da ? b : a;
+  return a;
+}
+
+function collapseAccountHouses(houses: AccountHouseRow[]): AccountHouseRow[] {
+  const by = new Map<string, AccountHouseRow>();
+  for (const house of houses) {
+    const key = accountHouseKey(house);
+    const prev = by.get(key);
+    if (!prev) {
+      by.set(key, house);
+      continue;
+    }
+    by.set(key, preferAccountHouse(prev, house));
+  }
+  return [...by.values()];
+}
+
 async function loadHouse(sql: Sql, property: Property): Promise<HouseFile> {
   const companyRows = await sql<Company>`select * from companies where id = ${property.company_id}`;
   const company = companyRows[0]!;
@@ -4468,6 +4526,60 @@ export const createHomeProperty = createServerFn({ method: "POST" })
     return { propertyId: id };
   });
 
+export const updateHomeProperty = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: { propertyId: string; addressLine: string; city: string; state: string; zip: string }) =>
+      input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const address = data.addressLine.trim();
+    if (address.length < 3) throw new Error("Need the street address.");
+    const city = data.city.trim();
+    const state = data.state.trim().toUpperCase();
+    const zip = data.zip.trim();
+    if (!city) throw new Error("Need the city.");
+    if (!state) throw new Error("Need the state.");
+    if (!zip) throw new Error("Need the ZIP.");
+    const rows = await sql<{ id: string }>`
+      update properties
+      set address_line = ${address},
+          city = ${city},
+          state = ${state},
+          zip = ${zip}
+      where id = ${data.propertyId} and homeowner_user_id = ${context.userId}
+      returning id
+    `;
+    if (!rows[0]) throw new Error("Property not found");
+    return { ok: true as const, propertyId: rows[0].id };
+  });
+
+export const removeHomeProperty = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const property = (
+      await sql<Property>`
+        select * from properties
+        where id = ${data.propertyId} and homeowner_user_id = ${context.userId}
+        limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    if (property.company_id === HOUSEHOLD_COMPANY) {
+      await sql`delete from properties where id = ${property.id} and homeowner_user_id = ${context.userId}`;
+    } else {
+      await sql`
+        update properties
+        set homeowner_user_id = null
+        where id = ${property.id} and homeowner_user_id = ${context.userId}
+      `;
+    }
+    return { ok: true as const };
+  });
+
 /** Standard → Pro on an existing Property Record. Photos, jobs, and shops stay. */
 export const upgradeHomePropertyToPro = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -5049,12 +5161,14 @@ export const getAccount = createServerFn({ method: "GET" })
       id: string;
       address_line: string;
       city: string;
+      state: string;
+      zip: string;
       cadence: string | null;
       tier: string | null;
       status: string | null;
       renews_on: string | null;
     }>`
-      select p.id, p.address_line, p.city, pp.cadence, pp.tier, pp.status, pp.renews_on
+      select p.id, p.address_line, p.city, p.state, p.zip, pp.cadence, pp.tier, pp.status, pp.renews_on
       from properties p
       left join property_plans pp on pp.property_id = p.id
       where p.homeowner_user_id = ${context.userId}
@@ -5148,15 +5262,19 @@ export const getAccount = createServerFn({ method: "GET" })
       profile,
       shop,
       quoteCount: num(quotes[0]?.c),
-      houses: houses.map((h) => ({
-        id: h.id,
-        address: h.address_line,
-        city: h.city,
-        cadence: h.cadence,
-        tier: h.tier,
-        status: h.status,
-        renewsOn: h.renews_on,
-      })),
+      houses: collapseAccountHouses(
+        houses.map((h) => ({
+          id: h.id,
+          address: h.address_line,
+          city: h.city,
+          state: h.state,
+          zip: h.zip,
+          cadence: h.cadence,
+          tier: h.tier,
+          status: h.status,
+          renewsOn: h.renews_on,
+        })),
+      ),
       portfolio: portfolio?.paid_at
         ? {
             id: portfolio.id,

@@ -17,7 +17,7 @@ import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { compressImage } from "@/lib/housefile/image";
 import { filledSocials, initialsFrom, SOCIAL_LINKS, type UserProfile } from "@/lib/housefile/profile";
-import { getAccount, updateUserProfile } from "@/lib/housefile/server";
+import { getAccount, removeHomeProperty, updateHomeProperty, updateUserProfile } from "@/lib/housefile/server";
 import {
   MANAGE_ANNUAL,
   MANAGE_EXTRA_MONTHLY,
@@ -141,7 +141,7 @@ function AccountPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="font-display text-xl font-medium">License</h2>
+              <h2 className="font-display text-xl font-medium">Properties</h2>
               <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
                 {isShop && data.shop && (
                   <li className="px-5 py-4">
@@ -162,22 +162,7 @@ function AccountPage() {
                   </li>
                 )}
                 {data.houses.map((h) => (
-                  <li key={h.id} className="px-5 py-4">
-                    <p className="font-medium">
-                      {h.address}
-                      {h.city ? `, ${h.city}` : ""}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {h.tier
-                        ? `${h.tier === "pro" ? "Pro" : "Standard"} · ${h.cadence === "annual" ? "annual" : "monthly"}`
-                        : "No paid plan yet"}
-                      {h.status ? ` · ${h.status}` : ""}
-                      {h.renewsOn ? ` · renews ${formatDay(h.renewsOn)}` : ""}
-                      {h.tier
-                        ? ` · $${dollars(h.tier === "pro" ? (h.cadence === "annual" ? PRO_ANNUAL : PRO_MONTHLY) : h.cadence === "annual" ? PROPERTY_ANNUAL : PROPERTY_MONTHLY)}${h.cadence === "annual" ? "/year" : "/month"}`
-                        : ""}
-                    </p>
-                  </li>
+                  <AccountHouseRow key={h.id} house={h} />
                 ))}
                 {isManage && data.portfolio && (
                   <li className="px-5 py-4">
@@ -200,7 +185,7 @@ function AccountPage() {
                 )}
                 {!isShop && !isHome && !isManage && (
                   <li className="px-5 py-4 text-sm text-muted-foreground">
-                    No shop, house, or portfolio license on this login yet.
+                    No shop, house, or portfolio on this login yet.
                   </li>
                 )}
               </ul>
@@ -274,6 +259,170 @@ function AccountPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+type AccountHouse = {
+  id: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  cadence: string | null;
+  tier: string | null;
+  status: string | null;
+  renewsOn: string | null;
+};
+
+function AccountHouseRow({ house }: { house: AccountHouse }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [address, setAddress] = useState(house.address);
+  const [city, setCity] = useState(house.city);
+  const [state, setState] = useState(house.state);
+  const [zip, setZip] = useState(house.zip);
+
+  useEffect(() => {
+    setAddress(house.address);
+    setCity(house.city);
+    setState(house.state);
+    setZip(house.zip);
+  }, [house]);
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["account"] });
+    void queryClient.invalidateQueries({ queryKey: ["household"] });
+    void queryClient.invalidateQueries({ queryKey: ["home-record"] });
+  };
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateHomeProperty({
+        data: {
+          propertyId: house.id,
+          addressLine: address,
+          city,
+          state,
+          zip,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Address updated");
+      setEditing(false);
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => removeHomeProperty({ data: { propertyId: house.id } }),
+    onSuccess: () => {
+      toast.success("Property removed from this account");
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
+  });
+
+  const planLine = house.tier
+    ? `${house.tier === "pro" ? "Pro" : "Standard"} · ${house.cadence === "annual" ? "annual" : "monthly"}`
+    : "No paid plan yet";
+  const priceLine = house.tier
+    ? ` · $${dollars(house.tier === "pro" ? (house.cadence === "annual" ? PRO_ANNUAL : PRO_MONTHLY) : house.cadence === "annual" ? PROPERTY_ANNUAL : PROPERTY_MONTHLY)}${house.cadence === "annual" ? "/year" : "/month"}`
+    : "";
+
+  return (
+    <li className="space-y-3 px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium">
+            {house.address}
+            {house.city ? `, ${house.city}` : ""}
+            {house.state ? ` ${house.state}` : ""}
+            {house.zip ? ` ${house.zip}` : ""}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {planLine}
+            {house.renewsOn ? ` · renews ${formatDay(house.renewsOn)}` : ""}
+            {priceLine}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setEditing((open) => !open)}
+          >
+            {editing ? "Cancel" : "Edit"}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={remove.isPending}
+            onClick={() => {
+              if (!window.confirm(`Remove ${house.address} from this account?`)) return;
+              remove.mutate();
+            }}
+          >
+            {remove.isPending ? "Removing…" : "Remove this property"}
+          </Button>
+        </div>
+      </div>
+      {editing ? (
+        <form
+          className="grid gap-3 sm:grid-cols-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate();
+          }}
+        >
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor={`house-address-${house.id}`}>Street</Label>
+            <Input
+              id={`house-address-${house.id}`}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`house-city-${house.id}`}>City</Label>
+            <Input
+              id={`house-city-${house.id}`}
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor={`house-state-${house.id}`}>State</Label>
+              <Input
+                id={`house-state-${house.id}`}
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`house-zip-${house.id}`}>ZIP</Label>
+              <Input
+                id={`house-zip-${house.id}`}
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <Button type="submit" size="sm" disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save address"}
+            </Button>
+          </div>
+        </form>
+      ) : null}
+    </li>
   );
 }
 
