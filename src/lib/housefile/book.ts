@@ -160,8 +160,13 @@ export function parseMoney(raw: string) {
   return Number.isFinite(n) ? n : null;
 }
 
+function sameUnit(a?: string, b?: string) {
+  return (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
+}
+
 export function priceIssues(item: {
   slot?: string;
+  unit?: string;
   cost: number | null;
   sell: number | null;
 }): PriceIssue[] {
@@ -195,11 +200,19 @@ export function priceIssues(item: {
     issues.push({
       severity: "warn",
       code: "markup_high",
-      message: "Sell is more than 8× cost. Check the unit.",
+      message: "Sell is more than 8× cost. Check the units.",
     });
   }
   const range = item.slot ? COST_RANGE[item.slot as BookSlotId] : undefined;
-  if (range && cost != null && cost > 0 && (cost < range.min || cost > range.max)) {
+  const unitKnown = Boolean((item.unit ?? "").trim());
+  if (
+    range &&
+    unitKnown &&
+    sameUnit(item.unit, range.unit) &&
+    cost != null &&
+    cost > 0 &&
+    (cost < range.min || cost > range.max)
+  ) {
     issues.push({
       severity: "warn",
       code: "cost_range",

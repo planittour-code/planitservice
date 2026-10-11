@@ -410,7 +410,7 @@ function BookForm({
   const [product, setProduct] = useState(initial?.product_name ?? "");
   const [sku, setSku] = useState(initial?.sku ?? "");
   const [color, setColor] = useState(initial?.color ?? "");
-  const [unit, setUnit] = useState(initial?.unit || def.unit);
+  const [unit, setUnit] = useState(initial?.unit || (initial ? def.unit : ""));
   const [cost, setCost] = useState(initial?.cost != null ? String(initial.cost) : "");
   const [sell, setSell] = useState(initial?.sell != null ? String(initial.sell) : "");
   const [years, setYears] = useState(initial?.warranty_years != null ? String(initial.warranty_years) : "");
@@ -419,15 +419,17 @@ function BookForm({
   const photoInput = useRef<HTMLInputElement>(null);
   const [issues, setIssues] = useState(() =>
     priceIssues({
-      slot: (initial?.slot as BookSlotId) || "shingle",
+      slot,
+      unit: initial?.unit || (initial ? def.unit : ""),
       cost: initial?.cost ?? null,
       sell: initial?.sell ?? null,
     }),
   );
 
-  function check(nextCost = cost, nextSell = sell, nextSlot = slot) {
+  function check(nextCost = cost, nextSell = sell, nextSlot = slot, nextUnit = unit) {
     const list = priceIssues({
       slot: nextSlot,
+      unit: nextUnit,
       cost: parseMoney(nextCost),
       sell: parseMoney(nextSell),
     });
@@ -507,24 +509,37 @@ function BookForm({
       <Field label="Product" value={product} onChange={setProduct} />
       <Field label="SKU" value={sku} onChange={setSku} />
       <Field label="Color" value={color} onChange={setColor} />
-      <Field label="Unit" value={unit} onChange={setUnit} />
+      <Field
+        label="Units"
+        value={unit}
+        placeholder="ls, lf, ea, or sf"
+        onChange={(v) => {
+          setUnit(v);
+          check(cost, sell, slot, v);
+        }}
+      />
       <Field
         label="Cost"
         value={cost}
+        placeholder="What you pay per unit"
         onChange={(v) => {
           setCost(v);
-          check(v, sell, slot);
+          check(v, sell, slot, unit);
         }}
       />
       <Field
         label="Sell"
         value={sell}
+        placeholder="What you charge per unit"
         onChange={(v) => {
           setSell(v);
-          check(cost, v, slot);
+          check(cost, v, slot, unit);
         }}
       />
-      <Field label="Warranty years" value={years} onChange={setYears} />
+      <Field label="Warranty years" value={years} placeholder="Years" onChange={setYears} />
+      <p className="text-xs text-muted-foreground sm:col-span-2">
+        ls lump sum · lf linear foot · ea each · sf square foot
+      </p>
       <div className="space-y-0.5 sm:col-span-2">
         <Label htmlFor="terms">Warranty terms</Label>
         <Input id="terms" value={terms} onChange={(e) => setTerms(e.target.value)} />
@@ -604,16 +619,23 @@ function Field({
   label,
   value,
   onChange,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
 }) {
   const id = label.toLowerCase().replace(/\s+/g, "-");
   return (
     <div className="space-y-0.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} />
+      <Input
+        id={id}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   );
 }
