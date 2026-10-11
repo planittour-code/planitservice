@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Mark } from "@/components/logo";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { LEGAL_EMAIL, LEGAL_NAME, LEGAL_SUPPORT_HOURS } from "@/lib/legal";
@@ -21,7 +22,10 @@ function AboutPage() {
       <PublicHeader path="choose" />
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-12 sm:px-5 sm:py-16">
         <div className="space-y-4">
-          <p className="text-sm font-medium tracking-wide text-secondary">About</p>
+          <div className="flex items-center gap-3">
+            <Mark className="size-12 rounded-md bg-secondary shadow-[var(--shadow-border)]" />
+            <p className="text-sm font-medium tracking-wide text-secondary">About</p>
+          </div>
           <h1 className="font-display text-4xl font-semibold tracking-tight md:text-5xl">
             The file for the house, hosted since 2007.
           </h1>

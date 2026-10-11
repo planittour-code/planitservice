@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { Mark } from "@/components/logo";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import {
   LEGAL_EFFECTIVE,
@@ -23,7 +24,8 @@ export function LegalShell({
     <div className="min-h-screen bg-background text-foreground">
       <PublicHeader path="choose" />
       <main className="mx-auto max-w-3xl px-4 py-12 sm:px-5 sm:py-16">
-        <p className="text-sm tracking-wide text-muted-foreground uppercase">{kicker}</p>
+        <Mark className="size-12 rounded-md bg-secondary shadow-[var(--shadow-border)]" />
+        <p className="mt-4 text-sm tracking-wide text-muted-foreground uppercase">{kicker}</p>
         <h1 className="mt-2 font-display text-4xl font-medium tracking-tight md:text-5xl">{title}</h1>
         <p className="mt-3 text-sm text-muted-foreground">Effective {LEGAL_EFFECTIVE}</p>
         <div className="mt-10 space-y-10 text-[1.05rem] leading-relaxed">{children}</div>

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { Mark } from "@/components/logo";
 import { ManageClaimForm, ManageSignupForm } from "@/components/manage-signup";
 import { PathSignInForm } from "@/components/path-sign-in";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
@@ -104,7 +105,10 @@ function OpenPortfolio() {
           <div className="absolute inset-0 bg-ink/55" />
           <div className="relative mx-auto grid max-w-5xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
-              <p className="text-sm font-medium tracking-wide text-primary">For property managers</p>
+              <div className="flex items-center gap-3">
+                <Mark className="size-14 rounded-lg bg-secondary shadow-[var(--shadow-border)]" />
+                <p className="text-sm font-medium tracking-wide text-primary">For property managers</p>
+              </div>
               <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white md:text-5xl">
                 Records, a calendar, and Request Estimates.
               </h1>

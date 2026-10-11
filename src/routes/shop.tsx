@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
+import { Mark } from "@/components/logo";
 import { PathSignInForm } from "@/components/path-sign-in";
 import { ProductPreview } from "@/components/product-preview";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
@@ -58,9 +59,12 @@ function HomePage() {
           <div className="relative mx-auto max-w-5xl px-5 pb-16 pt-8 md:pt-14">
             <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
               <div className="space-y-6">
-                <p className="text-sm font-medium tracking-wide text-primary">
-                  For contractors
-                </p>
+                <div className="flex items-center gap-3">
+                  <Mark className="size-14 rounded-lg bg-secondary shadow-[var(--shadow-border)]" />
+                  <p className="text-sm font-medium tracking-wide text-primary">
+                    For contractors
+                  </p>
+                </div>
                 <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl md:text-6xl">
                   Look up the house. Quote onto the file.
                 </h1>

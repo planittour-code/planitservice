@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { TermsAgree } from "@/components/legal-doc";
 import { PaidLanding } from "@/components/paid-landing";
+import { Mark } from "@/components/logo";
 import { ProductPreview } from "@/components/product-preview";
 import { HomeownerCopyright, PublicHeader, AuthSlot, SignInCta } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -97,9 +98,12 @@ function StartHouseRecord() {
           <div className="absolute inset-0 bg-ink/55" />
           <div className="relative mx-auto grid max-w-5xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
             <div className="space-y-5">
-              <p className="text-sm font-medium tracking-wide text-primary">
-                For the homeowner
-              </p>
+              <div className="flex items-center gap-3">
+                <Mark className="size-14 rounded-lg bg-secondary shadow-[var(--shadow-border)]" />
+                <p className="text-sm font-medium tracking-wide text-primary">
+                  For the homeowner
+                </p>
+              </div>
               <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white md:text-5xl">
                 Start with the address. The file stays with the house.
               </h1>

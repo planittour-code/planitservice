@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Wordmark } from "@/components/logo";
+import { Mark, Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -205,11 +205,14 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
   return (
     <footer className="border-t border-border">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 px-5 py-10 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <span>
-          {shop
-            ? "Know the house before you start talking."
-            : "You start the record. You keep it."}{" "}
-          <span className="text-muted-foreground/80">© {new Date().getFullYear()} PlanitService</span>
+        <span className="flex items-center gap-2">
+          <Mark className="size-8 rounded-md" />
+          <span>
+            {shop
+              ? "Know the house before you start talking."
+              : "You start the record. You keep it."}{" "}
+            <span className="text-muted-foreground/80">© {new Date().getFullYear()} PlanitService</span>
+          </span>
         </span>
         <nav className="flex flex-wrap gap-x-4 gap-y-1">
           {shop ? (

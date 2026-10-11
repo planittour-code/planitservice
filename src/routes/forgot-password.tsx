@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
+import { Mark } from "@/components/logo";
 import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ function ForgotPassword() {
       </PublicHeader>
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-8 md:grid-cols-2 md:items-center">
         <div className="space-y-4">
+          <Mark className="size-14 rounded-lg bg-secondary shadow-[var(--shadow-border)]" />
           <p className="text-sm tracking-wide text-muted-foreground uppercase">Account</p>
           <h1 className="font-display text-4xl font-medium tracking-tight md:text-5xl">Reset your password</h1>
           <p className="max-w-md text-muted-foreground">

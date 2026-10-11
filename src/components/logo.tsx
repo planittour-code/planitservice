@@ -8,7 +8,7 @@ export function Mark({ className }: { className?: string }) {
     <img
       src={LOGO_SRC}
       alt=""
-      className={cn("size-8 shrink-0 rounded-md object-cover outline-none", className)}
+      className={cn("size-8 shrink-0 rounded-md object-contain outline-none", className)}
       aria-hidden
     />
   );

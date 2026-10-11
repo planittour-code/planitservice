@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { TermsAgree } from "@/components/legal-doc";
+import { Mark } from "@/components/logo";
 import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -213,6 +214,7 @@ function Login() {
       </PublicHeader>
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-8 md:grid-cols-2 md:items-center">
         <div className="space-y-4">
+          <Mark className="size-14 rounded-lg bg-secondary shadow-[var(--shadow-border)]" />
           <p className="text-sm font-medium tracking-wide text-secondary">
             {homeowner
               ? "For the homeowner"

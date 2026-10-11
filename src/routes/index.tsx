@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AudienceTracks } from "@/components/audience-tracks";
 import { HowItWorks } from "@/components/how-it-works";
 import { JsonLd } from "@/components/json-ld";
+import { Mark } from "@/components/logo";
 import { PaidLanding } from "@/components/paid-landing";
 import { ProductPreview } from "@/components/product-preview";
 import { justSignedOut } from "@/lib/auth/client";
@@ -38,7 +39,10 @@ function WelcomeSite() {
           <div className="absolute inset-0 bg-ink/55" />
           <div className="relative mx-auto grid max-w-5xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-20">
             <div className="space-y-6 text-left">
-              <p className="text-sm font-medium tracking-wide text-primary">PlanitService</p>
+              <div className="flex items-center gap-3">
+                <Mark className="size-14 rounded-lg bg-secondary shadow-[var(--shadow-border)]" />
+                <p className="text-sm font-medium tracking-wide text-primary">PlanitService</p>
+              </div>
               <h1 className="font-display text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl">
                 Keep the house file. Call the shop that already knows it.
               </h1>
