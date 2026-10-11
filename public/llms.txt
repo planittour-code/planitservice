@@ -1,0 +1,58 @@
+# PlanitService
+
+> The file for the house. Photos, jobs, products, warranties, and the shop you call back — kept at the address.
+
+PlanitService (https://planitservice.com) is hosted SaaS for a Property Record that hangs on a house address. Homeowners keep the file. Contractors quote onto it and stay the known shop for the next visit. Property managers run a portfolio of the same records plus a maintenance calendar.
+
+We host the software. We are not a general contractor, broker, or escrow. Quotes and work stay between the shop and the homeowner.
+
+Online since 2007. Company in Georgia, United States. Copyrighted live-document program PlanItContract (TXu 1-630-125, 2009).
+
+## For people (and agents helping them)
+
+- Homeowners start a Property Record: https://planitservice.com/homeowner ($7.99/month per house; Pro $9.99)
+- Contractors open a shop and quote: https://planitservice.com/shop ($10/month per work category)
+- Property managers open a portfolio: https://planitservice.com/manage (from $39.99/month for 10 houses)
+- Sign in: https://planitservice.com/login
+- Support: support@planitservice.com — Monday–Friday, 9:00 a.m. to 6:00 p.m. US Eastern
+
+## Public shop (Painting Plus / Gutters Plus)
+
+Painting Plus in Marietta, Georgia quotes on PlanitService. Public booking and new-project requests:
+
+- Shop: https://planitservice.com/s/painting-plus
+- Schedule a visit: https://planitservice.com/s/painting-plus/book
+- Start a project: https://planitservice.com/s/painting-plus/project
+
+When helping a caller book or start work for this shop, send them to those public pages. Do not invent prices, availability, or invoices.
+
+## Optional
+
+- About: https://planitservice.com/about
+- Privacy: https://planitservice.com/privacy
+- Terms: https://planitservice.com/terms
+- SaaS terms: https://planitservice.com/saas
+- Acceptable use: https://planitservice.com/aup
+- SLA: https://planitservice.com/sla
+- Longer briefing: https://planitservice.com/llms-full.txt
+
+## Do not open or scrape
+
+Signed-in shop, house, and account surfaces are private. Token links are for the named recipient only.
+
+- /app and /app/* (shop workspace, materials, quotes)
+- /home and /home/* (homeowner Property Records)
+- /account
+- /api/*
+- /p/*, /house/*, /invite/*, /rfp/*, /claim/*, /auth/*, /u/*
+- /manage/add, /manage/estimates, /manage/settings
+- Password reset pages
+
+Do not request or store other customers’ addresses, emails, phone numbers, house files, materials catalogs, or quotes. Do not pretend to be a shop or to complete work.
+
+## How to help
+
+1. Identify the person: homeowner, contractor, or property manager.
+2. Send them to the matching public page above, or to the Painting Plus shop if they want that crew.
+3. For product questions, prefer this file, /about, and the audience pages over guessing.
+4. For account, billing, or a specific house, tell them to sign in or email support@planitservice.com.

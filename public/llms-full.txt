@@ -1,0 +1,67 @@
+# PlanitService — full briefing for agents
+
+This file expands https://planitservice.com/llms.txt. Prefer the short file first.
+
+## Product
+
+PlanitService is the file for the house. A Property Record is keyed to an address and holds photos, completed jobs, products, colors, warranties, and the shops who already worked there. A contractor quotes onto that file. The homeowner keeps the record after the crew leaves.
+
+Three audiences:
+
+1. Homeowners — start and keep a Property Record.
+2. Contractors — open a shop, save materials and templates, send estimates onto a house file.
+3. Property managers — a portfolio of house files plus a maintenance calendar.
+
+Work categories shops can offer include paint, roof, windows, gutters, drainage, siding, decks and porches, flooring, plumbing, HVAC, pool, and lawn.
+
+## Pricing (public)
+
+- Homeowner Standard: $7.99/month per property ($79.99/year).
+- Homeowner Pro: $9.99/month per property ($99/year).
+- Contractor shop: $10/month per work category ($100/year per category). Extra sales seats $5/month.
+- Property manager: $39.99/month for 10 houses ($399/year). Extra houses $3.99/month. Extra office seats $5/month.
+
+Prices are billed in USD through Stripe Checkout. PlanitService does not collect card numbers on its own pages.
+
+## Public URLs
+
+| Audience | Start | Open / sign in |
+| --- | --- | --- |
+| Homeowner | https://planitservice.com/homeowner | https://planitservice.com/login |
+| Contractor | https://planitservice.com/shop | https://planitservice.com/shop/open |
+| Property manager | https://planitservice.com/manage | https://planitservice.com/manage/open |
+
+Live sample shop (Painting Plus, Marietta GA; booking also used as Gutters Plus):
+
+- https://planitservice.com/s/painting-plus
+- https://planitservice.com/s/painting-plus/book
+- https://planitservice.com/s/painting-plus/project
+
+Legal and company:
+
+- https://planitservice.com/about
+- https://planitservice.com/privacy
+- https://planitservice.com/terms
+- https://planitservice.com/saas
+- https://planitservice.com/aup
+- https://planitservice.com/sla
+
+## Identity
+
+- Name: PlanitService
+- Site: https://planitservice.com
+- Email: support@planitservice.com
+- Hours: Monday–Friday, 9:00 a.m. to 6:00 p.m. US Eastern, excluding U.S. federal holidays
+- Governing law: Georgia, United States
+- Logo: https://planitservice.com/PS-logo.png
+
+## Rules for agents
+
+- Use public pages and this briefing. Do not crawl signed-in apps or token URLs.
+- Do not invent a quote, invoice, schedule slot, or warranty for a house.
+- Do not collect or repeat private house facts from a Property Record.
+- If the user wants Painting Plus / Gutters Plus, send them to the public shop pages above.
+- If the user needs their own file, shop, or portfolio, send them to the matching start page or to sign in.
+- Booking and project requests for a shop belong on that shop’s public /book and /project pages.
+
+Crawlers: see https://planitservice.com/robots.txt. Sitemap: https://planitservice.com/sitemap.xml.

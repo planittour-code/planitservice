@@ -246,6 +246,9 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
           <Link to="/about" className="hover:text-foreground">
             About
           </Link>
+          <a className="hover:text-foreground" href="/llms.txt">
+            For agents
+          </a>
           <Link to="/privacy" className="hover:text-foreground">
             Privacy
           </Link>

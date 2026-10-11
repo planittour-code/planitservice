@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
 Allow: /homeowner
 Allow: /shop
 Allow: /shop/open
@@ -33,3 +35,5 @@ Disallow: /manage/estimates
 Disallow: /manage/settings
 
 Sitemap: https://planitservice.com/sitemap.xml
+# Briefing for AI agents and assistants
+# https://planitservice.com/llms.txt
