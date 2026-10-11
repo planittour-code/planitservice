@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { Folder } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
 import { z } from "zod";
 import { HouseCard } from "@/components/site-chrome";
 import { StatusBadge } from "@/components/status-badge";
@@ -87,7 +88,7 @@ function PropertiesPage() {
         <div>
           <h1 className="font-display text-2xl font-medium tracking-tight">Jobs</h1>
           <p className="mt-1 text-muted-foreground">
-            Leads waiting on a quote, estimates already sent, and the houses on file. Search any of those.
+            Open jobs stay current. When a month closes, completed work files into a folder for that month.
           </p>
         </div>
         <Button asChild>
@@ -175,12 +176,22 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
       </p>
     );
   }
-  const incoming = rows.filter((row) => row.kind === "invite");
-  const open = rows.filter((row) => row.kind === "proposal" && row.status !== "draft" && row.status !== "pending");
-  const drafts = rows.filter((row) => row.kind === "proposal" && (row.status === "draft" || row.status === "pending"));
+  const incoming = sortWorkByDate(rows.filter((row) => row.kind === "invite"));
+  const live = sortWorkByDate(
+    rows.filter((row) => row.kind === "proposal" && row.status !== "draft" && row.status !== "pending"),
+  );
+  const drafts = sortWorkByDate(
+    rows.filter((row) => row.kind === "proposal" && (row.status === "draft" || row.status === "pending")),
+  );
   const done = rows.filter((row) => row.kind === "job");
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const currentDone = sortWorkByDate(done.filter((row) => monthKey(workDate(row)) === currentMonth));
+  const filed = done.filter((row) => monthKey(workDate(row)) !== currentMonth);
+  const open = [...live, ...currentDone];
+  const months = groupJobsByMonth(filed);
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {incoming.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Leads</h2>
@@ -196,20 +207,101 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
           <WorkRows rows={drafts} />
         </section>
       )}
-      {open.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Open</h2>
+      <section className="space-y-2">
+        <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Open jobs</h2>
+        {open.length > 0 ? (
           <WorkRows rows={open} />
-        </section>
-      )}
-      {done.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Completed</h2>
-          <WorkRows rows={done} />
+        ) : (
+          <p className="text-sm text-muted-foreground">No current jobs. Sent estimates and sold work stay here until the month files them.</p>
+        )}
+      </section>
+      {months.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xs tracking-wide text-muted-foreground uppercase">Filed by month</h2>
+          <ul className="space-y-4">
+            {months.map((month) => (
+              <li key={month.key}>
+                <MonthFolder label={month.label} count={month.rows.length}>
+                  <WorkRows rows={month.rows} />
+                </MonthFolder>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </div>
   );
+}
+
+function MonthFolder({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group/folder">
+      <summary className="relative cursor-pointer list-none pt-6 [&::-webkit-details-marker]:hidden">
+        <span
+          aria-hidden
+          className="absolute top-0 left-3 h-6 w-36 rounded-t-md bg-chip-gutters shadow-[var(--shadow-border)]"
+        />
+        <span className="relative flex min-h-12 items-center justify-between gap-3 rounded-xl bg-chip-gutters px-4 py-3 text-foreground shadow-[var(--shadow-border)] transition-[box-shadow] duration-150 group-open/folder:rounded-b-none group-open/folder:shadow-[var(--shadow-border-hover)]">
+          <span className="flex min-w-0 items-center gap-2">
+            <Folder className="size-5 shrink-0" aria-hidden />
+            <span className="min-w-0 truncate font-display text-lg font-medium">{label}</span>
+          </span>
+          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+            {count} {count === 1 ? "job" : "jobs"}
+          </span>
+        </span>
+      </summary>
+      <div className="rounded-b-xl bg-paper px-1.5 pt-2 pb-1.5 shadow-[var(--shadow-border)]">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function workDate(row: ShopWorkRow) {
+  return row.completed_at || row.created_at;
+}
+
+function sortWorkByDate(rows: ShopWorkRow[]) {
+  return [...rows].sort((a, b) => workDate(b).localeCompare(workDate(a)));
+}
+
+function groupJobsByMonth(rows: ShopWorkRow[]) {
+  const map = new Map<string, ShopWorkRow[]>();
+  for (const row of rows) {
+    const key = monthKey(workDate(row));
+    const list = map.get(key) ?? [];
+    list.push(row);
+    map.set(key, list);
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([key, monthRows]) => ({
+      key,
+      label: monthLabel(key),
+      rows: sortWorkByDate(monthRows),
+    }));
+}
+
+function monthKey(iso: string) {
+  const d = new Date(iso.length <= 10 ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return "unknown";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(key: string) {
+  if (key === "unknown") return "Undated";
+  const [year, month] = key.split("-").map(Number);
+  const d = new Date(year, (month || 1) - 1, 1);
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(d);
 }
 
 function WorkRows({ rows }: { rows: ShopWorkRow[] }) {
