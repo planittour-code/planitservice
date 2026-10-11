@@ -15,6 +15,7 @@ import {
   parseMoney,
   priceIssues,
   slotsForOfferedWork,
+  workIdForSlot,
   type BookSlot,
   type BookSlotId,
   type PriceBookItem,
@@ -22,8 +23,8 @@ import {
 import { money } from "@/lib/housefile/format";
 import { compressImage } from "@/lib/housefile/image";
 import { WorkKitEditor } from "@/components/work-kit-editor";
-import { shopCsvTemplate } from "@/lib/housefile/kits";
-import { workTypesFor } from "@/lib/housefile/quote";
+import { shopCsvTemplate, workLabel } from "@/lib/housefile/kits";
+import { WORK_TYPES, workTypesFor } from "@/lib/housefile/quote";
 import {
   archivePriceBookItem,
   getDashboard,
@@ -59,14 +60,19 @@ function PriceBookPage() {
 
   const grouped = useMemo(() => {
     const map = new Map<string, PriceBookItem[]>();
+    const order = new Map(WORK_TYPES.map((work, i) => [work.name, i]));
+    for (const work of offered) map.set(work.name, []);
     for (const item of items) {
-      const label = BOOK_SLOTS.find((s) => s.id === item.slot)?.label ?? item.slot;
+      const workId = workIdForSlot(item.slot);
+      const label = (workId && workLabel(workId)) || workLabel(item.trade) || item.trade || "Other";
       const list = map.get(label) ?? [];
       list.push(item);
       map.set(label, list);
     }
-    return [...map.entries()];
-  }, [items]);
+    return [...map.entries()]
+      .filter(([, rows]) => rows.length > 0)
+      .sort((a, b) => (order.get(a[0]) ?? 99) - (order.get(b[0]) ?? 99));
+  }, [items, offered]);
 
   const health = useMemo(() => {
     let missing = 0;

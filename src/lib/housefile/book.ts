@@ -92,6 +92,30 @@ export function slotsForWork(workId: string, inputs: Record<string, string>): Bo
   }
 }
 
+/** Work category the product belongs with on Materials (Paint, Roof, Windows, …). */
+export function workIdForSlot(slot?: string | null): string | undefined {
+  const def = slot ? SLOT_BY_ID[slot as BookSlotId] : undefined;
+  if (!def) return undefined;
+  switch (def.trade) {
+    case "paint":
+      return "paint";
+    case "roofing":
+      return "roof";
+    case "windows":
+      return "windows";
+    case "gutters":
+      return "gutters";
+    case "siding":
+      return "siding";
+    case "decks":
+      return "deck";
+    case "flooring":
+      return "flooring";
+    default:
+      return def.trade;
+  }
+}
+
 export function slotsForOfferedWork(workIds: string[]): BookSlot[] {
   const seen = new Set<BookSlotId>();
   const out: BookSlot[] = [];
