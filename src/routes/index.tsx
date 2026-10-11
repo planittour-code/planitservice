@@ -1,16 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AudienceTracks } from "@/components/audience-tracks";
+import { HowItWorks } from "@/components/how-it-works";
 import { JsonLd } from "@/components/json-ld";
 import { PaidLanding } from "@/components/paid-landing";
 import { ProductPreview } from "@/components/product-preview";
 import { justSignedOut } from "@/lib/auth/client";
 import { PageFooter, PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
-import {
-  MANAGE_MONTHLY,
-  PROPERTY_MONTHLY,
-  SHOP_MONTHLY,
-  dollars,
-} from "@/lib/housefile/pricing";
 import { organizationJsonLd, pageHead, SITE_DESCRIPTION, softwareJsonLd } from "@/lib/seo";
 import { trackCta } from "@/lib/track-cta";
 
@@ -60,17 +56,21 @@ function WelcomeSite() {
                   asChild
                   size="lg"
                   variant="outline"
-                  className="min-h-12 border-white/40 bg-white/10 text-white hover:border-white hover:bg-white/20 hover:text-white"
+                  className="min-h-12 whitespace-nowrap border-white/40 bg-white/10 px-4 text-white hover:border-white hover:bg-white/20 hover:text-white"
                 >
                   <Link to="/shop" onClick={() => trackCta("contractor_lane")}>
-                    Open a shop
+                    Open a Shop
                   </Link>
                 </Button>
               </div>
               <p className="text-sm text-white/75">
-                Property managers:{" "}
-                <Link to="/manage" className="underline underline-offset-4" onClick={() => trackCta("manager_lane")}>
-                  run a portfolio of the same files
+                Managing more than one house?{" "}
+                <Link
+                  to="/manage"
+                  className="underline underline-offset-4"
+                  onClick={() => trackCta("manager_lane")}
+                >
+                  Open a portfolio
                 </Link>
                 .
               </p>
@@ -79,119 +79,10 @@ function WelcomeSite() {
           </div>
         </section>
 
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-5xl px-4 py-14 sm:px-5">
-            <p className="text-center text-sm font-medium tracking-wide text-secondary">
-              Choose how you use it
-            </p>
-            <div className="mt-8 grid gap-6 md:grid-cols-3">
-              <PathCard
-                kicker="Homeowners"
-                title="The file for the house."
-                body="Photos, jobs, warranties, and maintenance at the address — plus the shops that already worked the house. Pro adds Request Estimates when you want bids from shops that service this street."
-                price={`From $${dollars(PROPERTY_MONTHLY)} / month per property`}
-                to="/homeowner"
-                cta="I’m a homeowner"
-              />
-              <PathCard
-                kicker="Contractors"
-                title="Turn one job into the next visit."
-                body="Quote onto the File so you are the known shop for repeat work. Choose the categories you offer. Catch Request Estimates that match those trades in your service area."
-                price={`$${dollars(SHOP_MONTHLY)} / month per category`}
-                to="/shop"
-                cta="I’m a contractor"
-                emphasis
-              />
-              <PathCard
-                kicker="Property managers"
-                title="Records, a calendar, and bids."
-                body="A portfolio of Property Records with a maintenance calendar. Known shops first. Request Estimates when a house needs work and you want numbers from shops that cover the address."
-                price={`Portfolio from $${dollars(MANAGE_MONTHLY)} / month for 10 houses`}
-                to="/manage"
-                cta="I’m a property manager"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-border bg-card/40">
-          <div className="mx-auto grid max-w-5xl gap-10 px-4 py-16 sm:px-5 md:grid-cols-3">
-            <Step
-              n="1"
-              title="The address is the file."
-              body="Search the house. Start a Property Record if one is not there. Everything that follows hangs on that address."
-            />
-            <Step
-              n="2"
-              title="The quote writes the history."
-              body="A shop measures, prices, and sends. Accepted work, products, and warranties stay on the record after the crew leaves."
-            />
-            <Step
-              n="3"
-              title="The shop that knows the house gets called back."
-              body="Known providers stay on the file. Request Estimates is for new work, or when you want competing numbers from shops that service the address."
-            />
-          </div>
-        </section>
+        <AudienceTracks />
+        <HowItWorks />
       </main>
       <PageFooter />
-    </div>
-  );
-}
-
-function PathCard({
-  kicker,
-  title,
-  body,
-  price,
-  to,
-  cta,
-  emphasis,
-}: {
-  kicker: string;
-  title: string;
-  body: string;
-  price: string;
-  to: "/homeowner" | "/shop" | "/manage";
-  cta: string;
-  emphasis?: boolean;
-}) {
-  return (
-    <article
-      className={
-        emphasis
-          ? "flex flex-col rounded-xl bg-primary p-6 text-primary-foreground shadow-[var(--shadow-border)] sm:p-8"
-          : "flex flex-col rounded-xl bg-card p-6 shadow-[var(--shadow-border)] sm:p-8"
-      }
-    >
-      <p className={`text-sm tracking-wide uppercase ${emphasis ? "opacity-80" : "text-muted-foreground"}`}>
-        {kicker}
-      </p>
-      <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight">{title}</h2>
-      <p className={`mt-4 flex-1 leading-relaxed ${emphasis ? "opacity-90" : "text-muted-foreground"}`}>
-        {body}
-      </p>
-      <p className={`mt-5 text-sm ${emphasis ? "opacity-80" : "text-muted-foreground"}`}>{price}</p>
-      <Button
-        asChild
-        className={
-          emphasis
-            ? "mt-6 min-h-12 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-            : "mt-6 min-h-12 w-full"
-        }
-      >
-        <Link to={to}>{cta}</Link>
-      </Button>
-    </article>
-  );
-}
-
-function Step({ n, title, body }: { n: string; title: string; body: string }) {
-  return (
-    <div className="space-y-2">
-      <p className="text-sm tracking-wide text-muted-foreground uppercase">Step {n}</p>
-      <h2 className="font-display text-xl font-bold">{title}</h2>
-      <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
     </div>
   );
 }

@@ -369,7 +369,7 @@ function Login() {
                     search={{ intent: "up" }}
                     className="underline underline-offset-2 hover:text-foreground"
                   >
-                    Open a shop
+                    Open a Shop
                   </Link>
                   {" · "}
                   New portfolio?{" "}

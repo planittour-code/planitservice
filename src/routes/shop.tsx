@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { PathSignInForm } from "@/components/path-sign-in";
+import { ProductPreview } from "@/components/product-preview";
 import { AuthSlot, PageFooter, PublicHeader } from "@/components/site-chrome";
 import { PaidLanding } from "@/components/paid-landing";
 import { AddressLookup, TeaseCard } from "@/components/address-lookup";
@@ -79,7 +80,7 @@ function HomePage() {
                 <div className="flex flex-wrap gap-3">
                   <Button asChild className="min-h-12 bg-go text-go-foreground hover:opacity-90">
                     <Link to="/shop/open" search={{ intent: "up" }} onClick={() => trackCta("shop_open")}>
-                      Open a shop
+                      Open a Shop
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="min-h-12 border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
@@ -97,7 +98,7 @@ function HomePage() {
                   title="Sign in to the shop"
                   submitLabel="Sign in to the shop"
                   newAccountTo="/shop/open"
-                  newAccountLabel="Open a shop"
+                  newAccountLabel="Open a Shop"
                 />
                 <SignedInOpenShop />
               </div>
@@ -117,33 +118,7 @@ function HomePage() {
             <h2 className="text-center font-display text-3xl font-semibold tracking-tight text-balance md:text-4xl">
               A little homework can remove a lot of guesswork.
             </h2>
-            <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
-              <img
-                src="/houses/maple-front.jpg"
-                alt="A craftsman bungalow in Marietta"
-                className="aspect-[16/9] w-full object-cover"
-              />
-              <div className="space-y-4 p-5">
-                <div>
-                  <p className="font-display text-xl font-bold">142 Maple Street</p>
-                  <p className="text-sm text-muted-foreground">Marietta, GA · 18 facts on file</p>
-                </div>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex justify-between gap-3">
-                    <span>Architectural shingle reroof</span>
-                    <span className="text-muted-foreground">2019</span>
-                  </li>
-                  <li className="flex justify-between gap-3">
-                    <span>Exterior — SW 7008 Alabaster</span>
-                    <span className="text-muted-foreground">2023</span>
-                  </li>
-                  <li className="flex justify-between gap-3">
-                    <span>Roll Lock Gutter Guards</span>
-                    <span className="text-muted-foreground">Lifetime</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <ProductPreview />
           </div>
         </section>
 
@@ -195,7 +170,7 @@ function HomePage() {
                   className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                 >
                   <Link to="/shop/open" search={{ intent: "up" }}>
-                    Open a shop
+                    Open a Shop
                   </Link>
                 </Button>
               </div>
@@ -225,7 +200,7 @@ function SignedInOpenShop() {
   return (
     <div className="space-y-3">
       <p className="text-sm tracking-wide text-muted-foreground uppercase">Signed in</p>
-      <p className="font-display text-2xl font-semibold tracking-tight">Open a shop on this login</p>
+      <p className="font-display text-2xl font-semibold tracking-tight">Open a Shop on this login</p>
       <p className="text-sm text-muted-foreground">
         Pay for the shop, then quote from the Property Record. Card details stay on Stripe.
       </p>

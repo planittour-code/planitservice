@@ -130,12 +130,12 @@ function OpenShop() {
                   kicker="Already have a shop"
                   title="Sign in to the shop"
                   submitLabel="Sign in to the shop"
-                  newAccountLabel="Open a shop"
+                  newAccountLabel="Open a Shop"
                   onNewAccount={() => setIntent("up")}
                 />
               ) : (
                 <>
-                  <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a shop</p>
+                  <p className="text-sm tracking-wide text-muted-foreground uppercase">Open a Shop</p>
                   <p className="mt-2 font-display text-3xl font-semibold tracking-tight">
                     ${dollars(SHOP_MONTHLY)}
                     <span className="ml-2 text-lg font-sans font-normal text-muted-foreground">

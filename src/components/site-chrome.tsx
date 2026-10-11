@@ -76,18 +76,30 @@ export function PublicHeader({
       >
         <Wordmark to="/" plate />
         <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2">
-          {lane === "choose" &&
-            (isPending ? (
-              <div className="h-11 w-24 animate-pulse rounded-md bg-white/15" />
-            ) : user ? (
-              <UserButton tone="dark" />
-            ) : (
-              <Button asChild>
-                <Link from="/" to="/login">
-                  Sign in
-                </Link>
-              </Button>
-            ))}
+          {lane === "choose" && (
+            <>
+              <HeaderLink to="/homeowner" hideOnMobile>
+                Homeowner
+              </HeaderLink>
+              <HeaderLink to="/shop" hideOnMobile>
+                Contractor
+              </HeaderLink>
+              <HeaderLink to="/manage" hideOnMobile>
+                Manager
+              </HeaderLink>
+              {isPending ? (
+                <div className="h-11 w-24 animate-pulse rounded-md bg-white/15" />
+              ) : user ? (
+                <UserButton tone="dark" />
+              ) : (
+                <Button asChild>
+                  <Link from="/" to="/login">
+                    Sign in
+                  </Link>
+                </Button>
+              )}
+            </>
+          )}
           {lane === "homeowner" && (
             <>
               <HeaderLink to="/homeowner">Start a record</HeaderLink>
@@ -105,7 +117,7 @@ export function PublicHeader({
               <HeaderLink to="/shop">Look up a house</HeaderLink>
               {user ? null : (
                 <HeaderLink to="/shop/open" search={{ intent: "up" }}>
-                  Open a shop
+                  Open a Shop
                 </HeaderLink>
               )}
               <HeaderLink to="/shop" hash="pricing" hideOnMobile>
@@ -206,7 +218,7 @@ export function PageFooter({ shop = false }: { shop?: boolean }) {
                 Look up a house
               </Link>
               <Link to="/shop/open" className="hover:text-foreground">
-                Open a shop
+                Open a Shop
               </Link>
               <Link to="/homeowner" className="hover:text-foreground">
                 For homeowners

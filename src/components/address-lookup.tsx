@@ -228,7 +228,7 @@ export function TeaseCard({ tease }: { tease: AddressTease }) {
               Open a shop to quote this house from the Property Record. Card details stay on Stripe.
             </p>
             <Button asChild className="min-h-12 w-full sm:w-auto">
-              <Link to="/shop/open">Open a shop</Link>
+              <Link to="/shop/open">Open a Shop</Link>
             </Button>
           </div>
         )}
