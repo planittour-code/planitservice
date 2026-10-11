@@ -202,11 +202,12 @@ function PriceBookPage() {
         {grouped.map(([label, rows]) => (
           <section key={label} className="space-y-2">
             <h2 className="text-xs tracking-wide text-muted-foreground uppercase">{label}</h2>
-            <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            <ul className="divide-y divide-border overflow-hidden rounded-xl bg-card shadow-[var(--shadow-border)]">
               {rows.map((item) => (
                 <li
                   key={item.id}
                   className={cn(
+                    "min-w-0 overflow-hidden",
                     editingId === item.id
                       ? "bg-muted/70 p-3 ring-1 ring-inset ring-ring"
                       : "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
@@ -225,18 +226,16 @@ function PriceBookPage() {
                     <>
                       <div className="flex min-w-0 items-start gap-3">
                         {item.photo ? (
-                          <img
-                            src={item.photo}
-                            alt=""
-                            className="size-14 shrink-0 rounded-md object-cover shadow-[var(--shadow-border)]"
-                          />
+                          <div className="relative isolate size-14 shrink-0 overflow-hidden rounded-md bg-muted shadow-[var(--shadow-border)]">
+                            <img src={item.photo} alt="" className="block size-full object-cover" />
+                          </div>
                         ) : (
                           <div className="grid size-14 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
                             <Camera className="size-4" />
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="font-medium">{bookLabel(item)}</p>
+                          <p className="break-words font-medium">{bookLabel(item)}</p>
                           <p className="text-sm text-muted-foreground">
                             Cost {item.cost == null ? "—" : money(item.cost)} / {item.unit}
                             {item.sell != null ? ` · sell ${money(item.sell)}` : ""}
@@ -467,13 +466,13 @@ function BookForm({
       }}
     >
       <p className="font-display text-lg font-medium sm:col-span-2">{heading}</p>
-      <div className="flex items-center gap-3 sm:col-span-2">
+      <div className="flex min-w-0 items-center gap-3 sm:col-span-2">
         {photo ? (
-          <div className="relative shrink-0">
-            <img src={photo} alt="" className="size-16 rounded-md object-cover shadow-[var(--shadow-border)]" />
+          <div className="relative isolate size-16 shrink-0 overflow-hidden rounded-md bg-muted shadow-[var(--shadow-border)]">
+            <img src={photo} alt="" className="block size-full object-cover" />
             <button
               type="button"
-              className="absolute -top-1 -right-1 grid size-6 place-items-center rounded-full bg-background shadow-[var(--shadow-border)]"
+              className="absolute top-0.5 right-0.5 z-10 grid size-6 place-items-center rounded-full bg-background/90 shadow-[var(--shadow-border)]"
               aria-label="Remove photo"
               onClick={() => setPhoto(null)}
             >

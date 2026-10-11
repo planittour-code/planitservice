@@ -166,9 +166,9 @@ function LineCard({
   const photoInput = useRef<HTMLInputElement>(null);
   const isOptional = Boolean(row.optionId);
   return (
-    <div className="space-y-2 rounded-lg bg-background p-2.5 shadow-[var(--shadow-border)] sm:p-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="min-w-0 truncate font-medium">{heading}</p>
+    <div className="min-w-0 space-y-2 rounded-lg bg-background p-2.5 shadow-[var(--shadow-border)] sm:p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="min-w-0 break-words font-medium">{heading}</p>
         <select
           value={isOptional ? "optional" : "line"}
           aria-label="Line type"
@@ -247,10 +247,10 @@ function LineCard({
         </div>
       </div>
       {(row.photos ?? []).length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        <div className="flex flex-wrap gap-2">
           {row.photos.map((src, i) => (
-            <div key={`${row.id}-ph-${i}`} className="relative overflow-hidden rounded-lg bg-muted">
-              <img src={src} alt="" className="aspect-square w-full object-cover" />
+            <div key={`${row.id}-ph-${i}`} className="relative isolate size-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+              <img src={src} alt="" className="block size-full object-cover" />
               <button
                 type="button"
                 className="absolute top-1 right-1 rounded bg-background/90 px-2 text-xs"
@@ -363,7 +363,7 @@ function ItemSearch({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choose(row)}
               >
-                <span className="font-medium">{row.kitName ? `${row.kitName} — ${row.name}` : row.name}</span>
+                <span className="min-w-0 break-words font-medium">{row.kitName ? `${row.kitName} — ${row.name}` : row.name}</span>
                 {row.description ? (
                   <span className="line-clamp-1 text-xs text-muted-foreground">{row.description}</span>
                 ) : null}

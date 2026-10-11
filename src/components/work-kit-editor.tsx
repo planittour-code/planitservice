@@ -147,7 +147,7 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
           {grouped.map(([workId, rows]) => {
         const openHere = selected?.work_id === workId;
         return (
-        <div key={workId} className="min-w-0 space-y-2 rounded-xl bg-muted/70 p-2">
+        <div key={workId} className="min-w-0 overflow-hidden rounded-xl bg-muted/70 p-2 space-y-2">
           <h3 className="px-1 text-xs font-semibold tracking-wide text-foreground uppercase">{workLabel(workId)}</h3>
           {rows.length === 0 && !openHere ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
@@ -169,11 +169,11 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
               ) : null}
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="w-fit space-y-1">
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="min-w-0 space-y-1">
                 {owner && missingSeedKitNames(workId, rows.map((kit) => kit.name)).length > 0 ? (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
-                    <p className="text-muted-foreground">
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
+                    <p className="min-w-0 break-words text-muted-foreground">
                       {missingSeedKitNames(workId, rows.map((kit) => kit.name)).join(", ")} can be loaded as a starter.
                     </p>
                     <Button
@@ -187,18 +187,19 @@ export function WorkKitEditor({ owner }: { owner: boolean }) {
                     </Button>
                   </div>
                 ) : null}
-                <ul className="flex flex-wrap gap-1.5">
+                <ul className="flex min-w-0 flex-wrap gap-1.5">
                   {rows.map((kit) => {
                     const on = selected?.id === kit.id;
                     return (
-                      <li key={kit.id}>
+                      <li key={kit.id} className="min-w-0 max-w-full">
                         <Button
                           type="button"
                           variant={on ? "default" : "outline"}
+                          className="h-auto min-h-7 max-w-full flex-wrap whitespace-normal text-left"
                           onClick={() => setEditing(on ? null : kit)}
                         >
-                          {kit.name}
-                          <span className="tabular-nums">{money(kitTotal(kit.items))}</span>
+                          <span className="min-w-0 break-words">{kit.name}</span>
+                          <span className="shrink-0 tabular-nums">{money(kitTotal(kit.items))}</span>
                         </Button>
                       </li>
                     );
@@ -280,13 +281,13 @@ function KitForm({
 
   return (
     <form
-      className="space-y-3 rounded-xl bg-card p-3 shadow-[var(--shadow-border)]"
+      className="min-w-0 space-y-3 overflow-hidden rounded-xl bg-card p-3 shadow-[var(--shadow-border)]"
       onSubmit={(e) => {
         e.preventDefault();
         onSave({ id: initial?.id, workId, name, items: items.filter((l) => l.name.trim()) });
       }}
     >
-      <p className="font-display text-lg font-medium">{initial ? `Editing ${initial.name}` : "New template"}</p>
+      <p className="min-w-0 break-words font-display text-lg font-medium">{initial ? `Editing ${initial.name}` : "New template"}</p>
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-0.5">
           <Label htmlFor="kit-work">Work category</Label>
@@ -373,8 +374,8 @@ function KitLineRow({
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
-      <div className="flex items-end gap-1">
+    <div className="space-y-2 overflow-hidden rounded-lg bg-background p-3 shadow-[var(--shadow-border)]">
+      <div className="flex flex-wrap items-end gap-1">
         <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-12">
           <div className="space-y-0.5 sm:col-span-6">
             <Label>Line item</Label>
@@ -448,13 +449,16 @@ function KitLineRow({
         />
       </div>
       {line.photos.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+        <div className="flex flex-wrap gap-2">
           {line.photos.map((src, i) => (
-            <div key={`${src.slice(0, 24)}-${i}`} className="relative overflow-hidden rounded-lg bg-muted">
-              <img src={src} alt="" className="aspect-square w-full object-cover" />
+            <div
+              key={`${line.key}-ph-${i}`}
+              className="relative isolate size-24 shrink-0 overflow-hidden rounded-lg bg-muted"
+            >
+              <img src={src} alt="" className="block size-full object-cover" />
               <button
                 type="button"
-                className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-background/90 text-xs"
+                className="absolute top-1 right-1 z-10 grid size-6 place-items-center rounded-full bg-background/90 text-xs"
                 aria-label="Remove photo"
                 onClick={() => onChange({ photos: line.photos.filter((_, idx) => idx !== i) })}
               >
@@ -482,7 +486,7 @@ function AutoGrowTextarea({
     const el = ref.current;
     if (!el) return;
     el.style.height = "0px";
-    el.style.height = `${Math.max(el.scrollHeight, 64)}px`;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 64), 160)}px`;
   }, [value]);
   return (
     <Textarea
@@ -491,7 +495,7 @@ function AutoGrowTextarea({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={1}
-      className="min-h-16 resize-none overflow-hidden"
+      className="max-h-40 min-h-16 resize-none overflow-y-auto"
     />
   );
 }
