@@ -186,9 +186,10 @@ function JobsList({ rows, query }: { rows: ShopWorkRow[]; query: string }) {
   const done = rows.filter((row) => row.kind === "job");
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const currentDone = sortWorkByDate(done.filter((row) => monthKey(workDate(row)) === currentMonth));
-  const filed = done.filter((row) => monthKey(workDate(row)) !== currentMonth);
-  const open = [...live, ...currentDone];
+  const currentDone = sortWorkByDate(done.filter((row) => monthKey(workTime(row)) === currentMonth));
+  const filed = done.filter((row) => monthKey(workTime(row)) !== currentMonth && monthKey(workTime(row)) !== "unknown");
+  const undated = sortWorkByDate(done.filter((row) => monthKey(workTime(row)) === "unknown"));
+  const open = [...live, ...currentDone, ...undated];
   const months = groupJobsByMonth(filed);
   return (
     <div className="space-y-4">
@@ -266,18 +267,29 @@ function MonthFolder({
   );
 }
 
-function workDate(row: ShopWorkRow) {
-  return row.completed_at || row.created_at;
+function toTime(value: string | Date | null | undefined) {
+  if (!value) return 0;
+  if (value instanceof Date) {
+    const t = value.getTime();
+    return Number.isNaN(t) ? 0 : t;
+  }
+  const raw = String(value);
+  const d = new Date(raw.length <= 10 ? `${raw}T12:00:00` : raw);
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function workTime(row: ShopWorkRow) {
+  return toTime(row.completed_at) || toTime(row.created_at);
 }
 
 function sortWorkByDate(rows: ShopWorkRow[]) {
-  return [...rows].sort((a, b) => workDate(b).localeCompare(workDate(a)));
+  return [...rows].sort((a, b) => workTime(b) - workTime(a));
 }
 
 function groupJobsByMonth(rows: ShopWorkRow[]) {
   const map = new Map<string, ShopWorkRow[]>();
   for (const row of rows) {
-    const key = monthKey(workDate(row));
+    const key = monthKey(workTime(row));
     const list = map.get(key) ?? [];
     list.push(row);
     map.set(key, list);
@@ -291,8 +303,9 @@ function groupJobsByMonth(rows: ShopWorkRow[]) {
     }));
 }
 
-function monthKey(iso: string) {
-  const d = new Date(iso.length <= 10 ? `${iso}T12:00:00` : iso);
+function monthKey(time: number) {
+  if (!time) return "unknown";
+  const d = new Date(time);
   if (Number.isNaN(d.getTime())) return "unknown";
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -300,7 +313,9 @@ function monthKey(iso: string) {
 function monthLabel(key: string) {
   if (key === "unknown") return "Undated";
   const [year, month] = key.split("-").map(Number);
-  const d = new Date(year, (month || 1) - 1, 1);
+  if (!year || !month) return "Undated";
+  const d = new Date(year, month - 1, 1);
+  if (Number.isNaN(d.getTime())) return "Undated";
   return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(d);
 }
 
