@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   BOOK_SLOTS,
   bookCsvTemplate,
@@ -101,6 +102,7 @@ function PriceBookPage() {
       sell: string;
       warranty_years: string;
       warranty_terms: string;
+      description?: string;
       photo?: string | null;
     }) => upsertPriceBookItem({ data: row }),
     onSuccess: () => {
@@ -242,6 +244,9 @@ function PriceBookPage() {
                         )}
                         <div className="min-w-0">
                           <p className="break-words font-medium">{bookLabel(item)}</p>
+                          {item.description ? (
+                            <p className="line-clamp-2 text-sm text-muted-foreground">{item.description}</p>
+                          ) : null}
                           <p className="text-sm text-muted-foreground">
                             Cost {item.cost == null ? "—" : money(item.cost)} / {item.unit}
                             {item.sell != null ? ` · sell ${money(item.sell)}` : ""}
@@ -279,6 +284,7 @@ function PriceBookPage() {
                                 sell: item.sell == null ? "" : String(item.sell),
                                 warranty_years: item.warranty_years == null ? "" : String(item.warranty_years),
                                 warranty_terms: item.warranty_terms ?? "",
+                                description: item.description ?? "",
                                 photo,
                               })
                             }
@@ -403,6 +409,7 @@ function BookForm({
     sell: string;
     warranty_years: string;
     warranty_terms: string;
+    description?: string;
     photo?: string | null;
   }) => void;
 }) {
@@ -421,6 +428,7 @@ function BookForm({
   const [sell, setSell] = useState(initial?.sell != null ? String(initial.sell) : "");
   const [years, setYears] = useState(initial?.warranty_years != null ? String(initial.warranty_years) : "");
   const [terms, setTerms] = useState(initial?.warranty_terms ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
   const [photo, setPhoto] = useState<string | null>(parseBookPhoto(initial?.photo));
   const photoInput = useRef<HTMLInputElement>(null);
   const [issues, setIssues] = useState(() =>
@@ -469,6 +477,7 @@ function BookForm({
           sell,
           warranty_years: years,
           warranty_terms: terms,
+          description,
           photo,
         });
       }}
@@ -515,6 +524,17 @@ function BookForm({
       <Field label="Product" value={product} onChange={setProduct} />
       <Field label="SKU" value={sku} onChange={setSku} />
       <Field label="Color" value={color} onChange={setColor} />
+      <div className="space-y-0.5 sm:col-span-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="This text fills the invoice line when the product is selected."
+          rows={3}
+          className="min-h-20"
+        />
+      </div>
       <Field
         label="Units"
         value={unit}

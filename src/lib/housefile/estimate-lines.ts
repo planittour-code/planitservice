@@ -1,4 +1,4 @@
-import { bookLabel, type BookSlotId, type PriceBookItem } from "./book";
+import { bookLabel, productInvoiceDescription, type BookSlotId, type PriceBookItem } from "./book";
 import { num } from "./format";
 import { parseKitPhotos } from "./kits";
 import type { QuoteLine } from "./quote";
@@ -559,20 +559,12 @@ export function applyBookToLine(line: EstimateLine, item: PriceBookItem | undefi
   if (!item) {
     return { ...line, bookId: "", item: line.item };
   }
-  const extra = [
-    item.color ? `Color: ${item.color}` : "",
-    item.sku ? `SKU ${item.sku}` : "",
-    item.warranty_years ? `${item.warranty_years}-year warranty` : "",
-    item.warranty_terms ?? "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-  const description = [line.description.trim(), extra].filter(Boolean).join("\n\n");
+  const fromProduct = productInvoiceDescription(item);
   return {
     ...line,
     bookId: item.id,
     item: bookLabel(item) || line.item,
-    description,
+    description: fromProduct || line.description,
     cost: item.cost != null ? String(item.cost) : line.cost,
     price: item.sell != null ? String(item.sell) : item.cost != null ? String(item.cost) : line.price,
     photos: line.photos ?? [],
@@ -655,7 +647,7 @@ export function catalogLinesFromBook(book: PriceBookItem[]): CatalogLine[] {
     seen.add(key);
     unique.push({
       name,
-      description: [item.trade, item.warranty_terms].filter(Boolean).join(" · "),
+      description: productInvoiceDescription(item) || [item.trade, item.warranty_terms].filter(Boolean).join(" · "),
       qty: "",
       unit: item.unit,
       slot: item.slot,
@@ -678,21 +670,13 @@ export function applyCatalogToLine(
       : pick.slot
         ? book.find((b) => b.active !== false && b.slot === pick.slot)
         : undefined;
-  const extra = product
-    ? [
-        product.color ? `Color: ${product.color}` : "",
-        product.sku ? `SKU ${product.sku}` : "",
-        product.warranty_years ? `${product.warranty_years}-year warranty` : "",
-        product.warranty_terms ?? "",
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : "";
+  const extra = product ? productInvoiceDescription(product) : "";
+  const description = extra || pick.description.trim();
   return {
     ...line,
     bookId: product?.id ?? "",
     item: pick.name,
-    description: [pick.description.trim(), extra].filter(Boolean).join("\n\n"),
+    description,
     qty: pick.qty != null ? pick.qty : line.qty,
     unit: pick.unit || line.unit,
     cost: product?.cost != null ? String(product.cost) : "",

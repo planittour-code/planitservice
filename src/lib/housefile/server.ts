@@ -417,13 +417,13 @@ async function copyOwnerCatalogToSales(sql: Sql, companyId: string, salesUserId:
     await sql`
       insert into price_book (
         id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-        cost, sell, warranty_years, warranty_terms, photo, owner_id
+        cost, sell, warranty_years, warranty_terms, description, photo, owner_id
       ) values (
         ${crypto.randomUUID()}, ${companyId}, ${row.trade}, ${row.slot}, ${row.manufacturer},
         ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
         ${row.cost == null ? null : num(row.cost)}, ${row.sell == null ? null : num(row.sell)},
         ${row.warranty_years == null ? null : num(row.warranty_years)}, ${row.warranty_terms},
-        ${row.photo ?? null}, ${salesUserId}
+        ${row.description ?? null}, ${row.photo ?? null}, ${salesUserId}
       )
     `;
   }
@@ -1686,11 +1686,11 @@ export const completeOnboard = createServerFn({ method: "POST" })
       await sql`
         insert into price_book (
           id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-          cost, sell, warranty_years, warranty_terms, active
+          cost, sell, warranty_years, warranty_terms, description, active
         ) values (
           ${crypto.randomUUID()}, ${company.id}, ${row.trade}, ${row.slot}, ${row.manufacturer},
           ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
-          ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${true}
+          ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${row.description ?? null}, ${true}
         )
       `;
     }
@@ -3130,6 +3130,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
       sell: string;
       warranty_years: string;
       warranty_terms: string;
+      description?: string;
       photo?: string | null;
     }) => input,
   )
@@ -3147,6 +3148,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     const years = data.warranty_years.trim() === "" ? null : num(data.warranty_years);
     assertBookPrices({ slot: data.slot, product_name: product, cost, sell });
     const photo = parseBookPhoto(data.photo);
+    const description = (data.description ?? "").trim() || null;
     if (data.id) {
       if (ownerId) {
         await sql`
@@ -3162,6 +3164,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
             sell = ${sell},
             warranty_years = ${years},
             warranty_terms = ${data.warranty_terms.trim() || null},
+            description = ${description},
             photo = ${photo},
             updated_at = now()
           where id = ${data.id} and company_id = ${company.id} and owner_id = ${ownerId}
@@ -3180,6 +3183,7 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
             sell = ${sell},
             warranty_years = ${years},
             warranty_terms = ${data.warranty_terms.trim() || null},
+            description = ${description},
             photo = ${photo},
             updated_at = now()
           where id = ${data.id} and company_id = ${company.id} and owner_id is null
@@ -3191,11 +3195,11 @@ export const upsertPriceBookItem = createServerFn({ method: "POST" })
     await sql`
       insert into price_book (
         id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-        cost, sell, warranty_years, warranty_terms, photo, owner_id
+        cost, sell, warranty_years, warranty_terms, description, photo, owner_id
       ) values (
         ${id}, ${company.id}, ${data.trade}, ${data.slot}, ${data.manufacturer.trim() || null},
         ${product}, ${data.sku.trim() || null}, ${data.color.trim() || null}, ${data.unit.trim() || "ea"},
-        ${cost}, ${sell}, ${years}, ${data.warranty_terms.trim() || null}, ${photo}, ${ownerId}
+        ${cost}, ${sell}, ${years}, ${data.warranty_terms.trim() || null}, ${description}, ${photo}, ${ownerId}
       )
     `;
     return { id };
@@ -3242,11 +3246,11 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
         await sql`
           insert into price_book (
             id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-            cost, sell, warranty_years, warranty_terms, owner_id
+            cost, sell, warranty_years, warranty_terms, description, owner_id
           ) values (
             ${crypto.randomUUID()}, ${company.id}, ${row.trade}, ${row.slot}, ${row.manufacturer},
             ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
-            ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${ownerId}
+            ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${row.description}, ${ownerId}
           )
         `;
       }
@@ -3310,11 +3314,11 @@ export const importPriceBookCsv = createServerFn({ method: "POST" })
       await sql`
         insert into price_book (
           id, company_id, trade, slot, manufacturer, product_name, sku, color, unit,
-          cost, sell, warranty_years, warranty_terms, owner_id
+          cost, sell, warranty_years, warranty_terms, description, owner_id
         ) values (
           ${crypto.randomUUID()}, ${company.id}, ${row.trade}, ${row.slot}, ${row.manufacturer},
           ${row.product_name}, ${row.sku}, ${row.color}, ${row.unit},
-          ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${ownerId}
+          ${row.cost}, ${row.sell}, ${row.warranty_years}, ${row.warranty_terms}, ${row.description ?? null}, ${ownerId}
         )
       `;
     }

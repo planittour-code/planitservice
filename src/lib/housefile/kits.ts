@@ -552,6 +552,7 @@ export type CatalogCsvProduct = {
   sell: number | null;
   warranty_years: number | null;
   warranty_terms: string | null;
+  description: string | null;
 };
 
 export type CatalogCsvKitLine = {
@@ -631,6 +632,7 @@ export function parseCatalogCsv(text: string): CatalogCsv {
         sell: nMaybe(col(cols, "sell")),
         warranty_years: nMaybe(col(cols, "warranty_years")),
         warranty_terms: emptyToNull(col(cols, "warranty_terms")),
+        description: emptyToNull(col(cols, "description")),
       });
     }
   }

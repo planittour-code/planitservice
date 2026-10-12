@@ -57,6 +57,7 @@ export type PriceBookItem = {
   sell: number | null;
   warranty_years: number | null;
   warranty_terms: string | null;
+  description?: string | null;
   active: boolean;
   photo?: string | null;
   owner_id?: string | null;
@@ -151,10 +152,24 @@ export function hydrateBook(row: PriceBookItem): PriceBookItem {
     cost: row.cost == null ? null : num(row.cost),
     sell: row.sell == null ? null : num(row.sell),
     warranty_years: row.warranty_years == null ? null : num(row.warranty_years),
+    description: row.description?.trim() || null,
     active: Boolean(row.active),
     slot: row.slot as BookSlotId,
     photo: parseBookPhoto(row.photo),
   };
+}
+
+/** Body that lands on an estimate or invoice line when this product is selected. */
+export function productInvoiceDescription(item: PriceBookItem) {
+  const extra = [
+    item.color ? `Color: ${item.color}` : "",
+    item.sku ? `SKU ${item.sku}` : "",
+    item.warranty_years ? `${item.warranty_years}-year warranty` : "",
+    item.warranty_terms ?? "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return [item.description?.trim() || "", extra].filter(Boolean).join("\n\n");
 }
 
 export type PriceIssue = {
@@ -316,6 +331,7 @@ export function applyPriceBook(
       color: item.color ?? line.color,
       warranty_years: item.warranty_years,
       warranty_terms: item.warranty_terms ?? line.warranty_terms,
+      description: productInvoiceDescription(item) || line.description,
       unit_cost: cost,
       needsCost: cost == null,
     };
@@ -367,6 +383,7 @@ export function parseBookCsv(text: string) {
       sell: nMaybe(cols[idx("sell")]),
       warranty_years: nMaybe(cols[idx("warranty_years")]),
       warranty_terms: emptyToNull(cols[idx("warranty_terms")]),
+      description: emptyToNull(cols[idx("description")]),
     });
     const last = rows[rows.length - 1]!;
     assertBookPrices(last);
