@@ -727,12 +727,9 @@ function NewQuote() {
               {inviteQ.data.property.homeowner_name} asked {inviteQ.data.invite.shop_name} to quote{" "}
               {inviteQ.data.invite.title} at {inviteQ.data.property.address_line}.
             </p>
-            <p className="text-xs text-muted-foreground">
-              This request stays with this shop. Photos on the File. Quote from your materials.
-            </p>
             {leadAnswerRows.length > 0 ? (
               <div className="space-y-2 border-t border-border/60 pt-3">
-                <p className="text-sm font-medium">Answers for this quote</p>
+                <p className="text-sm font-medium">Quote Details</p>
                 <dl className="grid gap-2 sm:grid-cols-2">
                   {leadAnswerRows.map((row) => (
                     <div key={row.label} className="space-y-0.5">
