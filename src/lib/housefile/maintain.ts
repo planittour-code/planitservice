@@ -1,4 +1,4 @@
-export type Cadence = "monthly" | "quarterly" | "semiannual" | "annual";
+export type Cadence = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "annual";
 
 export type MaintenanceTemplate = {
   title: string;
@@ -7,7 +7,7 @@ export type MaintenanceTemplate = {
 };
 
 export const MAINTENANCE_LIBRARY: MaintenanceTemplate[] = [
-  { title: "Replace HVAC filter", system: "Climate", cadence: "quarterly" },
+  { title: "Replace HVAC filter", system: "Climate", cadence: "monthly" },
   { title: "Test smoke and CO alarms", system: "Safety", cadence: "monthly" },
   { title: "Clean gutters and downspouts", system: "Exterior", cadence: "semiannual" },
   { title: "Flush the water heater", system: "Plumbing", cadence: "annual" },
@@ -41,7 +41,14 @@ export const MAINTENANCE_SYSTEMS = [
 ] as const;
 
 export function isCadence(value: string): value is Cadence {
-  return value === "monthly" || value === "quarterly" || value === "semiannual" || value === "annual";
+  return (
+    value === "daily" ||
+    value === "weekly" ||
+    value === "monthly" ||
+    value === "quarterly" ||
+    value === "semiannual" ||
+    value === "annual"
+  );
 }
 
 export function missingMaintenanceItems(existingTitles: string[], removedTitles: string[] = []) {
@@ -55,7 +62,9 @@ export function missingMaintenanceItems(existingTitles: string[], removedTitles:
 
 export function nextDue(cadence: Cadence, from = new Date()) {
   const d = new Date(from);
-  if (cadence === "monthly") d.setMonth(d.getMonth() + 1);
+  if (cadence === "daily") d.setDate(d.getDate() + 1);
+  else if (cadence === "weekly") d.setDate(d.getDate() + 7);
+  else if (cadence === "monthly") d.setMonth(d.getMonth() + 1);
   else if (cadence === "quarterly") d.setMonth(d.getMonth() + 3);
   else if (cadence === "semiannual") d.setMonth(d.getMonth() + 6);
   else d.setFullYear(d.getFullYear() + 1);
@@ -63,10 +72,13 @@ export function nextDue(cadence: Cadence, from = new Date()) {
 }
 
 export function cadenceLabel(c: string) {
+  if (c === "daily") return "Every day";
+  if (c === "weekly") return "Every week";
   if (c === "monthly") return "Every month";
   if (c === "quarterly") return "Every 3 months";
   if (c === "semiannual") return "Twice a year";
-  return "Once a year";
+  if (c === "annual") return "Once a year";
+  return c;
 }
 
 export type MaintenanceStatus = "scheduled" | "overdue" | "dueSoon" | "current";

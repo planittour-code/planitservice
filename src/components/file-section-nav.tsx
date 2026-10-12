@@ -30,7 +30,7 @@ export const HOMEOWNER_SECTIONS: FileSection[] = [
   { id: "materials", label: "Materials", Icon: Package },
   { id: "shops", label: "Known shops", Icon: Store },
   { id: "warranties", label: "Warranties", Icon: Shield },
-  { id: "maintenance", label: "Maintenance", Icon: CalendarCheck },
+  { id: "maintenance", label: "Maintenance Schedule", Icon: CalendarCheck },
   { id: "transfer", label: "Transfer", Icon: ArrowRightLeft },
   { id: "measure", label: "Measurements", Icon: Ruler },
   { id: "request-estimates", label: "Request Estimates", Icon: ClipboardList },
@@ -45,7 +45,7 @@ export const MANAGER_SECTIONS: FileSection[] = [
   { id: "warranties", label: "Warranties", Icon: Shield },
   { id: "request-estimates", label: "Request Estimates", Icon: ClipboardList },
   { id: "agreed-work", label: "Agreed work", Icon: CheckCircle2 },
-  { id: "maintenance", label: "Maintenance", Icon: CalendarCheck },
+  { id: "maintenance", label: "Maintenance Schedule", Icon: CalendarCheck },
 ];
 
 export const CONTRACTOR_SECTIONS: FileSection[] = [

@@ -13,35 +13,55 @@ import {
 import { shortDate } from "@/lib/housefile/format";
 import type { MaintenanceTask } from "@/lib/housefile/types";
 
-const CADENCE_OPTIONS: { value: Cadence; label: string }[] = [
-  { value: "monthly", label: "Every month" },
-  { value: "quarterly", label: "Every 3 months" },
-  { value: "semiannual", label: "Twice a year" },
-  { value: "annual", label: "Once a year" },
+const CADENCE_CHECKS: { value: Cadence; label: string }[] = [
+  { value: "daily", label: "Day" },
+  { value: "weekly", label: "Week" },
+  { value: "monthly", label: "Month" },
 ];
+
+export type MaintenanceAddInput = {
+  title: string;
+  system: string;
+  cadence: Cadence;
+  notes?: string;
+  alertOn?: boolean;
+};
+
+export type MaintenanceUpdateInput = {
+  taskId: string;
+  notes?: string;
+  cadence?: Cadence;
+  alertOn?: boolean;
+};
 
 export function MaintenanceChecklist({
   tasks,
   donePending,
   removePending,
   addPending,
+  updatePending,
   onDone,
   onRemove,
   onAdd,
+  onUpdate,
   extra,
 }: {
   tasks: MaintenanceTask[];
   donePending?: boolean;
   removePending?: boolean;
   addPending?: boolean;
+  updatePending?: boolean;
   onDone: (taskId: string) => void;
   onRemove: (taskId: string) => void;
-  onAdd: (input: { title: string; system: string; cadence: Cadence }) => void;
+  onAdd: (input: MaintenanceAddInput) => void;
+  onUpdate?: (input: MaintenanceUpdateInput) => void;
   extra?: (task: MaintenanceTask) => ReactNode;
 }) {
   const [title, setTitle] = useState("");
   const [system, setSystem] = useState("Custom");
   const [cadence, setCadence] = useState<Cadence>("monthly");
+  const [notes, setNotes] = useState("");
+  const [alertOn, setAlertOn] = useState(true);
   const groups = groupTasks(tasks);
 
   return (
@@ -53,7 +73,7 @@ export function MaintenanceChecklist({
             {group.tasks.map((t) => (
               <li key={t.id} className="space-y-3 px-4 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">{t.title}</p>
                     <p className="text-sm text-muted-foreground">
                       {cadenceLabel(t.cadence)} · due {shortDate(t.due_on)}
@@ -85,6 +105,11 @@ export function MaintenanceChecklist({
                     </Button>
                   </div>
                 </div>
+                <TaskScheduleFields
+                  task={t}
+                  disabled={updatePending}
+                  onUpdate={onUpdate}
+                />
                 {extra?.(t)}
               </li>
             ))}
@@ -98,14 +123,22 @@ export function MaintenanceChecklist({
           e.preventDefault();
           const nextTitle = title.trim();
           if (!nextTitle) return;
-          onAdd({ title: nextTitle, system, cadence });
+          onAdd({
+            title: nextTitle,
+            system,
+            cadence,
+            notes: notes.trim() || undefined,
+            alertOn,
+          });
           setTitle("");
           setSystem("Custom");
           setCadence("monthly");
+          setNotes("");
+          setAlertOn(true);
         }}
       >
         <div>
-          <h4 className="font-display text-sm font-bold tracking-tight">Add a checklist item</h4>
+          <h4 className="font-display text-sm font-bold tracking-tight">Add to the schedule</h4>
           <p className="text-sm text-muted-foreground">
             Use Custom for your own list, or pick Lawn/Grounds, Pool, House, and the rest. Remove
             anything that does not apply to this house.
@@ -118,8 +151,17 @@ export function MaintenanceChecklist({
               id="maintenance-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Clean the dryer vent"
+              placeholder="Replace HVAC filter"
               required
+            />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="maintenance-notes">Notes for instructions</Label>
+            <Input
+              id="maintenance-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="HVAC filter size"
             />
           </div>
           <div className="space-y-1">
@@ -137,27 +179,182 @@ export function MaintenanceChecklist({
               ))}
             </select>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="maintenance-cadence">How often</Label>
-            <select
-              id="maintenance-cadence"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-              value={cadence}
-              onChange={(e) => setCadence(e.target.value as Cadence)}
-            >
-              {CADENCE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <fieldset className="space-y-1">
+            <legend className="text-sm font-medium">How often</legend>
+            <CadenceChecks value={cadence} onChange={setCadence} />
+          </fieldset>
+          <fieldset className="space-y-1">
+            <legend className="text-sm font-medium">Alert</legend>
+            <AlertChecks value={alertOn} onChange={setAlertOn} />
+          </fieldset>
         </div>
         <Button type="submit" size="sm" disabled={addPending || !title.trim()}>
-          {addPending ? "Adding…" : "Add to checklist"}
+          {addPending ? "Adding…" : "Add to schedule"}
         </Button>
       </form>
     </div>
+  );
+}
+
+function TaskScheduleFields({
+  task,
+  disabled,
+  onUpdate,
+}: {
+  task: MaintenanceTask;
+  disabled?: boolean;
+  onUpdate?: (input: MaintenanceUpdateInput) => void;
+}) {
+  const [notes, setNotes] = useState(task.notes ?? "");
+
+  useEffect(() => {
+    setNotes(task.notes ?? "");
+  }, [task.id, task.notes]);
+
+  const saveNotes = () => {
+    if (!onUpdate) return;
+    const next = notes.trim();
+    const prev = (task.notes ?? "").trim();
+    if (next === prev) return;
+    onUpdate({ taskId: task.id, notes: next });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <Label htmlFor={`notes-${task.id}`}>Notes for instructions</Label>
+        <Input
+          id={`notes-${task.id}`}
+          value={notes}
+          disabled={disabled || !onUpdate}
+          onChange={(e) => setNotes(e.target.value)}
+          onBlur={saveNotes}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          placeholder="HVAC filter size"
+        />
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <fieldset className="space-y-1">
+          <legend className="text-sm font-medium">How often</legend>
+          <CadenceChecks
+            name={`cadence-${task.id}`}
+            value={task.cadence}
+            disabled={disabled || !onUpdate}
+            onChange={(cadence) =>
+              onUpdate?.({ taskId: task.id, cadence, notes: notes.trim() })
+            }
+          />
+        </fieldset>
+        <fieldset className="space-y-1">
+          <legend className="text-sm font-medium">Alert</legend>
+          <AlertChecks
+            name={`alert-${task.id}`}
+            value={task.alert_on !== false}
+            disabled={disabled || !onUpdate}
+            onChange={(next) =>
+              onUpdate?.({ taskId: task.id, alertOn: next, notes: notes.trim() })
+            }
+          />
+        </fieldset>
+      </div>
+    </div>
+  );
+}
+
+function CadenceChecks({
+  name,
+  value,
+  disabled,
+  onChange,
+}: {
+  name?: string;
+  value: string;
+  disabled?: boolean;
+  onChange: (cadence: Cadence) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {CADENCE_CHECKS.map((opt) => (
+        <CheckOption
+          key={opt.value}
+          name={name}
+          label={opt.label}
+          checked={value === opt.value}
+          disabled={disabled}
+          onPick={() => {
+            if (value !== opt.value) onChange(opt.value);
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function AlertChecks({
+  name,
+  value,
+  disabled,
+  onChange,
+}: {
+  name?: string;
+  value: boolean;
+  disabled?: boolean;
+  onChange: (alertOn: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <CheckOption
+        name={name}
+        label="On"
+        checked={value}
+        disabled={disabled}
+        onPick={() => {
+          if (!value) onChange(true);
+        }}
+      />
+      <CheckOption
+        name={name}
+        label="Off"
+        checked={!value}
+        disabled={disabled}
+        onPick={() => {
+          if (value) onChange(false);
+        }}
+      />
+    </div>
+  );
+}
+
+function CheckOption({
+  name,
+  label,
+  checked,
+  disabled,
+  onPick,
+}: {
+  name?: string;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onPick: () => void;
+}) {
+  return (
+    <label className="flex min-h-11 items-center gap-2 rounded-md bg-card px-3 text-sm shadow-[var(--shadow-border)]">
+      <input
+        type="checkbox"
+        className="size-4 shrink-0"
+        name={name}
+        checked={checked}
+        disabled={disabled}
+        onChange={onPick}
+      />
+      {label}
+    </label>
   );
 }
 

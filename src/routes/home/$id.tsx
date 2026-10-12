@@ -29,6 +29,7 @@ import {
   getHomeRecord,
   removeHomeMaintenance,
   startPropertyTransfer,
+  updateHomeMaintenance,
 } from "@/lib/housefile/server";
 import { confirmHomeownerCheckout } from "@/lib/housefile/stripe-billing";
 
@@ -81,13 +82,26 @@ function HomeRecord() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not log"),
   });
   const addTask = useMutation({
-    mutationFn: (input: { title: string; system: string; cadence: string }) =>
-      addHomeMaintenance({ data: { propertyId: id, ...input } }),
+    mutationFn: (input: {
+      title: string;
+      system: string;
+      cadence: string;
+      notes?: string;
+      alertOn?: boolean;
+    }) => addHomeMaintenance({ data: { propertyId: id, ...input } }),
     onSuccess: () => {
-      toast.success("Added to the checklist.");
+      toast.success("Added to the schedule.");
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
+  });
+  const updateTask = useMutation({
+    mutationFn: (input: { taskId: string; notes?: string; cadence?: string; alertOn?: boolean }) =>
+      updateHomeMaintenance({ data: input }),
+    onSuccess: () => {
+      void q.refetch();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
   const removeTask = useMutation({
     mutationFn: (taskId: string) => removeHomeMaintenance({ data: { taskId } }),
@@ -158,8 +172,8 @@ function HomeRecord() {
 
       <RecordSection
         id="maintenance"
-        title="Maintenance"
-        blurb={`${due.length} due in the next two weeks. Add your own checklist, or remove what this house does not need.`}
+        title="Maintenance Schedule"
+        blurb={`${due.length} due in the next two weeks. Add notes on each line — filter size, product, or how to do the job.`}
         photo={CATEGORY_PHOTO.systems}
         countLabel={`${open.length} open`}
         chips={
@@ -179,9 +193,11 @@ function HomeRecord() {
           donePending={done.isPending}
           removePending={removeTask.isPending}
           addPending={addTask.isPending}
+          updatePending={updateTask.isPending}
           onDone={(taskId) => done.mutate(taskId)}
           onRemove={(taskId) => removeTask.mutate(taskId)}
           onAdd={(input) => addTask.mutate(input)}
+          onUpdate={(input) => updateTask.mutate(input)}
         />
       </RecordSection>
 

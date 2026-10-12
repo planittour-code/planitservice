@@ -482,6 +482,7 @@ export type MaintenanceTask = {
   due_on: string;
   completed_at: string | null;
   notes: string | null;
+  alert_on: boolean;
   scheduled_on: string | null;
   scheduled_note: string | null;
 };

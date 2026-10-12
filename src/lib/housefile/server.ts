@@ -4696,11 +4696,12 @@ export const completeMaintenance = createServerFn({ method: "POST" })
           scheduled_note = null
       where id = ${task.id}
     `;
+    const nextCadence = isCadence(task.cadence) ? task.cadence : "monthly";
     await sql`
-      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
+      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
         ${crypto.randomUUID()}, ${task.property_id}, ${task.title}, ${task.system_name}, ${task.cadence},
-        ${nextDue(task.cadence as "monthly" | "quarterly" | "semiannual" | "annual")}
+        ${nextDue(nextCadence)}, ${task.notes}, ${task.alert_on !== false}
       )
     `;
     return { ok: true as const };
@@ -4708,7 +4709,16 @@ export const completeMaintenance = createServerFn({ method: "POST" })
 
 export const addHomeMaintenance = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { propertyId: string; title: string; system: string; cadence: string }) => input)
+  .validator(
+    (input: {
+      propertyId: string;
+      title: string;
+      system: string;
+      cadence: string;
+      notes?: string;
+      alertOn?: boolean;
+    }) => input,
+  )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const property = (
@@ -4721,6 +4731,8 @@ export const addHomeMaintenance = createServerFn({ method: "POST" })
     if (!title) throw new Error("Name the checklist item.");
     const system = data.system.trim() || "Custom";
     if (!isCadence(data.cadence)) throw new Error("Pick how often this comes due.");
+    const notes = data.notes?.trim() || null;
+    const alertOn = data.alertOn !== false;
     const existing = (
       await sql<{ id: string }>`
         select id from maintenance_tasks
@@ -4731,11 +4743,49 @@ export const addHomeMaintenance = createServerFn({ method: "POST" })
     if (existing) throw new Error("That item is already on this checklist.");
     await sql`delete from maintenance_removed where property_id = ${property.id} and lower(title) = ${title.toLowerCase()}`;
     await sql`
-      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
+      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
         ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${data.cadence},
-        ${nextDue(data.cadence)}
+        ${nextDue(data.cadence)}, ${notes}, ${alertOn}
       )
+    `;
+    return { ok: true as const };
+  });
+
+export const updateHomeMaintenance = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: { taskId: string; notes?: string; cadence?: string; alertOn?: boolean }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const task = (
+      await sql<MaintenanceTask & { homeowner_user_id: string }>`
+        select t.*, p.homeowner_user_id
+        from maintenance_tasks t
+        join properties p on p.id = t.property_id
+        where t.id = ${data.taskId} and t.completed_at is null
+        limit 1
+      `
+    )[0];
+    if (!task || task.homeowner_user_id !== context.userId) throw new Error("Task not found");
+    if (data.cadence !== undefined && !isCadence(data.cadence)) {
+      throw new Error("Pick day, week, or month.");
+    }
+    const notes = data.notes !== undefined ? data.notes.trim() || null : task.notes;
+    const cadence = data.cadence ?? task.cadence;
+    const alertOn = data.alertOn !== undefined ? data.alertOn : task.alert_on !== false;
+    const dueOn =
+      data.cadence && isCadence(data.cadence) && data.cadence !== task.cadence
+        ? nextDue(data.cadence)
+        : task.due_on;
+    await sql`
+      update maintenance_tasks
+      set notes = ${notes},
+          cadence = ${cadence},
+          alert_on = ${alertOn},
+          due_on = ${dueOn}
+      where id = ${task.id}
     `;
     return { ok: true as const };
   });
@@ -4765,7 +4815,16 @@ export const removeHomeMaintenance = createServerFn({ method: "POST" })
 
 export const addPortfolioMaintenance = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { propertyId: string; title: string; system: string; cadence: string }) => input)
+  .validator(
+    (input: {
+      propertyId: string;
+      title: string;
+      system: string;
+      cadence: string;
+      notes?: string;
+      alertOn?: boolean;
+    }) => input,
+  )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const { portfolio } = await requirePaidPortfolio(sql, context.userId);
@@ -4783,6 +4842,8 @@ export const addPortfolioMaintenance = createServerFn({ method: "POST" })
     if (!title) throw new Error("Name the checklist item.");
     const system = data.system.trim() || "Custom";
     if (!isCadence(data.cadence)) throw new Error("Pick how often this comes due.");
+    const notes = data.notes?.trim() || null;
+    const alertOn = data.alertOn !== false;
     const existing = (
       await sql<{ id: string }>`
         select id from maintenance_tasks
@@ -4793,11 +4854,50 @@ export const addPortfolioMaintenance = createServerFn({ method: "POST" })
     if (existing) throw new Error("That item is already on this checklist.");
     await sql`delete from maintenance_removed where property_id = ${property.id} and lower(title) = ${title.toLowerCase()}`;
     await sql`
-      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
+      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
         ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${data.cadence},
-        ${nextDue(data.cadence)}
+        ${nextDue(data.cadence)}, ${notes}, ${alertOn}
       )
+    `;
+    return { ok: true as const };
+  });
+
+export const updatePortfolioMaintenance = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: { taskId: string; notes?: string; cadence?: string; alertOn?: boolean }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { portfolio } = await requirePaidPortfolio(sql, context.userId);
+    const task = (
+      await sql<MaintenanceTask>`
+        select t.*
+        from maintenance_tasks t
+        join portfolio_properties pp on pp.property_id = t.property_id
+        where t.id = ${data.taskId} and pp.portfolio_id = ${portfolio.id} and t.completed_at is null
+        limit 1
+      `
+    )[0];
+    if (!task) throw new Error("Task not found");
+    if (data.cadence !== undefined && !isCadence(data.cadence)) {
+      throw new Error("Pick day, week, or month.");
+    }
+    const notes = data.notes !== undefined ? data.notes.trim() || null : task.notes;
+    const cadence = data.cadence ?? task.cadence;
+    const alertOn = data.alertOn !== undefined ? data.alertOn : task.alert_on !== false;
+    const dueOn =
+      data.cadence && isCadence(data.cadence) && data.cadence !== task.cadence
+        ? nextDue(data.cadence)
+        : task.due_on;
+    await sql`
+      update maintenance_tasks
+      set notes = ${notes},
+          cadence = ${cadence},
+          alert_on = ${alertOn},
+          due_on = ${dueOn}
+      where id = ${task.id}
     `;
     return { ok: true as const };
   });
@@ -5741,6 +5841,7 @@ function asMaintenanceTask(row: MaintenanceTask): MaintenanceTask {
     ...row,
     completed_at: row.completed_at ?? null,
     notes: row.notes ?? null,
+    alert_on: row.alert_on !== false,
     scheduled_on: row.scheduled_on ?? null,
     scheduled_note: row.scheduled_note ?? null,
   };
@@ -6224,11 +6325,12 @@ export const completePortfolioMaintenance = createServerFn({ method: "POST" })
           scheduled_note = null
       where id = ${task.id}
     `;
+    const nextCadence = isCadence(task.cadence) ? task.cadence : "monthly";
     await sql`
-      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on)
+      insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
         ${crypto.randomUUID()}, ${task.property_id}, ${task.title}, ${task.system_name}, ${task.cadence},
-        ${nextDue(task.cadence as "monthly" | "quarterly" | "semiannual" | "annual")}
+        ${nextDue(nextCadence)}, ${task.notes}, ${task.alert_on !== false}
       )
     `;
     return { ok: true as const };

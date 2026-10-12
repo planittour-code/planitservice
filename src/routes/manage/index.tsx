@@ -16,6 +16,7 @@ import {
   getPortfolio,
   removePortfolioMaintenance,
   schedulePortfolioMaintenance,
+  updatePortfolioMaintenance,
 } from "@/lib/housefile/server";
 import type { MaintenanceStatus } from "@/lib/housefile/maintain";
 import type { PortfolioHouse, PortfolioOwner } from "@/lib/housefile/types";
@@ -175,8 +176,8 @@ function ManageDashboard() {
             </RecordSection>
             <RecordSection
               id="maintenance"
-              title="Maintenance checklists"
-              blurb="Add your own checklist, or remove what this house does not need. Open the house for photos, jobs, and the full record."
+              title="Maintenance Schedule"
+              blurb="Add notes on each line — filter size, product, or how to do the job. Open the house for photos, jobs, and the full record."
               photo={CATEGORY_PHOTO.systems}
               countLabel={selectedHouse ? `${(selectedHouse.tasks ?? []).length} open` : "Pick a house"}
               chips={
@@ -322,13 +323,26 @@ function PortfolioChecklists({
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not schedule"),
   });
   const addTask = useMutation({
-    mutationFn: (input: { title: string; system: string; cadence: string }) =>
-      addPortfolioMaintenance({ data: { propertyId: selectedId as string, ...input } }),
+    mutationFn: (input: {
+      title: string;
+      system: string;
+      cadence: string;
+      notes?: string;
+      alertOn?: boolean;
+    }) => addPortfolioMaintenance({ data: { propertyId: selectedId as string, ...input } }),
     onSuccess: () => {
-      toast.success("Added to the checklist.");
+      toast.success("Added to the schedule.");
       refresh();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
+  });
+  const updateTask = useMutation({
+    mutationFn: (input: { taskId: string; notes?: string; cadence?: string; alertOn?: boolean }) =>
+      updatePortfolioMaintenance({ data: input }),
+    onSuccess: () => {
+      refresh();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
   });
   const removeTask = useMutation({
     mutationFn: (taskId: string) => removePortfolioMaintenance({ data: { taskId } }),
@@ -377,9 +391,11 @@ function PortfolioChecklists({
             donePending={done.isPending}
             removePending={removeTask.isPending}
             addPending={addTask.isPending}
+            updatePending={updateTask.isPending}
             onDone={(taskId) => done.mutate(taskId)}
             onRemove={(taskId) => removeTask.mutate(taskId)}
             onAdd={(input) => addTask.mutate(input)}
+            onUpdate={(input) => updateTask.mutate(input)}
             extra={(t) => (
               <ScheduleTask
                 task={t}
