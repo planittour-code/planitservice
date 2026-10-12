@@ -624,17 +624,15 @@ export async function sendProjectOpenedEmail(data: {
   const text = [
     `Hi ${first},`,
     "",
-    `We opened a Property Record for ${data.address} and sent your ${data.work} request to ${data.shopName}.`,
-    "The file is free while we estimate the work. After you accept and we start work, it stays free for 30 days, then continues at $7.99 per month if you want to keep it.",
+    `We sent your ${data.work} request for ${data.address} to ${data.shopName}. They will follow up with an estimate.`,
     "",
-    `Open the file: ${data.inviteUrl}`,
+    `View this request: ${data.inviteUrl}`,
     "",
     data.shopName,
   ].join("\n");
   const html = `<p>Hi ${escapeHtml(first)},</p>
-<p>We opened a Property Record for ${escapeHtml(data.address)} and sent your ${escapeHtml(data.work)} request to ${escapeHtml(data.shopName)}.</p>
-<p>The file is free while we estimate the work. After you accept and we start work, it stays free for 30 days, then continues at $7.99 per month if you want to keep it.</p>
-<p><a href="${escapeHtml(data.inviteUrl)}">Open the file</a></p>
+<p>We sent your ${escapeHtml(data.work)} request for ${escapeHtml(data.address)} to ${escapeHtml(data.shopName)}. They will follow up with an estimate.</p>
+<p><a href="${escapeHtml(data.inviteUrl)}">View this request</a></p>
 <p>${escapeHtml(data.shopName)}</p>`;
   await sendResendEmail({
     to: data.to,

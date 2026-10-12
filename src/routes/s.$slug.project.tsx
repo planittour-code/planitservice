@@ -38,9 +38,9 @@ function ShopProject() {
       }),
     onSuccess: (res) => {
       setOpened({ inviteUrl: res.inviteUrl, work: res.work });
-      toast.success(`Property Record opened. ${shopName} has the request.`);
+      toast.success(`${shopName} has your request.`);
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not open the file."),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send the request."),
   });
 
   return (
@@ -60,11 +60,9 @@ function ShopProject() {
       <main className="mx-auto max-w-xl space-y-6 px-4 py-8 sm:px-6">
         <div className="space-y-2">
           <p className="text-sm font-medium tracking-wide text-primary">{shopName}</p>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Start a new project</h1>
+          <h1 className="font-display text-3xl font-medium tracking-tight">Request an estimate</h1>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Tell us the work and the address. We open a Property Record for free and send the
-            request to {shopName}. After you accept the estimate and start work, the file stays
-            free for 30 days, then continues at $7.99 a month if you want to keep it.
+            Pick the work, give the address, and {shopName} will build a quote from what you send.
           </p>
         </div>
         {shop.error ? (
@@ -73,10 +71,10 @@ function ShopProject() {
           <section className="space-y-3 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
             <h2 className="font-display text-xl font-medium">{opened.work} request sent</h2>
             <p className="text-sm text-muted-foreground">
-              Sign in with the email you just used to claim the file.
+              {shopName} has the job details and will follow up with an estimate.
             </p>
             <Button asChild>
-              <a href={opened.inviteUrl}>Open the Property Record</a>
+              <a href={opened.inviteUrl}>View this request</a>
             </Button>
           </section>
         ) : (
@@ -142,7 +140,7 @@ function ShopProject() {
               </div>
             </div>
             <Button type="submit" disabled={save.isPending || shop.isLoading || !workId}>
-              {save.isPending ? "Opening the file…" : "Start a New Project"}
+              {save.isPending ? "Sending…" : "Send request"}
             </Button>
           </form>
         )}

@@ -360,7 +360,7 @@ function SettingsPage() {
             </Button>
             <Button asChild variant="outline">
               <a href={`/s/${company.slug}/project`} target="_blank" rel="noreferrer">
-                Start a New Project
+                Request an estimate
               </a>
             </Button>
             <Button

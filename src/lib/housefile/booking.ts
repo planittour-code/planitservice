@@ -441,7 +441,7 @@ export async function openProjectLead(input: {
         ${propertyId}, ${shopId ?? HOUSEHOLD}, ${slugToken()}, ${invite}, ${"sent"},
         ${address}, ${input.city?.trim() || "—"}, ${input.state?.trim() || "GA"}, ${zip},
         ${name}, ${email}, ${input.phone?.trim() || null},
-        ${`Opened from ${input.source}. Work requested: ${work.label}. Complimentary Property Record.`}
+        ${`Opened from ${input.source}. Work requested: ${work.label}.`}
       )
     `;
   }
@@ -489,7 +489,7 @@ export async function openProjectLead(input: {
     ) values (
       ${inviteId}, ${fileId}, ${"mailer"}, ${shop.replyTo}, ${shopName},
       ${work.label},
-      ${`${name} asked ${shopName} to quote ${work.label} at ${address}. Opened from the seasonal mailer (${input.source}). The Property Record is free until 30 days after Start Work.`},
+      ${`${name} asked ${shopName} to quote ${work.label} at ${address}. Opened from the seasonal mailer (${input.source}).`},
       ${share}, ${"open"}
     )
   `;

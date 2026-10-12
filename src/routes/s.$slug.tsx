@@ -130,7 +130,7 @@ function PublicShopPage() {
           </Button>
           <Button asChild variant="outline">
             <Link to="/s/$slug/project" params={{ slug }}>
-              Start a New Project
+              Request an estimate
             </Link>
           </Button>
         </section>
