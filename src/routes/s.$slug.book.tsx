@@ -2,11 +2,13 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AddressClaimNote } from "@/components/address-claim-note";
 import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { bookPublicSlot, getPublicBookingSlots, getPublicShop, startPublicProject } from "@/lib/housefile/server";
+import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/s/$slug/book")({ component: ShopOfferPage });
@@ -36,6 +38,7 @@ function ShopOfferPage() {
   const [state, setState] = useState("GA");
   const [zip, setZip] = useState("");
   const [done, setDone] = useState<string | null>(null);
+  const claimed = useAddressClaimed(address, zip);
 
   const book = useMutation({
     mutationFn: () =>
@@ -209,7 +212,8 @@ function ShopOfferPage() {
                     <Input id="zip" value={zip} onChange={(e) => setZip(e.target.value)} />
                   </div>
                 </div>
-                <Button type="submit" disabled={enroll.isPending}>
+                <AddressClaimNote claimed={claimed} />
+                <Button type="submit" disabled={enroll.isPending || claimed}>
                   {enroll.isPending ? "Sending…" : "Sign up for the year"}
                 </Button>
               </form>

@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { AddressClaimNote } from "@/components/address-claim-note";
 import { createHomeProperty, getHousehold } from "@/lib/housefile/server";
+import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 import { startCheckout } from "@/lib/housefile/stripe-billing";
 import {
   PROPERTY_ANNUAL,
@@ -40,6 +42,7 @@ function AddProperty() {
   const [zip, setZip] = useState("");
   const [useAccountEmail, setUseAccountEmail] = useState(true);
   const [email, setEmail] = useState("");
+  const claimed = useAddressClaimed(address, zip);
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [tier, setTier] = useState<"standard" | "pro">(search.tier ?? "standard");
   const price =
@@ -91,9 +94,9 @@ function AddProperty() {
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Add a property</h1>
         <p className="mt-2 text-muted-foreground">
-          One Property Record per address. Use the email you signed up with, or a different one for
-          this house. Standard keeps the file and known shops. Pro adds Request Estimates. $
-          {dollars(price)} {cadence === "annual" ? "this year" : "per month"}.
+          Use the email you signed up with, or a different one for this house. Standard keeps the
+          file and known shops. Pro adds Request Estimates. ${dollars(price)}{" "}
+          {cadence === "annual" ? "this year" : "per month"}.
         </p>
       </div>
       <form
@@ -121,6 +124,7 @@ function AddProperty() {
             <Input id="zp" value={zip} onChange={(e) => setZip(e.target.value)} />
           </div>
         </div>
+        <AddressClaimNote claimed={claimed} />
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Email for this Property Record</legend>
           <label className="flex min-h-11 items-start gap-2 rounded-lg bg-card px-3 py-2 text-sm shadow-[var(--shadow-border)]">
@@ -184,7 +188,7 @@ function AddProperty() {
             />
           </div>
         </fieldset>
-        <Button type="submit" className="w-full" disabled={save.isPending}>
+        <Button type="submit" className="w-full" disabled={save.isPending || claimed}>
           {save.isPending ? "Starting checkout…" : `Continue to checkout · $${dollars(price)}`}
         </Button>
       </form>

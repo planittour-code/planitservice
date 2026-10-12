@@ -26,6 +26,11 @@ import {
   googleInsertEvent,
   googleMoveEvent,
 } from "@/lib/housefile/google-calendar";
+import {
+  CLAIMED_ADDRESS_MESSAGE,
+  claimedAddressMatch,
+  findClaimedByOther,
+} from "@/lib/housefile/address-claim";
 import { slugToken } from "@/lib/housefile/format";
 import {
   factsFromTakeoff,
@@ -431,16 +436,32 @@ export async function openProjectLead(input: {
   const shopId = shop.id;
   const shopName = shop.name;
 
+  const zip = input.zip?.trim() || "—";
+  const household = await sql<{
+    id: string;
+    invite_token: string;
+    address_line: string;
+    zip: string;
+  }>`
+    select id, invite_token, address_line, zip from properties
+    where company_id = ${HOUSEHOLD}
+      and lower(homeowner_email) = ${email}
+  `;
+  const householdMatch = household.find((row) =>
+    claimedAddressMatch(row, { address_line: address, zip }),
+  );
+  if (!householdMatch) {
+    const claimed = await findClaimedByOther(sql, { addressLine: address, zip });
+    if (claimed) throw new Error(CLAIMED_ADDRESS_MESSAGE);
+  }
+
   const shopRows = shopId
     ? await sql<{ id: string; address_line: string; zip: string; invite_token: string }>`
         select id, address_line, zip, invite_token from properties where company_id = ${shopId}
       `
     : [];
-  const zip = input.zip?.trim() || "—";
-  const match = shopRows.find(
-    (row) =>
-      row.address_line.trim().toLowerCase() === address.toLowerCase() &&
-      row.zip.trim().slice(0, 5) === zip.slice(0, 5),
+  const match = shopRows.find((row) =>
+    claimedAddressMatch(row, { address_line: address, zip }),
   );
   let propertyId = match?.id;
   let invite = match?.invite_token;
@@ -460,15 +481,8 @@ export async function openProjectLead(input: {
     `;
   }
 
-  const household = await sql<{ id: string; invite_token: string }>`
-    select id, invite_token from properties
-    where company_id = ${HOUSEHOLD}
-      and lower(homeowner_email) = ${email}
-      and lower(address_line) = ${address.toLowerCase()}
-    limit 1
-  `;
-  let fileId = household[0]?.id;
-  let fileInvite = household[0]?.invite_token;
+  let fileId = householdMatch?.id;
+  let fileInvite = householdMatch?.invite_token;
   if (!fileId) {
     fileId = crypto.randomUUID();
     fileInvite = slugToken();

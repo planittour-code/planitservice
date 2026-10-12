@@ -17,7 +17,9 @@ import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { compressImage } from "@/lib/housefile/image";
 import { filledSocials, initialsFrom, SOCIAL_LINKS, type UserProfile } from "@/lib/housefile/profile";
+import { AddressClaimNote } from "@/components/address-claim-note";
 import { getAccount, removeHomeProperty, updateHomeProperty, updateUserProfile } from "@/lib/housefile/server";
+import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 import {
   MANAGE_ANNUAL,
   MANAGE_EXTRA_MONTHLY,
@@ -281,6 +283,7 @@ function AccountHouseRow({ house }: { house: AccountHouse }) {
   const [city, setCity] = useState(house.city);
   const [state, setState] = useState(house.state);
   const [zip, setZip] = useState(house.zip);
+  const claimed = useAddressClaimed(address, zip);
 
   useEffect(() => {
     setAddress(house.address);
@@ -415,8 +418,9 @@ function AccountHouseRow({ house }: { house: AccountHouse }) {
               />
             </div>
           </div>
-          <div className="sm:col-span-2">
-            <Button type="submit" size="sm" disabled={save.isPending}>
+          <div className="sm:col-span-2 space-y-2">
+            {claimed ? <AddressClaimNote claimed /> : null}
+            <Button type="submit" size="sm" disabled={save.isPending || claimed}>
               {save.isPending ? "Saving…" : "Save address"}
             </Button>
           </div>

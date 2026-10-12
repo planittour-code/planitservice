@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
+import { AddressClaimNote } from "@/components/address-claim-note";
 import { TermsAgree } from "@/components/legal-doc";
 import { PaidLanding } from "@/components/paid-landing";
 import { Mark } from "@/components/logo";
@@ -19,6 +20,7 @@ import {
   PRO_UPGRADE_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
+import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 import { pageHead } from "@/lib/seo";
 import { trackCta } from "@/lib/track-cta";
 import { cn } from "@/lib/utils";
@@ -51,6 +53,7 @@ function StartHouseRecord() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const claimed = useAddressClaimed(street);
   const next = street.trim()
     ? `/home/add?tier=${tier}&address=${encodeURIComponent(street.trim())}`
     : `/home/add?tier=${tier}`;
@@ -134,6 +137,11 @@ function StartHouseRecord() {
                   Keep this file
                 </Button>
               </form>
+              {claimed ? (
+                <div className="max-w-xl">
+                  <AddressClaimNote claimed tone="on-photo" />
+                </div>
+              ) : null}
               <SignInCta
                 signedInTo="/home"
                 className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"

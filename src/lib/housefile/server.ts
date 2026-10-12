@@ -27,6 +27,15 @@ import {
   type UserProfile,
 } from "./profile";
 import { normalizePaymentLink, shopPaymentLinkForWork } from "./payment";
+import {
+  addressKey,
+  assertAddressAvailable,
+  CLAIMED_ADDRESS_MESSAGE,
+  claimedAddressMatch,
+  findClaimedByOther,
+  normalizeStreetKey,
+  sameAddress,
+} from "./address-claim";
 import { geocodeLine, parseStreet, standardizeFromCensus, suggestFromPhoton, type AddressHit } from "./geocode";
 import {
   ESTIMATE_KEY,
@@ -582,18 +591,43 @@ async function userIdForEmail(sql: Sql, email: string): Promise<string | null> {
 async function bindHomeownerByEmail(sql: Sql, userId: string, email: string) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return;
-  await sql`
-    update properties
-    set homeowner_user_id = ${userId},
-        invite_status = ${"claimed"}
-    where lower(homeowner_email) = ${normalized}
-      and (homeowner_user_id is null or homeowner_user_id = ${userId})
+  const candidates = await sql<Property>`
+    select * from properties
+    where company_id = ${HOUSEHOLD_COMPANY}
+      and lower(homeowner_email) = ${normalized}
+      and homeowner_user_id is null
   `;
+  for (const row of candidates) {
+    const claimed = await findClaimedByOther(sql, {
+      addressLine: row.address_line,
+      zip: row.zip,
+      userId,
+      exceptPropertyId: row.id,
+    });
+    if (claimed) continue;
+    await sql`
+      update properties
+      set homeowner_user_id = ${userId},
+          invite_status = ${"claimed"}
+      where id = ${row.id} and homeowner_user_id is null
+    `;
+  }
 }
 
 async function attachHomeownerIfKnown(sql: Sql, propertyId: string, email: string) {
   const userId = await userIdForEmail(sql, email);
   if (!userId) return;
+  const property = (
+    await sql<Property>`select * from properties where id = ${propertyId} limit 1`
+  )[0];
+  if (!property || property.homeowner_user_id) return;
+  const claimed = await findClaimedByOther(sql, {
+    addressLine: property.address_line,
+    zip: property.zip,
+    userId,
+    exceptPropertyId: property.id,
+  });
+  if (claimed) return;
   await sql`
     update properties
     set homeowner_user_id = ${userId}
@@ -611,32 +645,6 @@ function listRowFromCounts(p: PropertyListRow): PropertyListRow {
     last_job_title: p.last_job_title ?? null,
     last_job_at: p.last_job_at ?? null,
   };
-}
-
-function normalizeStreetKey(line: string) {
-  return line
-    .toLowerCase()
-    .replace(/[.,#]/g, " ")
-    .replace(/\b(northwest|northeast|southwest|southeast)\b/g, (m) =>
-      m === "northwest" ? "nw" : m === "northeast" ? "ne" : m === "southwest" ? "sw" : "se",
-    )
-    .replace(/\b(street|st)\b/g, "st")
-    .replace(/\b(road|rd)\b/g, "rd")
-    .replace(/\b(drive|dr)\b/g, "dr")
-    .replace(/\b(court|ct)\b/g, "ct")
-    .replace(/\b(avenue|ave)\b/g, "ave")
-    .replace(/\b(lane|ln)\b/g, "ln")
-    .replace(/\b(boulevard|blvd)\b/g, "blvd")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function addressKey(line: string, zip: string) {
-  return `${normalizeStreetKey(line)}|${zip.trim().toLowerCase().slice(0, 5)}`;
-}
-
-function sameAddress(a: { address_line: string; zip: string }, b: { address_line: string; zip: string }) {
-  return addressKey(a.address_line, a.zip) === addressKey(b.address_line, b.zip);
 }
 
 function isMail(value: string | null | undefined): value is string {
@@ -2388,6 +2396,21 @@ export const standardizeAddress = createServerFn({ method: "GET" })
     return geocodeLine(data);
   });
 
+export const checkAddressClaimed = createServerFn({ method: "POST" })
+  .middleware([optionalAuthMiddleware])
+  .validator((input: { addressLine: string; zip?: string }) => input)
+  .handler(async ({ data, context }) => {
+    const address = data.addressLine.trim();
+    if (address.length < 3) return { claimed: false as const };
+    const sql = await getSql();
+    const hit = await findClaimedByOther(sql, {
+      addressLine: address,
+      zip: data.zip,
+      userId: context.userId,
+    });
+    return { claimed: Boolean(hit) };
+  });
+
 export const peekHouseByAddress = createServerFn({ method: "GET" })
   .middleware([optionalAuthMiddleware])
   .validator((query: string) => query)
@@ -3923,8 +3946,15 @@ export const claimInvite = createServerFn({ method: "POST" })
     `;
     if (!rows[0]) throw new Error("Invitation not found");
     if (rows[0].homeowner_user_id && rows[0].homeowner_user_id !== context.userId) {
-      throw new Error("This Property Record already belongs to another household.");
+      throw new Error(CLAIMED_ADDRESS_MESSAGE);
     }
+    const claimed = await findClaimedByOther(sql, {
+      addressLine: rows[0].address_line,
+      zip: rows[0].zip,
+      userId: context.userId,
+      exceptPropertyId: rows[0].id,
+    });
+    assertAddressAvailable(claimed);
     if (session?.email) {
       await bindHomeownerByEmail(sql, context.userId, session.email);
     }
@@ -4200,9 +4230,17 @@ export const createRfp = createServerFn({ method: "POST" })
     }
     const onFile = property ? await canWriteFile(sql, context.userId, property.id) : null;
     if (property && !onFile && property.homeowner_user_id && property.homeowner_user_id !== context.userId) {
-      throw new Error("This Property Record belongs to another household.");
+      throw new Error(CLAIMED_ADDRESS_MESSAGE);
     }
     if (property && !property.homeowner_user_id && !onFile) {
+      assertAddressAvailable(
+        await findClaimedByOther(sql, {
+          addressLine: property.address_line,
+          zip: property.zip,
+          userId: context.userId,
+          exceptPropertyId: property.id,
+        }),
+      );
       await sql`
         update properties set homeowner_user_id = ${context.userId}, invite_status = ${"claimed"}
         where id = ${property.id}
@@ -4493,18 +4531,24 @@ export const createHomeProperty = createServerFn({ method: "POST" })
       values (${context.userId}, ${"basic"}, ${"active"})
       on conflict (user_id) do nothing
     `;
-    const existing = (
-      await sql<Property>`
-        select * from properties
-        where homeowner_user_id = ${context.userId}
-          and lower(trim(address_line)) = ${address.toLowerCase()}
-        order by created_at desc
-        limit 1
-      `
-    )[0];
-    if (existing) {
-      return { propertyId: existing.id };
+    const mine = await sql<Property>`
+      select * from properties
+      where homeowner_user_id = ${context.userId}
+      order by created_at desc
+    `;
+    const alreadyMine = mine.find((row) =>
+      claimedAddressMatch(row, { address_line: address, zip: data.zip }),
+    );
+    if (alreadyMine) {
+      return { propertyId: alreadyMine.id };
     }
+    assertAddressAvailable(
+      await findClaimedByOther(sql, {
+        addressLine: address,
+        zip: data.zip,
+        userId: context.userId,
+      }),
+    );
     const id = crypto.randomUUID();
     const name = data.name?.trim() || session?.email?.split("@")[0] || "Homeowner";
     const accountEmail = session?.email?.trim().toLowerCase() ?? "";
@@ -4548,6 +4592,14 @@ export const updateHomeProperty = createServerFn({ method: "POST" })
     if (!city) throw new Error("Need the city.");
     if (!state) throw new Error("Need the state.");
     if (!zip) throw new Error("Need the ZIP.");
+    assertAddressAvailable(
+      await findClaimedByOther(sql, {
+        addressLine: address,
+        zip,
+        userId: context.userId,
+        exceptPropertyId: data.propertyId,
+      }),
+    );
     const rows = await sql<{ id: string }>`
       update properties
       set address_line = ${address},
@@ -6254,6 +6306,12 @@ export const addPortfolioProperty = createServerFn({ method: "POST" })
       `
     )[0];
     if (existing) return { ok: true as const, propertyId: existing.id, needExtra: false as const };
+    assertAddressAvailable(
+      await findClaimedByOther(sql, {
+        addressLine: address,
+        zip: data.zip,
+      }),
+    );
     const id = crypto.randomUUID();
     const owner = data.ownerName?.trim() || "Owner";
     await sql`

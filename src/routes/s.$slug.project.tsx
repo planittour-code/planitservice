@@ -2,12 +2,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AddressClaimNote } from "@/components/address-claim-note";
 import { TakeoffFields } from "@/components/takeoff-fields";
 import { PublicHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getPublicShop, startPublicProject } from "@/lib/housefile/server";
+import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 import { takeoffReady, workFromId, workTypesFor } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +34,7 @@ function ShopProject() {
   const [state, setState] = useState("GA");
   const [zip, setZip] = useState("");
   const [opened, setOpened] = useState<{ inviteUrl: string; work: string } | null>(null);
+  const claimed = useAddressClaimed(addressLine, zip);
   const work = workFromId(workId);
   const answersReady = work ? takeoffReady(work, takeoff) : false;
 
@@ -174,8 +177,9 @@ function ShopProject() {
                   </div>
                 </div>
               </div>
+              <AddressClaimNote claimed={claimed} />
             </fieldset>
-            <Button type="submit" disabled={save.isPending || shop.isLoading || !workId || !answersReady}>
+            <Button type="submit" disabled={save.isPending || shop.isLoading || !workId || !answersReady || claimed}>
               {save.isPending ? "Sending…" : "Send request"}
             </Button>
           </form>

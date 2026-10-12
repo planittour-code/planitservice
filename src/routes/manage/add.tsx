@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AddressClaimNote } from "@/components/address-claim-note";
 import { addPortfolioProperty } from "@/lib/housefile/server";
+import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 import {
   MANAGE_EXTRA_ANNUAL,
   MANAGE_EXTRA_MONTHLY,
@@ -59,6 +61,7 @@ function AddPortfolioHouse() {
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
   const [confirming, setConfirming] = useState(Boolean(search.session_id));
 
+  const claimed = useAddressClaimed(address, zip);
   const extraPrice = cadence === "annual" ? MANAGE_EXTRA_ANNUAL : MANAGE_EXTRA_MONTHLY;
 
   const save = useMutation({
@@ -272,11 +275,12 @@ function AddPortfolioHouse() {
               <Input id="zp" value={zip} onChange={(e) => setZip(e.target.value)} />
             </div>
           </div>
+          <AddressClaimNote claimed={claimed} />
           <div className="space-y-1">
             <Label htmlFor="ow">Owner name (optional)</Label>
             <Input id="ow" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
           </div>
-          <Button type="submit" className="w-full" disabled={save.isPending}>
+          <Button type="submit" className="w-full" disabled={save.isPending || claimed}>
             {save.isPending ? "Opening the record…" : "Open Property Record"}
           </Button>
         </form>
