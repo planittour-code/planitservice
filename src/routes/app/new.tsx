@@ -39,12 +39,13 @@ import { isDrainageInvoice, type InvoiceView } from "@/lib/housefile/invoice";
 import {
   buildQuote,
   customWorkId,
-  defaultsFor,
+  formatTakeoffAnswers,
+  parseTakeoffJson,
   quoteTotal,
-  takeoffReady,
   templateFor,
   workForTemplate,
   workFromId,
+  workIdFromInvite,
   workTypesFor,
   WORK_TYPES,
 } from "@/lib/housefile/quote";
@@ -165,6 +166,13 @@ function NewQuote() {
           .filter((w): w is NonNullable<typeof w> => Boolean(w)),
       ];
   const work = workFromId(workId);
+  const leadPacked = inviteQ.data?.invite;
+  const leadAnswers = parseTakeoffJson(leadPacked?.takeoff_json);
+  const leadWork =
+    workFromId(workIdFromInvite(leadPacked ?? {})) ??
+    (leadAnswers.__work ? workFromId(leadAnswers.__work) : undefined) ??
+    work;
+  const leadAnswerRows = leadWork ? formatTakeoffAnswers(leadWork, leadAnswers) : [];
   useEffect(() => {
     if (!paymentTouched) {
       const shop = dash.data?.company;
@@ -265,6 +273,8 @@ function NewQuote() {
     setHomeownerName(p.homeowner_name);
     setHomeownerEmail(p.homeowner_email);
     setHomeownerPhone(p.homeowner_phone ?? "");
+    const workFromLead = workIdFromInvite(packed.invite);
+    if (workFromLead) setWorkId(workFromLead);
     const invitePhotos = packed.photos
       .slice()
       .sort((a, b) => (a.category === "exterior" ? 0 : 1) - (b.category === "exterior" ? 0 : 1))
@@ -338,9 +348,17 @@ function NewQuote() {
     if (!work) return;
     if (user && !kitsQ.isFetched) return;
     const items = user ? (bookQ.data?.items ?? []) : guestBook();
-    const scope = search.template === "tmpl_ext_paint" ? "exterior" : "interior";
+    const leadAnswers = parseTakeoffJson(inviteQ.data?.invite.takeoff_json);
+    const leadScope = leadAnswers.paint_scope;
+    const scope =
+      leadScope === "exterior" || leadScope === "interior"
+        ? leadScope
+        : search.template === "tmpl_ext_paint"
+          ? "exterior"
+          : "interior";
     setTakeoff((prev) => {
       if (prev.__work === work.id) return prev;
+      const fromLead = leadAnswers.__work === work.id ? leadAnswers : {};
       const presetIds = search.kit
         ? search.kit
             .split(",")
@@ -352,8 +370,9 @@ function NewQuote() {
         .filter((kit: WorkKit | undefined): kit is WorkKit => Boolean(kit));
       if (presets.length) {
         return {
+          ...fromLead,
           __work: work.id,
-          paint_scope: work.id === "paint" ? scope : "",
+          paint_scope: work.id === "paint" ? scope : fromLead.paint_scope ?? "",
           __kit: joinKitIds(presets.map((kit: WorkKit) => kit.id)),
           __kit_name: kitNamesLabel(presets.map((kit: WorkKit) => kit.name)),
           [ESTIMATE_KEY]: serializeEstimateLines(linesFromKits(presets, items)),
@@ -361,19 +380,30 @@ function NewQuote() {
       }
       if (workKits.length > 0) {
         return {
+          ...fromLead,
           __work: work.id,
-          paint_scope: work.id === "paint" ? scope : "",
+          paint_scope: work.id === "paint" ? scope : fromLead.paint_scope ?? "",
           __kit: "",
           __kit_name: "",
         };
       }
       return {
+        ...fromLead,
         __work: work.id,
-        paint_scope: work.id === "paint" ? scope : "",
+        paint_scope: work.id === "paint" ? scope : fromLead.paint_scope ?? "",
         [ESTIMATE_KEY]: serializeEstimateLines(seedEstimateLines(work.id, items, scope)),
       };
     });
-  }, [work?.id, user, kitsQ.isFetched, workKits.length, bookQ.data?.items.length, search.template, search.kit]);
+  }, [
+    work?.id,
+    user,
+    kitsQ.isFetched,
+    workKits.length,
+    bookQ.data?.items.length,
+    search.template,
+    search.kit,
+    inviteQ.data?.invite.id,
+  ]);
 
   const book = user ? (bookQ.data?.items ?? []) : guestBook();
   const quoteCatalog = useMemo(() => {
@@ -692,10 +722,32 @@ function NewQuote() {
               : "Start a Quote"}
         </h1>
         {inviteQ.data ? (
-          <p className="rounded-xl bg-card px-4 py-3 text-sm shadow-[var(--shadow-border)]">
-            Lead at this address. Photos on the File. Quote from your materials. This request stays with this shop.
-            {inviteQ.data.invite.body ? ` ${inviteQ.data.invite.body}` : ""}
-          </p>
+          <section className="space-y-3 rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-border)]">
+            <p className="text-sm">
+              {inviteQ.data.property.homeowner_name} asked {inviteQ.data.invite.shop_name} to quote{" "}
+              {inviteQ.data.invite.title} at {inviteQ.data.property.address_line}.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This request stays with this shop. Photos on the File. Quote from your materials.
+            </p>
+            {leadAnswerRows.length > 0 ? (
+              <div className="space-y-2 border-t border-border/60 pt-3">
+                <p className="text-sm font-medium">Answers for this quote</p>
+                <dl className="grid gap-2 sm:grid-cols-2">
+                  {leadAnswerRows.map((row) => (
+                    <div key={row.label} className="space-y-0.5">
+                      <dt className="text-xs tracking-wide text-muted-foreground uppercase">{row.label}</dt>
+                      <dd className="text-sm">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ) : inviteQ.data.invite.body.includes("\n") ? (
+              <p className="whitespace-pre-line border-t border-border/60 pt-3 text-sm">
+                {inviteQ.data.invite.body}
+              </p>
+            ) : null}
+          </section>
         ) : search.invite && inviteQ.isError ? (
           <p className="text-sm text-destructive">
             {inviteQ.error instanceof Error ? inviteQ.error.message : "Could not open this lead."}
@@ -811,7 +863,9 @@ function NewQuote() {
       {shownStep === 3 && (
         <div className="space-y-3">
           <p className="text-muted-foreground">
-            Pick the work category, then the photos, measurements, and pre-saved templates for that job.
+            {inviteQ.data
+              ? "The homeowner already answered the measurements for this job. Use them with your materials."
+              : "Pick the work category, then the photos, measurements, and pre-saved templates for that job."}
           </p>
           <div className="space-y-2">
             <p className="text-sm font-medium">Work category</p>
@@ -860,6 +914,7 @@ function NewQuote() {
               onChange={(key, value) => setTakeoff((s) => ({ ...s, [key]: value }))}
               book={book}
               kits={workKits}
+              startOpenMeasures={leadAnswerRows.length > 0}
             />
           ) : (
             <p className="text-sm text-muted-foreground">Pick a work category to continue.</p>

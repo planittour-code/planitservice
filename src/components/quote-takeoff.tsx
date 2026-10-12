@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { EstimateSheet } from "@/components/estimate-sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TakeoffInput } from "@/components/takeoff-fields";
 import type { PriceBookItem } from "@/lib/housefile/book";
 import {
   ESTIMATE_KEY,
@@ -16,7 +16,6 @@ import { money } from "@/lib/housefile/format";
 import {
   fieldVisible,
   type QuoteLine,
-  type TakeoffField,
   type WorkType,
 } from "@/lib/housefile/quote";
 import { cn } from "@/lib/utils";
@@ -28,12 +27,14 @@ export function TakeoffForm({
   onChange,
   book,
   kits = [],
+  startOpenMeasures = false,
 }: {
   work: WorkType;
   paintScope?: string;
   inputs: Record<string, string>;
   onChange: (key: string, value: string) => void;
   book: PriceBookItem[];
+  startOpenMeasures?: boolean;
   kits?: {
     work_id: string;
     items: {
@@ -45,7 +46,7 @@ export function TakeoffForm({
     }[];
   }[];
 }) {
-  const [showMeasures, setShowMeasures] = useState(false);
+  const [showMeasures, setShowMeasures] = useState(startOpenMeasures);
   const estimate = parseEstimateLines(inputs[ESTIMATE_KEY]);
   const rows = estimate.length > 0 ? estimate : seedEstimateLines(work.id, book, paintScope);
   const catalog = catalogLinesForWork(work.id, kits, paintScope);
@@ -93,7 +94,9 @@ export function TakeoffForm({
           {showMeasures && (
             <div className="grid gap-2 rounded-xl bg-card p-3 shadow-[var(--shadow-border)] sm:grid-cols-2">
               <p className="text-sm text-muted-foreground sm:col-span-2">
-                Optional. These write onto the property record. They do not price the lines.
+                {startOpenMeasures
+                  ? "From the homeowner request. Change a number if you measure on site."
+                  : "Optional. These write onto the property record. They do not price the lines."}
               </p>
               {measureFields.map((field) => (
                 <TakeoffInput
@@ -110,6 +113,8 @@ export function TakeoffForm({
     </div>
   );
 }
+
+export { TakeoffInput, TakeoffFields } from "@/components/takeoff-fields";
 
 export function QuotePreview({
   lines,
@@ -141,68 +146,5 @@ export function QuotePreview({
         ))}
       </ul>
     </aside>
-  );
-}
-
-function TakeoffInput({
-  field,
-  value,
-  onChange,
-}: {
-  field: TakeoffField;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const id = `to-${field.key}`;
-  if (field.kind === "toggle") {
-    const on = value === "yes" || value === "true" || value === "1";
-    return (
-      <label className="flex min-h-9 items-center gap-3 rounded-lg bg-background px-3 py-2 shadow-[var(--shadow-border)] sm:col-span-2">
-        <input
-          id={id}
-          type="checkbox"
-          checked={on}
-          onChange={(e) => onChange(e.target.checked ? "yes" : "no")}
-          className="size-4"
-        />
-        <span>
-          <span className="block text-sm font-medium">{field.label}</span>
-          <span className="block text-xs text-muted-foreground">{field.hint}</span>
-        </span>
-      </label>
-    );
-  }
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>
-        {field.label}
-        {field.unit ? ` (${field.unit})` : ""}
-      </Label>
-      {field.kind === "select" ? (
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex h-9 w-full rounded-md bg-background px-2.5 text-sm shadow-[var(--shadow-border)] outline-none"
-        >
-          {(field.options ?? []).map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <Input
-          id={id}
-          type={field.kind === "number" ? "number" : "text"}
-          inputMode={field.kind === "number" ? "decimal" : "text"}
-          step={field.kind === "number" ? "any" : undefined}
-          min={field.kind === "number" ? 0 : undefined}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
-    </div>
   );
 }

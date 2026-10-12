@@ -80,6 +80,7 @@ export const WORK_TYPES: WorkType[] = [
     blurb: "Interior or exterior. Rooms, siding, and the colors that stay with the house.",
     fields: [
       f("paint_scope", "Where", "select", "The questions change with the side of the wall.", {
+        required: true,
         options: [
           { value: "interior", label: "Interior" },
           { value: "exterior", label: "Exterior" },
@@ -139,6 +140,7 @@ export const WORK_TYPES: WorkType[] = [
       f("square_feet", "Finished square feet", "number", "Footprint proxy if squares are unknown.", { unit: "sf" }),
       f("stories", "Stories", "number", "Staging and disposal."),
       f("roof_pitch", "Pitch", "select", "Steeper roofs add waste and labor.", {
+        required: true,
         options: [
           { value: "4/12", label: "Low — 4/12 or less" },
           { value: "6/12", label: "Average — 6/12" },
@@ -210,6 +212,7 @@ export const WORK_TYPES: WorkType[] = [
     blurb: "Downspout leaders, buried pipe, and splash away from the foundation.",
     fields: [
       f("drainage_type", "Drainage type", "select", "Where the water leaves the house.", {
+        required: true,
         options: [
           { value: "underground", label: "Underground" },
           { value: "above", label: "Above ground" },
@@ -312,6 +315,7 @@ export const WORK_TYPES: WorkType[] = [
     blurb: "Leaks, fixtures, drains, and the water heater that stays with the house.",
     fields: [
       f("plumbing_scope", "The work", "select", "Repair, a new fixture, or the water heater.", {
+        required: true,
         options: [
           { value: "repair", label: "Leak or repair" },
           { value: "fixture", label: "New fixture" },
@@ -335,6 +339,7 @@ export const WORK_TYPES: WorkType[] = [
     blurb: "Tune-up, repair, or a new system sized for this house.",
     fields: [
       f("hvac_scope", "The work", "select", "Service visit, repair, or replacement.", {
+        required: true,
         options: [
           { value: "tuneup", label: "Tune-up / maintenance" },
           { value: "repair", label: "Repair" },
@@ -357,6 +362,7 @@ export const WORK_TYPES: WorkType[] = [
     blurb: "Weekly care, opening and closing, and the equipment on this pool.",
     fields: [
       f("pool_scope", "The work", "select", "Weekly service, open, close, or a repair.", {
+        required: true,
         options: [
           { value: "weekly", label: "Weekly service" },
           { value: "open", label: "Opening" },
@@ -383,6 +389,7 @@ export const WORK_TYPES: WorkType[] = [
     blurb: "Mow, beds, irrigation, and the lot that stays with the house.",
     fields: [
       f("lawn_scope", "The work", "select", "Mow, seasonal cleanup, irrigation, or beds.", {
+        required: true,
         options: [
           { value: "mow", label: "Mow and edge" },
           { value: "seasonal", label: "Seasonal cleanup" },
@@ -1680,6 +1687,74 @@ export function takeoffReady(work: WorkType, inputs: Record<string, string>) {
     return requiredOk && (nInput(inputs, "roof_squares") > 0 || nInput(inputs, "square_feet") > 0);
   }
   return requiredOk;
+}
+
+export function parseTakeoffJson(raw: string | null | undefined): Record<string, string> {
+  if (!raw?.trim()) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value === "string" && value.trim()) out[key] = value.trim();
+      else if (typeof value === "number" && Number.isFinite(value)) out[key] = String(value);
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function sanitizeLeadTakeoff(work: WorkType, raw: Record<string, string> | undefined) {
+  const source = raw ?? {};
+  const out: Record<string, string> = { __work: work.id };
+  for (const field of work.fields) {
+    if (!fieldVisible(field, source)) continue;
+    const value = String(source[field.key] ?? "").trim();
+    if (!value) continue;
+    if (value.length > 400) throw new Error("Keep each answer under 400 characters.");
+    out[field.key] = value;
+  }
+  const notes = String(source.lead_notes ?? "").trim();
+  if (notes) out.lead_notes = notes.slice(0, 800);
+  return out;
+}
+
+export function formatTakeoffAnswers(work: WorkType, inputs: Record<string, string>) {
+  const rows: { label: string; value: string }[] = [];
+  for (const field of work.fields) {
+    if (!fieldVisible(field, inputs)) continue;
+    const raw = (inputs[field.key] ?? "").trim();
+    if (!raw) continue;
+    let value = raw;
+    if (field.kind === "toggle") value = onInput(inputs, field.key) ? "Yes" : "No";
+    else if (field.kind === "select") {
+      value = field.options?.find((o) => o.value === raw)?.label ?? raw;
+    } else if (field.kind === "number" && field.unit) {
+      value = `${raw} ${field.unit}`;
+    }
+    rows.push({ label: field.label, value });
+  }
+  const notes = (inputs.lead_notes ?? "").trim();
+  if (notes) rows.push({ label: "Notes", value: notes });
+  return rows;
+}
+
+export function takeoffAnswerText(work: WorkType, inputs: Record<string, string>) {
+  return formatTakeoffAnswers(work, inputs)
+    .map((row) => `${row.label}: ${row.value}`)
+    .join("\n");
+}
+
+export function workIdFromInvite(invite: { title?: string | null; takeoff_json?: string | null }) {
+  const packed = parseTakeoffJson(invite.takeoff_json);
+  if (packed.__work && workFromId(packed.__work)) return packed.__work;
+  const title = (invite.title ?? "").trim().toLowerCase();
+  if (!title) return "";
+  const hit = WORK_TYPES.find(
+    (w) => w.name.toLowerCase() === title || w.id.toLowerCase() === title,
+  );
+  return hit?.id ?? "";
 }
 
 export function suggestedSquares(inputs: Record<string, string>) {

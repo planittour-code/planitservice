@@ -413,6 +413,7 @@ export type FileWorkInvite = {
   share_token: string;
   status: "open" | "quoted" | "closed";
   created_at: string;
+  takeoff_json?: string | null;
 };
 
 export type RfpStatus = "open" | "awarded" | "closed";

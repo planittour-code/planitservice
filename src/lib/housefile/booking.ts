@@ -27,7 +27,14 @@ import {
   googleMoveEvent,
 } from "@/lib/housefile/google-calendar";
 import { slugToken } from "@/lib/housefile/format";
-import { workTypesFor } from "@/lib/housefile/quote";
+import {
+  factsFromTakeoff,
+  sanitizeLeadTakeoff,
+  takeoffAnswerText,
+  takeoffReady,
+  workFromId,
+  workTypesFor,
+} from "@/lib/housefile/quote";
 import { missingMaintenanceItems, nextDue } from "@/lib/housefile/maintain";
 
 const HOUSEHOLD = "co_household";
@@ -399,6 +406,7 @@ export async function openProjectLead(input: {
   state?: string;
   zip?: string;
   workId: ProjectServiceId | string;
+  takeoff?: Record<string, string>;
   source: "web" | "voice";
   slug: string;
 }) {
@@ -413,6 +421,12 @@ export async function openProjectLead(input: {
   const offered = workTypesFor(shop.trades);
   const picked = offered.find((item) => item.id === input.workId);
   if (!picked) throw new Error("That work is not offered by this shop.");
+  const workType = workFromId(picked.id) ?? picked;
+  const takeoff = sanitizeLeadTakeoff(workType, input.takeoff);
+  if (input.source === "web" && !takeoffReady(workType, takeoff)) {
+    throw new Error("Answer the measurements for this work so we can quote it.");
+  }
+  const answers = takeoffAnswerText(workType, takeoff);
   const work = { id: picked.id, label: picked.name };
   const shopId = shop.id;
   const shopName = shop.name;
@@ -481,16 +495,33 @@ export async function openProjectLead(input: {
     await seedFile(sql, fileId);
   }
 
+  for (const fact of factsFromTakeoff(workType, takeoff)) {
+    const value = fact.value.trim();
+    if (!value) continue;
+    await sql`
+      insert into property_facts (id, property_id, field_key, value, source)
+      values (${crypto.randomUUID()}, ${fileId}, ${fact.fieldKey}, ${value}, ${"homeowner"})
+      on conflict (property_id, field_key)
+      do update set value = excluded.value, source = excluded.source, updated_at = now()
+    `;
+  }
+
   const inviteId = crypto.randomUUID();
   const share = slugToken();
+  const body = [
+    `${name} asked ${shopName} to quote ${work.label} at ${address}.`,
+    answers,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   await sql`
     insert into file_work_invites (
-      id, property_id, invited_by_user_id, shop_email, shop_name, title, body, share_token, status
+      id, property_id, invited_by_user_id, shop_email, shop_name, title, body, share_token, status, takeoff_json
     ) values (
       ${inviteId}, ${fileId}, ${"mailer"}, ${shop.replyTo}, ${shopName},
       ${work.label},
-      ${`${name} asked ${shopName} to quote ${work.label} at ${address}. Opened from the seasonal mailer (${input.source}).`},
-      ${share}, ${"open"}
+      ${body},
+      ${share}, ${"open"}, ${JSON.stringify(takeoff)}
     )
   `;
 

@@ -1165,6 +1165,7 @@ export const startPublicProject = createServerFn({ method: "POST" })
       state?: string;
       zip?: string;
       workId: string;
+      takeoff?: Record<string, string>;
     }) => input,
   )
   .handler(async ({ data }) => {
