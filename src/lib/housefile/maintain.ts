@@ -81,6 +81,18 @@ export function cadenceLabel(c: string) {
   return c;
 }
 
+export function isScheduleCadence(value: string): value is "daily" | "weekly" | "monthly" {
+  return value === "daily" || value === "weekly" || value === "monthly";
+}
+
+export function scheduleCadence(value: string): Cadence {
+  return isScheduleCadence(value) ? value : "annual";
+}
+
+export function isHvacTask(task: { title?: string; system?: string; system_name?: string }) {
+  return /\bhvac\b/i.test(task.title ?? "");
+}
+
 export type MaintenanceStatus = "scheduled" | "overdue" | "dueSoon" | "current";
 
 const DUE_SOON_DAYS = 14;
@@ -170,6 +182,71 @@ export function isUpcomingTask(
   if (task.due_on <= horizon) return true;
   if (task.scheduled_on && task.scheduled_on <= horizon) return true;
   return false;
+}
+
+export function monthKeyFromValue(value: string | Date | null | undefined) {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(String(value).length <= 10 ? `${value}T12:00:00` : String(value));
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function monthLabelFromKey(key: string) {
+  const [year, month] = key.split("-").map(Number);
+  if (!year || !month) return key;
+  const d = new Date(year, month - 1, 1);
+  if (Number.isNaN(d.getTime())) return key;
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(d);
+}
+
+export function currentMonthKey(from = new Date()) {
+  return `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function clientMonthKeys(fromValue: string | Date | null | undefined, through = new Date()) {
+  const startKey = monthKeyFromValue(fromValue) || currentMonthKey(through);
+  const endKey = currentMonthKey(through);
+  const [startYear, startMonth] = startKey.split("-").map(Number);
+  const [endYear, endMonth] = endKey.split("-").map(Number);
+  if (!startYear || !startMonth || !endYear || !endMonth) return [endKey];
+  const keys: string[] = [];
+  let year = startYear;
+  let month = startMonth;
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    keys.push(`${year}-${String(month).padStart(2, "0")}`);
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+    if (keys.length > 240) break;
+  }
+  return keys;
+}
+
+export function maintenanceRecordMonths<T extends { completed_at?: string | null }>(
+  tasks: T[],
+  clientSince?: string | Date | null,
+) {
+  const done = tasks.filter((task) => task.completed_at);
+  const byMonth = new Map<string, T[]>();
+  for (const task of done) {
+    const key = monthKeyFromValue(task.completed_at);
+    if (!key) continue;
+    const list = byMonth.get(key) ?? [];
+    list.push(task);
+    byMonth.set(key, list);
+  }
+  const keys = new Set([...clientMonthKeys(clientSince), ...byMonth.keys()]);
+  return [...keys]
+    .sort((a, b) => b.localeCompare(a))
+    .map((key) => ({
+      key,
+      label: monthLabelFromKey(key),
+      tasks: (byMonth.get(key) ?? []).sort((a, b) =>
+        String(b.completed_at ?? "").localeCompare(String(a.completed_at ?? "")),
+      ),
+    }));
 }
 
 export function nextOpenTask<T extends { id: string; title: string; due_on: string; scheduled_on?: string | null; completed_at?: string | null }>(

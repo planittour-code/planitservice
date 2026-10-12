@@ -173,7 +173,7 @@ function HomeRecord() {
       <RecordSection
         id="maintenance"
         title="Maintenance Schedule"
-        blurb={`${due.length} due in the next two weeks. Add notes on each line — filter size, product, or how to do the job.`}
+        blurb={`${due.length} due in the next two weeks. Marked-done work files into a month folder for the service record.`}
         photo={CATEGORY_PHOTO.systems}
         countLabel={`${open.length} open`}
         chips={
@@ -190,6 +190,8 @@ function HomeRecord() {
       >
         <MaintenanceChecklist
           tasks={open}
+          completedTasks={tasks.filter((t) => t.completed_at)}
+          clientSince={p.created_at}
           donePending={done.isPending}
           removePending={removeTask.isPending}
           addPending={addTask.isPending}

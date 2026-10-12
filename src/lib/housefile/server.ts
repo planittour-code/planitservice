@@ -99,6 +99,7 @@ import {
   maintenanceRank,
   missingMaintenanceItems,
   nextDue,
+  scheduleCadence,
   nextOpenTask,
   parseIsoDate,
   relevantTaskDate,
@@ -4696,11 +4697,11 @@ export const completeMaintenance = createServerFn({ method: "POST" })
           scheduled_note = null
       where id = ${task.id}
     `;
-    const nextCadence = isCadence(task.cadence) ? task.cadence : "monthly";
+    const nextCadence = scheduleCadence(task.cadence);
     await sql`
       insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
-        ${crypto.randomUUID()}, ${task.property_id}, ${task.title}, ${task.system_name}, ${task.cadence},
+        ${crypto.randomUUID()}, ${task.property_id}, ${task.title}, ${task.system_name}, ${nextCadence},
         ${nextDue(nextCadence)}, ${task.notes}, ${task.alert_on !== false}
       )
     `;
@@ -4731,6 +4732,7 @@ export const addHomeMaintenance = createServerFn({ method: "POST" })
     if (!title) throw new Error("Name the checklist item.");
     const system = data.system.trim() || "Custom";
     if (!isCadence(data.cadence)) throw new Error("Pick how often this comes due.");
+    const cadence = scheduleCadence(data.cadence);
     const notes = data.notes?.trim() || null;
     const alertOn = data.alertOn !== false;
     const existing = (
@@ -4745,8 +4747,8 @@ export const addHomeMaintenance = createServerFn({ method: "POST" })
     await sql`
       insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
-        ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${data.cadence},
-        ${nextDue(data.cadence)}, ${notes}, ${alertOn}
+        ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${cadence},
+        ${nextDue(cadence)}, ${notes}, ${alertOn}
       )
     `;
     return { ok: true as const };
@@ -4773,12 +4775,10 @@ export const updateHomeMaintenance = createServerFn({ method: "POST" })
       throw new Error("Pick day, week, or month.");
     }
     const notes = data.notes !== undefined ? data.notes.trim() || null : task.notes;
-    const cadence = data.cadence ?? task.cadence;
+    const cadence = data.cadence !== undefined ? scheduleCadence(data.cadence) : task.cadence;
     const alertOn = data.alertOn !== undefined ? data.alertOn : task.alert_on !== false;
     const dueOn =
-      data.cadence && isCadence(data.cadence) && data.cadence !== task.cadence
-        ? nextDue(data.cadence)
-        : task.due_on;
+      data.cadence !== undefined && cadence !== task.cadence ? nextDue(scheduleCadence(data.cadence)) : task.due_on;
     await sql`
       update maintenance_tasks
       set notes = ${notes},
@@ -4842,6 +4842,7 @@ export const addPortfolioMaintenance = createServerFn({ method: "POST" })
     if (!title) throw new Error("Name the checklist item.");
     const system = data.system.trim() || "Custom";
     if (!isCadence(data.cadence)) throw new Error("Pick how often this comes due.");
+    const cadence = scheduleCadence(data.cadence);
     const notes = data.notes?.trim() || null;
     const alertOn = data.alertOn !== false;
     const existing = (
@@ -4856,8 +4857,8 @@ export const addPortfolioMaintenance = createServerFn({ method: "POST" })
     await sql`
       insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
-        ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${data.cadence},
-        ${nextDue(data.cadence)}, ${notes}, ${alertOn}
+        ${crypto.randomUUID()}, ${property.id}, ${title}, ${system}, ${cadence},
+        ${nextDue(cadence)}, ${notes}, ${alertOn}
       )
     `;
     return { ok: true as const };
@@ -4885,12 +4886,10 @@ export const updatePortfolioMaintenance = createServerFn({ method: "POST" })
       throw new Error("Pick day, week, or month.");
     }
     const notes = data.notes !== undefined ? data.notes.trim() || null : task.notes;
-    const cadence = data.cadence ?? task.cadence;
+    const cadence = data.cadence !== undefined ? scheduleCadence(data.cadence) : task.cadence;
     const alertOn = data.alertOn !== undefined ? data.alertOn : task.alert_on !== false;
     const dueOn =
-      data.cadence && isCadence(data.cadence) && data.cadence !== task.cadence
-        ? nextDue(data.cadence)
-        : task.due_on;
+      data.cadence !== undefined && cadence !== task.cadence ? nextDue(scheduleCadence(data.cadence)) : task.due_on;
     await sql`
       update maintenance_tasks
       set notes = ${notes},
@@ -6064,7 +6063,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
     for (const row of seeded) {
       await seedMaintenance(sql, row.property_id);
     }
-    const openTasks = (
+    const allTasks = (
       await sql<
         MaintenanceTask & {
           address_line: string;
@@ -6078,15 +6077,23 @@ export const getPortfolio = createServerFn({ method: "GET" })
         from maintenance_tasks t
         join portfolio_properties pp on pp.property_id = t.property_id
         join properties p on p.id = t.property_id
-        where pp.portfolio_id = ${portfolio.id} and t.completed_at is null
+        where pp.portfolio_id = ${portfolio.id}
       `
     ).map((row) => ({ ...asMaintenanceTask(row), address_line: row.address_line, city: row.city, state: row.state, zip: row.zip, homeowner_name: row.homeowner_name }));
+    const openTasks = allTasks.filter((task) => !task.completed_at);
     const today = todayIso();
     const tasksByHouse = new Map<string, typeof openTasks>();
-    for (const task of openTasks) {
-      const list = tasksByHouse.get(task.property_id) ?? [];
-      list.push(task);
-      tasksByHouse.set(task.property_id, list);
+    const completedByHouse = new Map<string, typeof allTasks>();
+    for (const task of allTasks) {
+      if (task.completed_at) {
+        const list = completedByHouse.get(task.property_id) ?? [];
+        list.push(task);
+        completedByHouse.set(task.property_id, list);
+      } else {
+        const list = tasksByHouse.get(task.property_id) ?? [];
+        list.push(task);
+        tasksByHouse.set(task.property_id, list);
+      }
     }
     const accepted = await acceptedEstimatesForPortfolio(sql, portfolio.id);
     const acceptedByHouse = new Map<string, PortfolioAcceptedEstimate[]>();
@@ -6131,6 +6138,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
         nextTask,
         acceptedEstimates,
         tasks,
+        completedTasks: completedByHouse.get(h.id) ?? [],
       };
     });
     listed.sort((a, b) => {
@@ -6325,11 +6333,11 @@ export const completePortfolioMaintenance = createServerFn({ method: "POST" })
           scheduled_note = null
       where id = ${task.id}
     `;
-    const nextCadence = isCadence(task.cadence) ? task.cadence : "monthly";
+    const nextCadence = scheduleCadence(task.cadence);
     await sql`
       insert into maintenance_tasks (id, property_id, title, system_name, cadence, due_on, notes, alert_on)
       values (
-        ${crypto.randomUUID()}, ${task.property_id}, ${task.title}, ${task.system_name}, ${task.cadence},
+        ${crypto.randomUUID()}, ${task.property_id}, ${task.title}, ${task.system_name}, ${nextCadence},
         ${nextDue(nextCadence)}, ${task.notes}, ${task.alert_on !== false}
       )
     `;

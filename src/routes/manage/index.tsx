@@ -177,7 +177,7 @@ function ManageDashboard() {
             <RecordSection
               id="maintenance"
               title="Maintenance Schedule"
-              blurb="Add notes on each line — filter size, product, or how to do the job. Open the house for photos, jobs, and the full record."
+              blurb="Open the house for photos, jobs, and the full record. Marked-done work files into a month folder for the service record."
               photo={CATEGORY_PHOTO.systems}
               countLabel={selectedHouse ? `${(selectedHouse.tasks ?? []).length} open` : "Pick a house"}
               chips={
@@ -388,6 +388,8 @@ function PortfolioChecklists({
           </p>
           <MaintenanceChecklist
             tasks={selected.tasks ?? []}
+            completedTasks={selected.completedTasks ?? []}
+            clientSince={selected.created_at}
             donePending={done.isPending}
             removePending={removeTask.isPending}
             addPending={addTask.isPending}

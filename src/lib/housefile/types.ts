@@ -522,6 +522,7 @@ export type PortfolioHouse = HomeownerHouse & {
   nextTask: PortfolioNextTask | null;
   acceptedEstimates: PortfolioAcceptedEstimate[];
   tasks: MaintenanceTask[];
+  completedTasks: MaintenanceTask[];
 };
 
 export type PortfolioOwner = {

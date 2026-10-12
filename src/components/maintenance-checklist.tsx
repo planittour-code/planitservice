@@ -2,10 +2,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MonthFolder } from "@/components/month-folder";
 import { MaintenanceBadge } from "@/components/status-badge";
 import {
   MAINTENANCE_SYSTEMS,
   cadenceLabel,
+  isHvacTask,
+  maintenanceRecordMonths,
+  scheduleCadence,
   taskStatus,
   todayIso,
   type Cadence,
@@ -36,6 +40,8 @@ export type MaintenanceUpdateInput = {
 
 export function MaintenanceChecklist({
   tasks,
+  completedTasks,
+  clientSince,
   donePending,
   removePending,
   addPending,
@@ -47,6 +53,8 @@ export function MaintenanceChecklist({
   extra,
 }: {
   tasks: MaintenanceTask[];
+  completedTasks?: MaintenanceTask[];
+  clientSince?: string | Date | null;
   donePending?: boolean;
   removePending?: boolean;
   addPending?: boolean;
@@ -59,10 +67,13 @@ export function MaintenanceChecklist({
 }) {
   const [title, setTitle] = useState("");
   const [system, setSystem] = useState("Custom");
-  const [cadence, setCadence] = useState<Cadence>("monthly");
+  const [cadence, setCadence] = useState<Cadence>("annual");
   const [notes, setNotes] = useState("");
   const [alertOn, setAlertOn] = useState(true);
-  const groups = groupTasks(tasks);
+  const open = tasks.filter((task) => !task.completed_at);
+  const history = completedTasks ?? tasks.filter((task) => task.completed_at);
+  const groups = groupTasks(open);
+  const months = maintenanceRecordMonths(history, clientSince);
 
   return (
     <div className="space-y-4">
@@ -76,7 +87,7 @@ export function MaintenanceChecklist({
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{t.title}</p>
                     <p className="text-sm text-muted-foreground">
-                      {cadenceLabel(t.cadence)} · due {shortDate(t.due_on)}
+                      {cadenceLabel(scheduleCadence(t.cadence))} · due {shortDate(t.due_on)}
                       {t.scheduled_on ? ` · scheduled ${shortDate(t.scheduled_on)}` : ""}
                     </p>
                     {t.scheduled_note ? (
@@ -132,7 +143,7 @@ export function MaintenanceChecklist({
           });
           setTitle("");
           setSystem("Custom");
-          setCadence("monthly");
+          setCadence("annual");
           setNotes("");
           setAlertOn(true);
         }}
@@ -161,7 +172,9 @@ export function MaintenanceChecklist({
               id="maintenance-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="HVAC filter size"
+              placeholder={
+                isHvacTask({ title, system }) ? "HVAC filter size" : undefined
+              }
             />
           </div>
           <div className="space-y-1">
@@ -192,6 +205,50 @@ export function MaintenanceChecklist({
           {addPending ? "Adding…" : "Add to schedule"}
         </Button>
       </form>
+
+      {months.length > 0 ? (
+        <section className="space-y-3">
+          <div>
+            <h4 className="font-display text-sm font-bold tracking-tight">Service record</h4>
+            <p className="text-sm text-muted-foreground">
+              One folder for each month this house has been a client. Marked-done work files here as the
+              maintenance record.
+            </p>
+          </div>
+          <ul className="space-y-4">
+            {months.map((month) => (
+              <li key={month.key}>
+                <MonthFolder
+                  label={month.label}
+                  count={month.tasks.length}
+                  countLabel={`${month.tasks.length} ${month.tasks.length === 1 ? "record" : "records"}`}
+                >
+                  {month.tasks.length ? (
+                    <ul className="divide-y divide-border rounded-md bg-background">
+                      {month.tasks.map((task) => (
+                        <li key={task.id} className="px-4 py-3">
+                          <p className="font-medium">{task.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {task.system_name}
+                            {task.completed_at ? ` · ${shortDate(task.completed_at)}` : ""}
+                          </p>
+                          {task.notes ? (
+                            <p className="text-sm text-muted-foreground">{task.notes}</p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="px-3 py-4 text-sm text-muted-foreground">
+                      No maintenance recorded this month.
+                    </p>
+                  )}
+                </MonthFolder>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -235,7 +292,7 @@ function TaskScheduleFields({
               (e.target as HTMLInputElement).blur();
             }
           }}
-          placeholder="HVAC filter size"
+          placeholder={isHvacTask(task) ? "HVAC filter size" : undefined}
         />
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -243,7 +300,7 @@ function TaskScheduleFields({
           <legend className="text-sm font-medium">How often</legend>
           <CadenceChecks
             name={`cadence-${task.id}`}
-            value={task.cadence}
+            value={scheduleCadence(task.cadence)}
             disabled={disabled || !onUpdate}
             onChange={(cadence) =>
               onUpdate?.({ taskId: task.id, cadence, notes: notes.trim() })
@@ -287,7 +344,7 @@ function CadenceChecks({
           checked={value === opt.value}
           disabled={disabled}
           onPick={() => {
-            if (value !== opt.value) onChange(opt.value);
+            onChange(value === opt.value ? "annual" : opt.value);
           }}
         />
       ))}
