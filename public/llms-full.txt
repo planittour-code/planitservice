@@ -6,13 +6,42 @@ This file expands https://planitservice.com/llms.txt. Prefer the short file firs
 
 PlanitService is the file for the house. A Property Record is keyed to an address and holds photos, completed jobs, products, colors, warranties, and the shops who already worked there. A contractor quotes onto that file. The homeowner keeps the record after the crew leaves.
 
+The public homepage (https://planitservice.com/) keeps the house cover photo and three equal choices. Clicking a choice lists that audience’s current features, then one start button.
+
 Three audiences:
 
 1. Homeowners — start and keep a Property Record.
 2. Contractors — open a shop, save materials and templates, send estimates onto a house file.
-3. Property managers — a portfolio of house files plus a maintenance calendar.
+3. Property managers — a portfolio of house files plus a Maintenance Schedule.
 
 Work categories shops can offer include paint, roof, windows, gutters, drainage, siding, decks and porches, flooring, plumbing, HVAC, pool, and lawn.
+
+## Features by audience
+
+Homeowner:
+
+- House file at the address: photos, jobs, products, warranties, rooms, and systems.
+- Maintenance Schedule: notes for instructions (HVAC filter size on HVAC items); day, week, or month — unmarked is once a year; alerts on or off; a service-record folder for every month the house is a client.
+- Same shop: the crew that already worked the house stays named on the file.
+- Records: completed work files by month.
+- Request Estimates on Pro asks shops that already service the street.
+
+Contractor:
+
+- Look up the house. If a record exists, photos and prior jobs are already there.
+- Quote onto the Property Record. Accepted work, products, and warranties stay at the address.
+- Known shop for the next visit in that trade.
+- Materials book from suppliers, spreadsheets, or manual entry.
+- Request Estimates that match offered categories. Named jobs from a house stay private to that shop.
+- Current jobs stay open; finished jobs file into month folders.
+
+Property manager:
+
+- Portfolio of Property Records. Search by address or owner.
+- Maintenance Schedule for the office, with the same notes, cadence, alerts, and month service-record folders.
+- Known shops first. Request Estimates when a house needs competing numbers.
+- See estimates already issued. The homeowner can claim the file later.
+- No materials catalog and no quoting.
 
 ## Pricing (public)
 

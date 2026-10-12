@@ -2,7 +2,7 @@
 
 > The file for the house. Photos, jobs, products, warranties, and the shop you call back — kept at the address.
 
-PlanitService (https://planitservice.com) is hosted SaaS for a Property Record that hangs on a house address. Homeowners keep the file. Contractors quote onto it and stay the known shop for the next visit. Property managers run a portfolio of the same records plus a maintenance calendar.
+PlanitService (https://planitservice.com) is hosted SaaS for a Property Record that hangs on a house address. The public homepage presents three choices: Homeowner, Contractor, and Property Manager. Each path has its own start URL below.
 
 We host the software. We are not a general contractor, broker, or escrow. Quotes and work stay between the shop and the homeowner.
 
@@ -15,6 +15,14 @@ Online since 2007. Company in Georgia, United States. Copyrighted live-document 
 - Property managers open a portfolio: https://planitservice.com/manage (from $39.99/month for 10 houses)
 - Sign in: https://planitservice.com/login
 - Support: support@planitservice.com — Monday–Friday, 9:00 a.m. to 6:00 p.m. US Eastern
+
+## What each path includes
+
+Homeowner — house file at the address (photos, jobs, products, warranties); Maintenance Schedule (notes, day/week/month or once a year, alerts, a service-record folder for every client month); the same shop stays named on the file; records of completed work; Request Estimates on Pro.
+
+Contractor — look up the house; quote onto the Property Record; stay the known shop for the next visit; materials book; catch Request Estimates that match offered categories; jobs file into month folders. Extra seats $5/month.
+
+Property manager — portfolio of Property Records (10 houses on the base plan); Maintenance Schedule for the office with the same month service-record folders; known shops first; Request Estimates when a house needs bids; extra houses $3.99/month; extra office seats $5/month. No catalog and no quoting.
 
 ## Public shop (Painting Plus / Gutters Plus)
 

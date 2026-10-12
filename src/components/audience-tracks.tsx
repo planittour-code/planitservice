@@ -1,29 +1,55 @@
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Building2, Home, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  MANAGE_EXTRA_MONTHLY,
+  MANAGE_INCLUDED,
   MANAGE_MONTHLY,
   PROPERTY_MONTHLY,
+  PRO_MONTHLY,
+  SEAT_MONTHLY,
   SHOP_MONTHLY,
   dollars,
 } from "@/lib/housefile/pricing";
 import { trackCta } from "@/lib/track-cta";
 import { cn } from "@/lib/utils";
 
-const TRACKS = [
+const CHOICES = [
   {
     id: "homeowner",
     label: "Homeowner",
-    short: "House",
     Icon: Home,
-    kicker: "Keep the file",
-    title: "The file for the house.",
-    body: "Photos, jobs, warranties, and the shops that already worked the address. Request Estimates is Pro — shops that already service this street.",
-    points: [
-      "Permanent record of work and warranties",
-      "Named shop you know stays on Standard",
-      "Pro asks shops that cover this street",
+    description:
+      "One house file: photos, jobs, warranties, a Maintenance Schedule, and the shop you already call.",
+    kicker: "For homeowners",
+    title: "What is on the house file",
+    body: "The record hangs on the address. You keep it. The shop that already worked the house stays named on it.",
+    features: [
+      {
+        name: "Maintenance Schedule",
+        detail:
+          "Day, week, or month — unmarked is once a year. Notes for instructions (HVAC filter size on HVAC items). Alerts on or off. A service-record folder for every month you keep the file.",
+      },
+      {
+        name: "House file",
+        detail:
+          "Photos, jobs, products, and warranties live at the address — rooms, systems, paint, roof, and the rest of the record.",
+      },
+      {
+        name: "Same shop",
+        detail:
+          "The crew that already worked the house stays on the file. Call them back without starting over.",
+      },
+      {
+        name: "Records",
+        detail:
+          "Completed work files by month. Warranties and products stay with the house when the crew leaves.",
+      },
+      {
+        name: "Request Estimates",
+        detail: `Pro ($${dollars(PRO_MONTHLY)} / month) asks shops that already service this street when you want new numbers.`,
+      },
     ],
     price: `From $${dollars(PROPERTY_MONTHLY)} / month per property`,
     to: "/homeowner" as const,
@@ -33,15 +59,45 @@ const TRACKS = [
   {
     id: "contractor",
     label: "Contractor",
-    short: "Shop",
     Icon: Store,
-    kicker: "Stay the known shop",
-    title: "Quote onto the file. Get the next visit.",
-    body: "Work written on the Property Record makes you the shop they call back. Pick the categories you offer. Catch Request Estimates in that area.",
-    points: [
-      "Quote onto the file, not a one-off PDF",
-      "$10 / month per category you offer",
-      "Local Request Estimates match your trades",
+    description:
+      "Look up the house, quote onto the file, and stay the known shop for the next visit.",
+    kicker: "For contractors",
+    title: "What the shop gets",
+    body: "Work written on the Property Record makes you the shop they call back. The estimate stays on the house for the next visit.",
+    features: [
+      {
+        name: "Quote onto the file",
+        detail:
+          "Estimates write onto the Property Record. Accepted work, products, and warranties stay at the address.",
+      },
+      {
+        name: "Known shop",
+        detail:
+          "Once you are on the file, you are the named shop for the next visit in that trade.",
+      },
+      {
+        name: "Look up the house",
+        detail:
+          "If a record exists, photos and prior jobs are already there when you look up the house.",
+      },
+      {
+        name: "Materials",
+        detail:
+          "Price from your book — suppliers, spreadsheets, or manual entry. Quote from what you already sell.",
+      },
+      {
+        name: "Request Estimates",
+        detail:
+          "Catch local requests that match the categories you offer. Named jobs from a house stay private to your shop.",
+      },
+      {
+        name: "Jobs and records",
+        detail:
+          "Current work stays open. Finished jobs file into month folders. Extra seats are $" +
+          dollars(SEAT_MONTHLY) +
+          " / month.",
+      },
     ],
     price: `$${dollars(SHOP_MONTHLY)} / month per category`,
     to: "/shop" as const,
@@ -50,101 +106,138 @@ const TRACKS = [
   },
   {
     id: "manager",
-    label: "Manager",
-    short: "Office",
+    label: "Property Manager",
     Icon: Building2,
-    kicker: "Run the portfolio",
-    title: "Records, a calendar, and bids.",
-    body: "One Property Record per house. Maintenance calendar for the office. Known shops first. Request Estimates when a house needs numbers.",
-    points: [
-      "Ten houses on the base plan",
-      "Maintenance calendar included",
-      "Bids from shops that cover the address",
+    description:
+      "A portfolio of house files, a Maintenance Schedule for the office, and known shops first.",
+    kicker: "For property managers",
+    title: "What the office gets",
+    body: "One Property Record per house. The calendar is the daily surface. The office keeps files and a schedule — no catalog, no quoting.",
+    features: [
+      {
+        name: "Portfolio",
+        detail: `${MANAGE_INCLUDED} Property Records on the base plan. Search by address or owner. Extra houses $${dollars(MANAGE_EXTRA_MONTHLY)} / month each.`,
+      },
+      {
+        name: "Maintenance Schedule",
+        detail:
+          "Calendar for the office: notes, day / week / month or once a year, alerts. A service-record folder for every client month on each house.",
+      },
+      {
+        name: "House files",
+        detail:
+          "Photos, jobs, warranties, and known shops on every address — the same record the homeowner can claim later.",
+      },
+      {
+        name: "Same shops",
+        detail:
+          "Known shops first. Request Estimates when a house needs competing numbers from shops that cover the address.",
+      },
+      {
+        name: "Records",
+        detail:
+          "See estimates already issued. Completed maintenance files by month so you can show a service record.",
+      },
+      {
+        name: "Office seats",
+        detail: `Owner is one seat. Extra people $${dollars(SEAT_MONTHLY)} / month — the people who walk the houses with you.`,
+      },
     ],
-    price: `From $${dollars(MANAGE_MONTHLY)} / month for 10 houses`,
+    price: `From $${dollars(MANAGE_MONTHLY)} / month for ${MANAGE_INCLUDED} houses`,
     to: "/manage" as const,
     cta: "Open a portfolio",
     event: "manager_lane",
   },
 ] as const;
 
-type TrackId = (typeof TRACKS)[number]["id"];
+type ChoiceId = (typeof CHOICES)[number]["id"];
 
 export function AudienceTracks() {
-  const [trackId, setTrackId] = useState<TrackId>("homeowner");
-  const track = TRACKS.find((item) => item.id === trackId) ?? TRACKS[0];
+  const [choiceId, setChoiceId] = useState<ChoiceId | null>(null);
+  const headingId = useId();
+  const choice = CHOICES.find((item) => item.id === choiceId);
+
+  useEffect(() => {
+    if (!choiceId) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById("choice-detail")?.scrollIntoView({
+      behavior: reduce ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [choiceId]);
 
   return (
-    <section id="tracks" className="border-t border-border">
+    <section id="choices" aria-labelledby={headingId} className="border-t border-border bg-background">
       <div className="mx-auto max-w-5xl px-4 py-14 sm:px-5">
-        <p className="text-center text-sm font-medium tracking-wide text-secondary">
-          Choose how you use it
-        </p>
-        <h2 className="mt-2 text-center font-display text-3xl font-semibold tracking-tight">
-          Three doors. Same house file.
+        <h2 id={headingId} className="text-center font-display text-3xl font-semibold tracking-tight">
+          Choose one
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
-          Pick a track. Pricing and the next step stay on that door.
+          Homeowner, contractor, or property manager. Open a path to see what it includes.
         </p>
 
-        <div
-          role="tablist"
-          aria-label="Choose a PlanitService track"
-          className="mx-auto mt-8 grid max-w-xl grid-cols-3 gap-1 rounded-lg bg-muted p-1 shadow-[var(--shadow-border)]"
-        >
-          {TRACKS.map((item) => {
-            const selected = item.id === track.id;
+        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          {CHOICES.map((item) => {
+            const selected = item.id === choiceId;
             return (
-              <button
+              <article
                 key={item.id}
-                type="button"
-                role="tab"
-                id={`track-tab-${item.id}`}
-                aria-label={item.label}
-                aria-selected={selected}
-                aria-controls="track-panel"
-                onClick={() => setTrackId(item.id)}
                 className={cn(
-                  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-medium transition-colors duration-150 ease-[var(--ease-smooth-out)]",
-                  selected
-                    ? "bg-card text-foreground shadow-[var(--shadow-border)]"
-                    : "bg-transparent text-muted-foreground hover:text-foreground",
+                  "flex flex-col rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-6",
+                  selected && "ring-2 ring-secondary",
                 )}
               >
-                <item.Icon className="size-3.5 shrink-0" aria-hidden />
-                <span className="sm:hidden">{item.short}</span>
-                <span className="hidden sm:inline">{item.label}</span>
-              </button>
+                <div className="flex items-center gap-2 text-secondary">
+                  <item.Icon className="size-5 shrink-0" aria-hidden />
+                  <h3 className="font-display text-xl font-semibold tracking-tight text-foreground">
+                    {item.label}
+                  </h3>
+                </div>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  {item.description}
+                </p>
+                <Button
+                  type="button"
+                  variant={selected ? "secondary" : "outline"}
+                  className="mt-6 min-h-12 w-full px-4 text-sm"
+                  aria-expanded={selected}
+                  aria-controls="choice-detail"
+                  onClick={() => setChoiceId(item.id)}
+                >
+                  {item.label}
+                </Button>
+              </article>
             );
           })}
         </div>
 
-        <article
-          id="track-panel"
-          role="tabpanel"
-          aria-labelledby={`track-tab-${track.id}`}
-          className="mx-auto mt-6 grid max-w-3xl gap-6 rounded-xl bg-card p-6 shadow-[var(--shadow-border)] sm:p-8 md:grid-cols-[1.1fr_0.9fr] md:items-center"
-        >
-          <div>
-            <p className="text-sm font-medium tracking-wide text-secondary">{track.kicker}</p>
-            <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight">{track.title}</h3>
-            <p className="mt-3 leading-relaxed text-muted-foreground">{track.body}</p>
-            <p className="mt-4 text-sm text-muted-foreground">{track.price}</p>
-            <Button asChild className="mt-6 min-h-12 w-full bg-go text-go-foreground hover:opacity-90 sm:w-auto">
-              <Link to={track.to} onClick={() => trackCta(track.event)}>
-                {track.cta}
+        {choice ? (
+          <article
+            id="choice-detail"
+            aria-live="polite"
+            className="mt-8 scroll-mt-24 rounded-xl bg-card p-6 shadow-[var(--shadow-border)] sm:p-8"
+          >
+            <p className="text-sm font-medium tracking-wide text-secondary">{choice.kicker}</p>
+            <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+              {choice.title}
+            </h3>
+            <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">{choice.body}</p>
+            <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+              {choice.features.map((feature) => (
+                <li key={feature.name} className="rounded-lg bg-muted/50 p-4 shadow-[var(--shadow-border)]">
+                  <p className="font-medium text-foreground">{feature.name}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{feature.detail}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 text-sm text-muted-foreground">{choice.price}</p>
+            <Button asChild className="mt-4 min-h-12 bg-go px-5 text-sm text-go-foreground hover:opacity-90">
+              <Link to={choice.to} onClick={() => trackCta(choice.event)}>
+                {choice.cta}
               </Link>
             </Button>
-          </div>
-          <ul className="space-y-3 rounded-lg bg-muted/50 p-4 text-sm leading-relaxed shadow-[var(--shadow-border)]">
-            {track.points.map((point) => (
-              <li key={point} className="flex gap-2">
-                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                <span>{point}</span>
-              </li>
-            ))}
-          </ul>
-        </article>
+          </article>
+        ) : null}
       </div>
     </section>
   );
