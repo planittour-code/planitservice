@@ -1,25 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { RecordSection } from "@/components/house-panels";
-import { MaintenanceChecklist, ScheduleTask } from "@/components/maintenance-checklist";
 import { MaintenanceBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import { shortDate } from "@/lib/housefile/format";
-import {
-  addPortfolioMaintenance,
-  completePortfolioMaintenance,
-  getPortfolio,
-  removePortfolioMaintenance,
-  schedulePortfolioMaintenance,
-  updatePortfolioMaintenance,
-} from "@/lib/housefile/server";
-import type { MaintenanceStatus } from "@/lib/housefile/maintain";
-import type { PortfolioHouse, PortfolioOwner } from "@/lib/housefile/types";
+import { getPortfolio } from "@/lib/housefile/server";
+import { relevantTaskDate, taskStatus, type MaintenanceStatus } from "@/lib/housefile/maintain";
+import type { PortfolioHouse, PortfolioUpcoming } from "@/lib/housefile/types";
 import { PortfolioLookup } from "@/components/portfolio-lookup";
 import { PortfolioWorkBoard } from "@/components/portfolio-work-board";
 import { cn } from "@/lib/utils";
@@ -30,7 +21,6 @@ type Filter = "all" | MaintenanceStatus;
 
 function ManageDashboard() {
   const [filter, setFilter] = useState<Filter>("all");
-  const [houseId, setHouseId] = useState<string | null>(null);
   const portfolio = useQuery({ queryKey: ["portfolio"], queryFn: () => getPortfolio() });
 
   const houses = useMemo(() => {
@@ -38,21 +28,63 @@ function ManageDashboard() {
     return list.filter((h) => filter === "all" || h.status === filter);
   }, [portfolio.data?.houses, filter]);
 
-  const owners = useMemo(() => {
-    const list = portfolio.data?.owners ?? [];
-    const ids = new Set(houses.map((h) => h.id));
-    return list
-      .map((owner) => ({
-        ...owner,
-        houses: owner.houses.filter((h) => ids.has(h.id)),
-      }))
-      .filter((owner) => owner.houses.length > 0);
-  }, [portfolio.data?.owners, houses]);
-
   const upcoming = useMemo(() => {
     const list = portfolio.data?.upcoming ?? [];
     return list.filter((item) => filter === "all" || item.status === filter);
   }, [portfolio.data?.upcoming, filter]);
+
+  const schedule = useMemo(() => {
+    const list = portfolio.data?.houses ?? [];
+    const items: PortfolioUpcoming[] = [];
+    for (const house of list) {
+      for (const t of house.tasks ?? []) {
+        if (t.completed_at) continue;
+        items.push({
+          id: t.id,
+          property_id: house.id,
+          title: t.title,
+          system_name: t.system_name,
+          due_on: t.due_on,
+          scheduled_on: t.scheduled_on,
+          scheduled_note: t.scheduled_note,
+          status: taskStatus(t),
+          address_line: house.address_line,
+          city: house.city,
+          state: house.state,
+          zip: house.zip,
+          homeowner_name: house.homeowner_name,
+          kind: "maintenance",
+        });
+      }
+      for (const est of house.acceptedEstimates ?? []) {
+        const hold = (est.scheduled_on ?? est.accepted_at ?? "").slice(0, 10);
+        items.push({
+          id: est.id,
+          property_id: house.id,
+          title: est.title,
+          system_name: est.company_name,
+          due_on: hold,
+          scheduled_on: est.scheduled_on ? est.scheduled_on.slice(0, 10) : hold,
+          scheduled_note: est.scheduled_note,
+          status: "scheduled",
+          address_line: house.address_line,
+          city: house.city,
+          state: house.state,
+          zip: house.zip,
+          homeowner_name: house.homeowner_name,
+          kind: "estimate",
+          share_token: est.share_token,
+        });
+      }
+    }
+    const visible = filter === "all" ? items : items.filter((item) => item.status === filter);
+    visible.sort((a, b) => {
+      const byDate = relevantTaskDate(b).slice(0, 10).localeCompare(relevantTaskDate(a).slice(0, 10));
+      if (byDate !== 0) return byDate;
+      return a.address_line.localeCompare(b.address_line);
+    });
+    return visible;
+  }, [portfolio.data?.houses, filter]);
 
   if (portfolio.isLoading) return <Skeleton className="h-48 w-full" />;
   if (portfolio.error || !portfolio.data) {
@@ -63,9 +95,6 @@ function ManageDashboard() {
   const count = portfolio.data.houseCount;
   const name = portfolio.data.name;
   const counts = portfolio.data.counts;
-  const selectedId =
-    houseId && houses.some((h) => h.id === houseId) ? houseId : (houses[0]?.id ?? null);
-  const selectedHouse = houses.find((h) => h.id === selectedId) ?? null;
 
   return (
     <div className="space-y-10">
@@ -74,8 +103,8 @@ function ManageDashboard() {
           <p className="text-sm tracking-wide text-muted-foreground uppercase">Property manager</p>
           <h1 className="font-display text-3xl font-medium tracking-tight">{name}</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            {count} of {cap} houses. Work is grouped by owner so you can see what is current, due
-            soon, overdue, or already scheduled — including estimates the owner has accepted.
+            {count} of {cap} houses. Calendar and map first, then each property’s house-file photo,
+            then one maintenance schedule with the owner on every line.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -145,137 +174,84 @@ function ManageDashboard() {
             <p className="text-sm text-muted-foreground">No houses match that filter.</p>
           ) : (
             <>
-            <RecordSection
-              title="Calendar and map"
-              blurb="Current, overdue, and scheduled work on the month. Pins are the houses — color matches the date."
-              photo={CATEGORY_PHOTO.house}
-              countLabel={`${houses.length} houses`}
-              chips={
-                <ul className="flex flex-wrap gap-1.5">
-                  {(
-                    [
-                      ["overdue", "Overdue", counts.overdue],
-                      ["dueSoon", "Due soon", counts.dueSoon],
-                      ["scheduled", "Scheduled", counts.scheduled],
-                      ["current", "Current", counts.current],
-                    ] as const
-                  )
-                    .filter(([, , n]) => n > 0)
-                    .map(([key, label, n]) => (
-                      <li
-                        key={key}
-                        className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
-                      >
-                        {label} {n}
-                      </li>
-                    ))}
-                </ul>
-              }
-            >
-              <PortfolioWorkBoard houses={houses} upcoming={upcoming} />
-            </RecordSection>
-            <RecordSection
-              id="maintenance"
-              title="Maintenance Schedule"
-              blurb="Open the house for photos, jobs, and the full record. Marked-done work files into a month folder for the service record."
-              photo={CATEGORY_PHOTO.systems}
-              countLabel={selectedHouse ? `${(selectedHouse.tasks ?? []).length} open` : "Pick a house"}
-              chips={
-                selectedHouse ? (
+              <RecordSection
+                title="Calendar and map"
+                blurb="Current, overdue, and scheduled work on the month. Pins are the houses — color matches the date."
+                photo={CATEGORY_PHOTO.house}
+                countLabel={`${houses.length} houses`}
+                defaultOpen
+                chips={
                   <ul className="flex flex-wrap gap-1.5">
-                    <li className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
-                      {selectedHouse.address_line}
-                    </li>
+                    {(
+                      [
+                        ["overdue", "Overdue", counts.overdue],
+                        ["dueSoon", "Due soon", counts.dueSoon],
+                        ["scheduled", "Scheduled", counts.scheduled],
+                        ["current", "Current", counts.current],
+                      ] as const
+                    )
+                      .filter(([, , n]) => n > 0)
+                      .map(([key, label, n]) => (
+                        <li
+                          key={key}
+                          className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
+                        >
+                          {label} {n}
+                        </li>
+                      ))}
                   </ul>
-                ) : undefined
-              }
-            >
-              <PortfolioChecklists
-                houses={houses}
-                selectedId={selectedId}
-                onSelect={setHouseId}
-              />
-            </RecordSection>
-            <RecordSection
-              title="By owner"
-              blurb="Open a house to log work or set a scheduled date once the owner has agreed."
-              photo={CATEGORY_PHOTO.systems}
-              countLabel={`${owners.length} ${owners.length === 1 ? "owner" : "owners"}`}
-              chips={
-                owners.length ? (
-                  <ul className="flex flex-wrap gap-1.5">
-                    {owners.slice(0, 8).map((owner) => (
-                      <li
-                        key={owner.key}
-                        className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
-                      >
-                        {owner.name}
-                        {owner.overdueCount ? ` · ${owner.overdueCount} overdue` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                ) : undefined
-              }
-            >
-              <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
-                {owners.map((owner) => (
-                  <OwnerBlock key={owner.key} owner={owner} />
-                ))}
-              </ul>
-            </RecordSection>
-            </>
-          )}
+                }
+              >
+                <PortfolioWorkBoard houses={houses} upcoming={upcoming} />
+              </RecordSection>
 
-          <RecordSection
-            title="Upcoming"
-            blurb="Overdue work first, then the next 60 days. Accepted estimates stay here until the shop logs the job complete."
-            photo={CATEGORY_PHOTO.paint}
-            countLabel={`${upcoming.length} in this window`}
-            chips={
-              upcoming.length ? (
-                <ul className="flex flex-wrap gap-1.5">
-                  {upcoming.slice(0, 6).map((item) => (
-                    <li
-                      key={item.id}
-                      className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold"
-                    >
-                      {item.title}
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <h2 className="font-display text-lg font-bold tracking-tight">Properties</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Default photo from each house file. Open a tile for the full record.
+                    </p>
+                  </div>
+                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">
+                    {houses.length} {houses.length === 1 ? "house" : "houses"}
+                  </p>
+                </div>
+                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                  {houses.map((house) => (
+                    <li key={house.id}>
+                      <PropertyTile house={house} />
                     </li>
                   ))}
                 </ul>
-              ) : undefined
-            }
-          >
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing in this window.</p>
-            ) : (
-              <ul className="divide-y divide-border rounded-md bg-background shadow-[var(--shadow-border)]">
-                {upcoming.slice(0, 24).map((item) => (
-                  <li key={item.id}>
-                    <Link
-                      to="/manage/$id"
-                      params={{ id: item.property_id }}
-                      className="flex min-h-14 flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div>
-                        <p className="font-medium">{item.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.homeowner_name} · {item.address_line}
-                          {item.kind === "estimate"
-                            ? ` · agreed ${shortDate(item.scheduled_on ?? item.due_on)}`
-                            : item.scheduled_on
-                              ? ` · scheduled ${shortDate(item.scheduled_on)}`
-                              : ` · due ${shortDate(item.due_on)}`}
-                          {item.kind === "estimate" && item.system_name ? ` · ${item.system_name}` : ""}
-                        </p>
-                      </div>
-                      <MaintenanceBadge status={item.status} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </RecordSection>
+              </section>
+
+              <section id="maintenance" className="scroll-mt-20 space-y-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <h2 className="font-display text-lg font-bold tracking-tight">Maintenance schedule</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Latest date first. Owner is tagged on every line.
+                    </p>
+                  </div>
+                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">
+                    {schedule.length} {schedule.length === 1 ? "item" : "items"}
+                  </p>
+                </div>
+                {schedule.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nothing on the schedule for this filter.</p>
+                ) : (
+                  <ul className="divide-y divide-border rounded-md bg-card shadow-[var(--shadow-border)]">
+                    {schedule.map((item) => (
+                      <li key={`${item.kind ?? "maintenance"}:${item.id}`}>
+                        <ScheduleLine item={item} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </>
+          )}
         </>
       )}
 
@@ -290,200 +266,64 @@ function ManageDashboard() {
   );
 }
 
-function PortfolioChecklists({
-  houses,
-  selectedId,
-  onSelect,
-}: {
-  houses: PortfolioHouse[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  const queryClient = useQueryClient();
-  const selected = houses.find((h) => h.id === selectedId) ?? null;
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
-    void queryClient.invalidateQueries({ queryKey: ["portfolio-record"] });
-  };
-  const done = useMutation({
-    mutationFn: (taskId: string) => completePortfolioMaintenance({ data: { taskId } }),
-    onSuccess: () => {
-      toast.success("Logged. Next due date is on the Property Record.");
-      refresh();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not log"),
-  });
-  const schedule = useMutation({
-    mutationFn: (input: { taskId: string; scheduledOn: string | null; scheduledNote?: string }) =>
-      schedulePortfolioMaintenance({ data: input }),
-    onSuccess: () => {
-      toast.success("Schedule updated");
-      refresh();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not schedule"),
-  });
-  const addTask = useMutation({
-    mutationFn: (input: {
-      title: string;
-      system: string;
-      cadence: string;
-      notes?: string;
-      alertOn?: boolean;
-    }) => addPortfolioMaintenance({ data: { propertyId: selectedId as string, ...input } }),
-    onSuccess: () => {
-      toast.success("Added to the schedule.");
-      refresh();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add"),
-  });
-  const updateTask = useMutation({
-    mutationFn: (input: { taskId: string; notes?: string; cadence?: string; alertOn?: boolean }) =>
-      updatePortfolioMaintenance({ data: input }),
-    onSuccess: () => {
-      refresh();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
-  });
-  const removeTask = useMutation({
-    mutationFn: (taskId: string) => removePortfolioMaintenance({ data: { taskId } }),
-    onSuccess: () => {
-      toast.success("Removed from this house.");
-      refresh();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
-  });
-
-  if (houses.length === 0) {
-    return <p className="text-sm text-muted-foreground">Add a property first.</p>;
-  }
-
+function PropertyTile({ house }: { house: PortfolioHouse }) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {houses.map((h) => (
-          <button
-            key={h.id}
-            type="button"
-            onClick={() => onSelect(h.id)}
-            className={cn(
-              "inline-flex min-h-11 items-center rounded-full px-3 text-sm shadow-[var(--shadow-border)]",
-              selectedId === h.id
-                ? "bg-secondary text-secondary-foreground"
-                : "bg-background hover:shadow-[var(--shadow-border-hover)]",
-            )}
-          >
-            {h.address_line}
-          </button>
-        ))}
-      </div>
-      {selected ? (
-        <>
-          <p className="text-sm text-muted-foreground">
-            {selected.city}, {selected.state} {selected.zip}
-            {selected.homeowner_name ? ` · ${selected.homeowner_name}` : ""}
-            {" · "}
-            <Link to="/manage/$id" params={{ id: selected.id }} className="underline underline-offset-2">
-              Open Property Record
-            </Link>
-          </p>
-          <MaintenanceChecklist
-            tasks={selected.tasks ?? []}
-            completedTasks={selected.completedTasks ?? []}
-            clientSince={selected.created_at}
-            donePending={done.isPending}
-            removePending={removeTask.isPending}
-            addPending={addTask.isPending}
-            updatePending={updateTask.isPending}
-            onDone={(taskId) => done.mutate(taskId)}
-            onRemove={(taskId) => removeTask.mutate(taskId)}
-            onAdd={(input) => addTask.mutate(input)}
-            onUpdate={(input) => updateTask.mutate(input)}
-            extra={(t) => (
-              <ScheduleTask
-                task={t}
-                pending={schedule.isPending}
-                onSave={(scheduledOn, scheduledNote) =>
-                  schedule.mutate({ taskId: t.id, scheduledOn, scheduledNote })
-                }
-              />
-            )}
+    <Link
+      to="/manage/$id"
+      params={{ id: house.id }}
+      className="block overflow-hidden rounded-lg bg-card shadow-[var(--shadow-border)] transition-[box-shadow] duration-150 hover:shadow-[var(--shadow-border-hover)]"
+    >
+      <div className="relative aspect-[4/3] bg-muted">
+        {house.cover_src ? (
+          <img
+            src={house.cover_src}
+            alt=""
+            className="size-full object-cover outline outline-1 -outline-offset-1 outline-foreground/10"
           />
-        </>
-      ) : (
-        <p className="text-sm text-muted-foreground">Pick a house.</p>
-      )}
-    </div>
-  );
-}
-
-function OwnerBlock({ owner }: { owner: PortfolioOwner }) {
-  return (
-    <li className="px-4 py-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <p className="font-medium">{owner.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {owner.houses.length} {owner.houses.length === 1 ? "property" : "properties"}
-            {owner.email ? ` · ${owner.email}` : ""}
-          </p>
-        </div>
-        <OwnerCounts houses={owner.houses} />
+        ) : (
+          <div className="grid size-full place-items-center font-display text-2xl text-muted-foreground">
+            {house.address_line.slice(0, 1)}
+          </div>
+        )}
       </div>
-      <ul className="mt-3 space-y-1">
-        {owner.houses.map((house) => (
-          <HouseRow key={house.id} house={house} />
-        ))}
-      </ul>
-    </li>
+      <div className="min-h-11 space-y-0.5 p-2">
+        <p className="truncate text-sm font-medium">{house.address_line}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {house.homeowner_name || `${house.city}, ${house.state}`}
+        </p>
+      </div>
+    </Link>
   );
 }
 
-function OwnerCounts({ houses }: { houses: PortfolioHouse[] }) {
-  const overdue = houses.reduce((n, h) => n + h.overdueCount, 0);
-  const dueSoon = houses.reduce((n, h) => n + h.dueSoonCount, 0);
-  const scheduled = houses.reduce((n, h) => n + h.scheduledCount, 0);
-  const bits = [
-    overdue ? `${overdue} overdue` : null,
-    dueSoon ? `${dueSoon} due soon` : null,
-    scheduled ? `${scheduled} scheduled` : null,
-  ].filter(Boolean);
-  if (bits.length === 0) {
-    return <span className="text-sm text-muted-foreground">Current</span>;
-  }
-  return <span className="text-sm text-muted-foreground">{bits.join(" · ")}</span>;
-}
-
-function HouseRow({ house }: { house: PortfolioHouse }) {
-  const next = house.nextTask;
+function ScheduleLine({ item }: { item: PortfolioUpcoming }) {
+  const when =
+    item.kind === "estimate"
+      ? `agreed ${shortDate(item.scheduled_on ?? item.due_on)}`
+      : item.scheduled_on
+        ? `scheduled ${shortDate(item.scheduled_on)}`
+        : `due ${shortDate(item.due_on)}`;
   return (
-    <li>
-      <Link
-        to="/manage/$id"
-        params={{ id: house.id }}
-        className="flex min-h-11 flex-col gap-1 rounded-md px-2 py-2 hover:bg-muted sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <p className="font-medium">{house.address_line}</p>
-          <p className="text-sm text-muted-foreground">
-            {house.city}, {house.state} {house.zip}
-            {next
-              ? next.kind === "estimate"
-                ? ` · ${next.title} agreed ${shortDate(next.scheduled_on ?? next.due_on)}`
-                : next.scheduled_on
-                  ? ` · ${next.title} scheduled ${shortDate(next.scheduled_on)}`
-                  : ` · ${next.title} due ${shortDate(next.due_on)}`
-              : " · no open maintenance"}
-            {(house.acceptedEstimates?.length ?? 0)
-              ? ` · ${house.acceptedEstimates.length} agreed ${house.acceptedEstimates.length === 1 ? "estimate" : "estimates"}`
-              : ""}
-            {house.job_count ? ` · ${house.job_count} ${house.job_count === 1 ? "job" : "jobs"}` : ""}
-            {house.open_proposal_count
-              ? ` · ${house.open_proposal_count} ${house.open_proposal_count === 1 ? "open estimate" : "open estimates"}`
-              : ""}
-          </p>
-        </div>
-        <MaintenanceBadge status={house.status} />
-      </Link>
-    </li>
+    <Link
+      to="/manage/$id"
+      params={{ id: item.property_id }}
+      className="flex min-h-14 flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="min-w-0 space-y-1">
+        <p className="font-medium">{item.title}</p>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+          {item.homeowner_name ? (
+            <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
+              {item.homeowner_name}
+            </span>
+          ) : null}
+          <span>
+            {item.address_line} · {when}
+            {item.kind === "estimate" && item.system_name ? ` · ${item.system_name}` : ""}
+          </span>
+        </p>
+      </div>
+      <MaintenanceBadge status={item.status} />
+    </Link>
   );
 }
