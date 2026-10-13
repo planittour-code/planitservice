@@ -28,6 +28,15 @@ test("proposal doc previews that letter next to send", () => {
   assert.doesNotMatch(doc, /NotifyReviewBar/);
 });
 
+test("shop can delete an estimate from review", () => {
+  const page = readFileSync(join(root, "src/routes/app/proposals.$id.tsx"), "utf8");
+  const server = readFileSync(join(root, "src/lib/housefile/server.ts"), "utf8");
+  assert.match(page, /Delete estimate/);
+  assert.match(page, /deleteProposal/);
+  assert.match(server, /export const deleteProposal/);
+  assert.match(server, /update jobs set proposal_id = null/);
+});
+
 test("mailer uses the shared estimate letter", () => {
   const mailer = readFileSync(join(root, "src/lib/auth/mail.server.ts"), "utf8");
   const deliver = readFileSync(join(root, "src/lib/housefile/mail.ts"), "utf8");

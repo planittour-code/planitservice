@@ -4244,6 +4244,24 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
     return { ok: true as const, emailed: property.homeowner_email };
   });
 
+export const deleteProposal = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((id: string) => id)
+  .handler(async ({ context, data: id }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const { company } = await requirePaidShop(sql, context.userId, session?.email);
+    const rows = await sql<Proposal>`
+      select * from proposals where id = ${id} and company_id = ${company.id} limit 1
+    `;
+    const proposal = rows[0];
+    if (!proposal) throw new Error("Proposal not found");
+    await sql`update jobs set proposal_id = null where proposal_id = ${proposal.id}`;
+    await sql`delete from proposals where id = ${proposal.id} and company_id = ${company.id}`;
+    return { ok: true as const, propertyId: proposal.property_id };
+  });
+
 export const adoptSampleHouse = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {

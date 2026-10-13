@@ -1,15 +1,16 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { approveProposal, getContractorProposal, listTeam } from "@/lib/housefile/server";
+import { approveProposal, deleteProposal, getContractorProposal, listTeam } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/proposals/$id")({ component: ProposalPage });
 
 function ProposalPage() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const q = useQuery({
     queryKey: ["proposal", id],
     queryFn: () => getContractorProposal({ data: id }),
@@ -26,6 +27,14 @@ function ProposalPage() {
       void q.refetch();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not approve"),
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteProposal({ data: id }),
+    onSuccess: (result) => {
+      toast.success("Estimate deleted");
+      void navigate({ to: "/app/properties/$id", params: { id: result.propertyId } });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not delete"),
   });
   if (q.isLoading) return <Skeleton className="h-64 w-full" />;
   if (!q.data) return <p className="text-destructive">Proposal not found.</p>;
@@ -66,6 +75,23 @@ function ProposalPage() {
             </a>
           </Button>
         ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={remove.isPending}
+          onClick={() => {
+            if (
+              window.confirm(
+                "Delete this estimate? Jobs already on the Property Record stay.",
+              )
+            ) {
+              remove.mutate();
+            }
+          }}
+        >
+          {remove.isPending ? "Deleting…" : "Delete estimate"}
+        </Button>
       </div>
       <ProposalDoc
         bundle={bundle}
