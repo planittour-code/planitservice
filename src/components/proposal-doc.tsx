@@ -853,14 +853,6 @@ function SentEstimateCard({ bundle }: { bundle: ProposalBundle }) {
           <h2 className="font-display text-xl font-medium tracking-tight">
             {send ? "This exact version" : "Sent estimate"}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {send
-              ? `Sent to ${send.to_email}. Later edits on this page do not change this letter.`
-              : `Sent to ${bundle.property.homeowner_email}. The exact letter is kept from the next send.`}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Delivered and Opened email are for this customer letter. A second email goes to the shop on the same send.
-          </p>
         </div>
         <StatusBadge status={bundle.proposal.status} />
       </div>
