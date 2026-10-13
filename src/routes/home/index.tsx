@@ -75,6 +75,7 @@ function HomeDashboard() {
               factCount={h.fact_count}
               jobCount={h.job_count}
               photoCount={h.photo_count}
+              primaryResidence={Boolean(h.is_primary_residence)}
               footnote={
                 <p className="text-sm text-muted-foreground">
                   {planLabel(h)}
@@ -97,7 +98,7 @@ function HomeDashboard() {
             <a href={BILLING_PORTAL}>Manage subscription</a>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/home/settings">Household settings</Link>
+            <Link to="/home/settings">Edit or remove a house</Link>
           </Button>
         </div>
       </section>

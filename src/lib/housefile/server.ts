@@ -635,9 +635,14 @@ async function attachHomeownerIfKnown(sql: Sql, propertyId: string, email: strin
   `;
 }
 
+function asBool(value: unknown) {
+  return value === true || value === "true" || value === 1 || value === "1" || value === "t";
+}
+
 function listRowFromCounts(p: PropertyListRow): PropertyListRow {
   return {
     ...p,
+    is_primary_residence: asBool(p.is_primary_residence),
     fact_count: num(p.fact_count),
     photo_count: num(p.photo_count),
     job_count: num(p.job_count),
@@ -921,6 +926,7 @@ function collapseSameAddress<T extends {
   fact_count: number;
   photo_count: number;
   job_count: number;
+  is_primary_residence?: boolean;
   plan?: PropertyPlan | null;
 }>(houses: T[]): T[] {
   const by = new Map<string, T>();
@@ -931,14 +937,16 @@ function collapseSameAddress<T extends {
       by.set(key, house);
       continue;
     }
-    const score = (h: T) => h.fact_count + h.photo_count + h.job_count;
+    const score = (h: T) =>
+      (h.is_primary_residence ? 1000 : 0) + h.fact_count + h.photo_count + h.job_count;
     const keep = score(house) > score(prev) ? house : prev;
     const standard = [house.plan, prev.plan].find((pl) => pl?.tier === "standard");
     if (standard) keep.plan = standard;
     else if (!keep.plan) keep.plan = house.plan ?? prev.plan ?? null;
+    keep.is_primary_residence = Boolean(house.is_primary_residence || prev.is_primary_residence);
     by.set(key, keep);
   }
-  return [...by.values()];
+  return [...by.values()].sort((a, b) => Number(Boolean(b.is_primary_residence)) - Number(Boolean(a.is_primary_residence)));
 }
 
 type AccountHouseRow = {
@@ -951,6 +959,7 @@ type AccountHouseRow = {
   tier: string | null;
   status: string | null;
   renewsOn: string | null;
+  isPrimaryResidence: boolean;
 };
 
 function accountHouseKey(house: { address: string }) {
@@ -976,6 +985,7 @@ function renewsAt(iso: string | null) {
 }
 
 function preferAccountHouse(a: AccountHouseRow, b: AccountHouseRow) {
+  if (a.isPrimaryResidence !== b.isPrimaryResidence) return a.isPrimaryResidence ? a : b;
   const ra = accountHouseRank(a);
   const rb = accountHouseRank(b);
   if (rb !== ra) return rb > ra ? b : a;
@@ -994,9 +1004,11 @@ function collapseAccountHouses(houses: AccountHouseRow[]): AccountHouseRow[] {
       by.set(key, house);
       continue;
     }
-    by.set(key, preferAccountHouse(prev, house));
+    const keep = preferAccountHouse(prev, house);
+    keep.isPrimaryResidence = prev.isPrimaryResidence || house.isPrimaryResidence;
+    by.set(key, keep);
   }
-  return [...by.values()];
+  return [...by.values()].sort((a, b) => Number(b.isPrimaryResidence) - Number(a.isPrimaryResidence));
 }
 
 async function loadHouse(sql: Sql, property: Property): Promise<HouseFile> {
@@ -3993,7 +4005,7 @@ export const getMyHouses = createServerFn({ method: "GET" })
       from properties p
       join companies c on c.id = p.company_id
       where p.homeowner_user_id = ${context.userId}
-      order by p.created_at desc
+      order by p.is_primary_residence desc, p.created_at desc
     `;
     return {
       houses: properties.map((p) => ({
@@ -4470,7 +4482,7 @@ export const getHousehold = createServerFn({ method: "GET" })
       from properties p
       join companies c on c.id = p.company_id
       where p.homeowner_user_id = ${context.userId}
-      order by p.created_at desc
+      order by p.is_primary_residence desc, p.created_at desc
     `;
     const plans = await sql<PropertyPlan>`
       select pp.* from property_plans pp
@@ -4491,17 +4503,20 @@ export const getHousehold = createServerFn({ method: "GET" })
       }
     }
     const planBy = new Map(plans.map((p) => [p.property_id, p]));
-    const listed = houses.map((h) => ({
-      ...listRowFromCounts(h),
-      company_name: h.company_name,
-      open_title: h.open_title,
-      open_token: h.open_token,
-      plan: planBy.get(h.id) ?? null,
-      dueSoon: dueBy.get(h.id) ?? 0,
-    }));
+    const listed = houses
+      .map((h) => ({
+        ...listRowFromCounts(h),
+        company_name: h.company_name,
+        open_title: h.open_title,
+        open_token: h.open_token,
+        plan: planBy.get(h.id) ?? null,
+        dueSoon: dueBy.get(h.id) ?? 0,
+      }))
+      .sort((a, b) => Number(b.is_primary_residence) - Number(a.is_primary_residence));
     return {
       profile,
       houses: collapseSameAddress(listed),
+      ownedHouses: listed,
     };
   });
 
@@ -4558,14 +4573,17 @@ export const createHomeProperty = createServerFn({ method: "POST" })
         ? accountEmail || typedEmail
         : typedEmail || accountEmail;
     if (!email.includes("@")) throw new Error("Need an email for this Property Record.");
+    const hasPrimary = mine.some((row) => asBool(row.is_primary_residence));
     await sql`
       insert into properties (
         id, company_id, share_token, invite_token, invite_status,
-        address_line, city, state, zip, homeowner_name, homeowner_email, homeowner_user_id
+        address_line, city, state, zip, homeowner_name, homeowner_email, homeowner_user_id,
+        is_primary_residence
       ) values (
         ${id}, ${HOUSEHOLD_COMPANY}, ${slugToken()}, ${slugToken()}, ${"claimed"},
         ${address}, ${data.city.trim() || "—"}, ${data.state.trim() || "GA"}, ${data.zip.trim() || "—"},
-        ${name}, ${email}, ${context.userId}
+        ${name}, ${email}, ${context.userId},
+        ${!hasPrimary}
       )
     `;
     await sql`
@@ -4631,11 +4649,39 @@ export const removeHomeProperty = createServerFn({ method: "POST" })
     } else {
       await sql`
         update properties
-        set homeowner_user_id = null
+        set homeowner_user_id = null, is_primary_residence = false
         where id = ${property.id} and homeowner_user_id = ${context.userId}
       `;
     }
     return { ok: true as const };
+  });
+
+export const setPrimaryResidence = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const property = (
+      await sql<Property>`
+        select * from properties
+        where id = ${data.propertyId} and homeowner_user_id = ${context.userId}
+        limit 1
+      `
+    )[0];
+    if (!property) throw new Error("Property not found");
+    await sql`
+      update properties
+      set is_primary_residence = false
+      where homeowner_user_id = ${context.userId}
+        and is_primary_residence = true
+        and id <> ${property.id}
+    `;
+    await sql`
+      update properties
+      set is_primary_residence = true
+      where id = ${property.id} and homeowner_user_id = ${context.userId}
+    `;
+    return { ok: true as const, propertyId: property.id };
   });
 
 /** Standard → Pro on an existing Property Record. Photos, jobs, and shops stay. */
@@ -5323,12 +5369,13 @@ export const getAccount = createServerFn({ method: "GET" })
       tier: string | null;
       status: string | null;
       renews_on: string | null;
+      is_primary_residence: boolean;
     }>`
-      select p.id, p.address_line, p.city, p.state, p.zip, pp.cadence, pp.tier, pp.status, pp.renews_on
+      select p.id, p.address_line, p.city, p.state, p.zip, pp.cadence, pp.tier, pp.status, pp.renews_on, p.is_primary_residence
       from properties p
       left join property_plans pp on pp.property_id = p.id
       where p.homeowner_user_id = ${context.userId}
-      order by p.created_at desc
+      order by p.is_primary_residence desc, p.created_at desc
     `;
     const quotes = shop
       ? await sql<{ c: number }>`
@@ -5429,6 +5476,7 @@ export const getAccount = createServerFn({ method: "GET" })
           tier: h.tier,
           status: h.status,
           renewsOn: h.renews_on,
+          isPrimaryResidence: asBool(h.is_primary_residence),
         })),
       ),
       portfolio: portfolio?.paid_at

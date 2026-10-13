@@ -413,6 +413,7 @@ export function HouseCard({
   photoCount,
   openCount,
   footnote,
+  primaryResidence,
 }: {
   to: string;
   params?: Record<string, string>;
@@ -427,6 +428,7 @@ export function HouseCard({
   photoCount: number;
   openCount?: number;
   footnote?: ReactNode;
+  primaryResidence?: boolean;
 }) {
   const total = FIELD_CATALOG.length;
   const pct = total ? Math.round((factCount / total) * 100) : 0;
@@ -447,6 +449,9 @@ export function HouseCard({
       </div>
       <div className="space-y-3 p-5">
         <div>
+          {primaryResidence ? (
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Primary residence</p>
+          ) : null}
           <h2 className="font-display text-xl font-bold">{address}</h2>
           <p className="text-sm text-muted-foreground">
             {city}, {state} {zip}

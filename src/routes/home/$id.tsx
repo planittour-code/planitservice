@@ -133,6 +133,7 @@ function HomeRecord() {
       )}
       <header className="space-y-2">
         <p className="text-sm tracking-wide text-muted-foreground uppercase">
+          {p.is_primary_residence ? "Primary residence · " : ""}
           {plan?.tier === "pro" ? "Pro Property Record" : "Property Record"}
           {plan?.status === "complimentary" && plan.complimentary_until
             ? ` · free through ${shortDate(plan.complimentary_until)}`

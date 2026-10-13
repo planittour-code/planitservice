@@ -61,6 +61,7 @@ export type Property = {
   homeowner_phone: string | null;
   homeowner_user_id: string | null;
   notes: string | null;
+  is_primary_residence?: boolean;
   created_at: string;
 };
 

@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { HomePropertyRow } from "@/components/home-property-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +55,7 @@ function HouseholdSettings() {
   if (q.error) return <p className="text-destructive">Could not load household settings.</p>;
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <div>
         <h1 className="font-display text-3xl font-medium tracking-tight">Household settings</h1>
         <p className="text-muted-foreground">
@@ -91,6 +92,43 @@ function HouseholdSettings() {
           {save.isPending ? "Saving…" : "Save"}
         </Button>
       </form>
+      <section className="space-y-3 border-t border-border pt-8">
+        <div>
+          <h2 className="font-display text-2xl font-medium tracking-tight">Properties</h2>
+          <p className="text-sm text-muted-foreground">
+            Mark the house you live in, edit the street, or remove a house that does not belong on this account.
+          </p>
+        </div>
+        {q.data?.ownedHouses.length ? (
+          <ul className="divide-y divide-border rounded-xl bg-card shadow-[var(--shadow-border)]">
+            {q.data.ownedHouses.map((h) => (
+              <HomePropertyRow
+                key={h.id}
+                house={{
+                  id: h.id,
+                  address: h.address_line,
+                  city: h.city,
+                  state: h.state,
+                  zip: h.zip,
+                  cadence: h.plan?.cadence ?? null,
+                  tier: h.plan?.tier ?? null,
+                  status: h.plan?.status ?? null,
+                  renewsOn: h.plan?.renews_on ?? null,
+                  isPrimaryResidence: Boolean(h.is_primary_residence),
+                }}
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No Property Record on this account yet.{" "}
+            <Link to="/home/add" className="underline underline-offset-2">
+              Add a property
+            </Link>
+            .
+          </p>
+        )}
+      </section>
       <section className="space-y-3 border-t border-border pt-8">
         <div>
           <h2 className="font-display text-2xl font-medium tracking-tight">Billing</h2>
