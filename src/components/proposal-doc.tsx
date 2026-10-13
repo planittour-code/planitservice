@@ -36,7 +36,6 @@ import {
   addHomeownerMessage,
   draftCoverNote,
   listTeam,
-  pingEstimateReview,
   sendEstimateToHomeowner,
   reviseProposalPublic,
   updateProposalMeta,
@@ -241,12 +240,6 @@ export function ProposalDoc({
           </div>
         )}
 
-        {mode !== "contractor" &&
-        !locked &&
-        proposal.status !== "pending" &&
-        proposal.status !== "accepted" ? (
-          <NotifyReviewBar token={proposal.share_token} mode={editMode} />
-        ) : null}
         {mode === "contractor" && proposal.status === "accepted" ? (
           <SoldHoldBar
             proposalId={proposal.id}
@@ -917,51 +910,6 @@ function CustomerEmailPreview({ bundle }: { bundle: ProposalBundle }) {
         dangerouslySetInnerHTML={{ __html: letter.html }}
       />
     </section>
-  );
-}
-
-function NotifyReviewBar({
-  token,
-  mode,
-}: {
-  token: string;
-  mode: "homeowner" | "contractor";
-}) {
-  const ping = useMutation({
-    mutationFn: () =>
-      pingEstimateReview({
-        data: { token, audience: mode === "contractor" ? "file" : "shop" },
-      }),
-    onSuccess: (result) => {
-      toast.success(
-        result.emailed === 1
-          ? "Review notice sent"
-          : `Review notice sent to ${result.emailed} people`,
-      );
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not notify"),
-  });
-  return (
-    <div className="flex flex-col gap-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
-        {mode === "contractor"
-          ? "A note emails the customer. This also sends a review notice to the homeowner and office."
-          : "A note emails the shop. This sends another review notice."}
-      </p>
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full sm:w-auto"
-        disabled={ping.isPending}
-        onClick={() => ping.mutate()}
-      >
-        {ping.isPending
-          ? "Sending…"
-          : mode === "contractor"
-            ? "Notify owner and office"
-            : "Notify shop"}
-      </Button>
-    </div>
   );
 }
 

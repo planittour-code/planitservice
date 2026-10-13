@@ -24,6 +24,8 @@ test("proposal doc previews that letter next to send", () => {
   assert.match(doc, /Send this estimate to/);
   assert.match(proposalDoc, /<ContractorNotesAndSend/);
   assert.doesNotMatch(proposalDoc, /<SendEstimateBar/);
+  assert.doesNotMatch(doc, /Notify shop/);
+  assert.doesNotMatch(doc, /NotifyReviewBar/);
 });
 
 test("mailer uses the shared estimate letter", () => {
