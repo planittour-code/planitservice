@@ -1,4 +1,5 @@
 import { LEGAL_EMAIL, LEGAL_NAME, LEGAL_SITE } from "@/lib/legal";
+import { estimateEmailCopy, type EstimateEmailLine } from "@/lib/housefile/estimate-email";
 
 function env(key: string): string | undefined {
   const value = process.env[key]?.trim();
@@ -153,27 +154,24 @@ export async function sendEstimateEmail(data: {
   proposalUrl: string;
   inviteUrl: string;
   replyToken: string;
+  title?: string;
+  coverNote?: string | null;
+  terms?: string | null;
+  items?: EstimateEmailLine[];
+  salesReps?: { name: string; email?: string | null }[];
 }) {
-  const first = data.name.trim().split(/\s+/)[0] || "there";
-  const subject = `${data.company} sent an estimate for ${data.address}`;
-  const text = [
-    `Hi ${first},`,
-    "",
-    `${data.company} sent an estimate for ${data.address}.`,
-    "",
-    `Open the estimate: ${data.proposalUrl}`,
-    `Property Record: ${data.inviteUrl}`,
-    "",
-    "Reply to this email with notes or questions. We put the reply on the estimate.",
-    "",
-    data.company,
-  ].join("\n");
-  const html = `<p>Hi ${escapeHtml(first)},</p>
-<p>${escapeHtml(data.company)} sent an estimate for ${escapeHtml(data.address)}.</p>
-<p><a href="${escapeHtml(data.proposalUrl)}">Open the estimate</a></p>
-<p>The Property Record for this house: <a href="${escapeHtml(data.inviteUrl)}">${escapeHtml(data.inviteUrl)}</a></p>
-<p>Reply to this email with notes or questions. We put the reply on the estimate.</p>
-<p>${escapeHtml(data.company)}</p>`;
+  const { subject, text, html } = estimateEmailCopy({
+    name: data.name,
+    company: data.company,
+    address: data.address,
+    title: data.title || "Estimate",
+    coverNote: data.coverNote,
+    terms: data.terms,
+    items: data.items ?? [],
+    salesReps: data.salesReps,
+    proposalUrl: data.proposalUrl,
+    inviteUrl: data.inviteUrl,
+  });
 
   await sendResendEmail({
     to: data.to,

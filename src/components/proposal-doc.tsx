@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StreetView } from "@/components/street-view";
 import { InvoiceDoc } from "@/components/invoice-doc";
 import { Mark } from "@/components/logo";
+import { estimateEmailCopy } from "@/lib/housefile/estimate-email";
 import { lineShowsInstalledProduct, lineShowsQuantity, optionLabel } from "@/lib/housefile/estimate-lines";
 import { money, shortDate } from "@/lib/housefile/format";
 import { isDrainageInvoice } from "@/lib/housefile/invoice";
@@ -145,13 +146,6 @@ export function ProposalDoc({
             </Button>
           </div>
         ) : null}
-        {mode === "contractor" && proposal.status !== "pending" && proposal.status !== "completed" ? (
-          <SendEstimateBar
-            proposalId={proposal.id}
-            email={property.homeowner_email}
-            onSent={onChanged}
-          />
-        ) : null}
         {mode === "contractor" && proposal.status === "accepted" ? (
           <SoldHoldBar
             proposalId={proposal.id}
@@ -160,6 +154,9 @@ export function ProposalDoc({
             scheduledNote={proposal.scheduled_note}
             onChanged={onChanged}
           />
+        ) : null}
+        {mode === "contractor" ? (
+          <ContractorNotesAndSend bundle={bundle} locked={locked} onChanged={onChanged} />
         ) : null}
       </article>
     );
@@ -241,13 +238,10 @@ export function ProposalDoc({
           </div>
         )}
 
-        {mode === "contractor" && proposal.status !== "pending" && proposal.status !== "completed" ? (
-          <SendEstimateBar
-            proposalId={proposal.id}
-            email={property.homeowner_email}
-            onSent={onChanged}
-          />
-        ) : !locked && proposal.status !== "pending" && proposal.status !== "accepted" ? (
+        {mode !== "contractor" &&
+        !locked &&
+        proposal.status !== "pending" &&
+        proposal.status !== "accepted" ? (
           <NotifyReviewBar token={proposal.share_token} mode={editMode} />
         ) : null}
         {mode === "contractor" && proposal.status === "accepted" ? (
@@ -291,15 +285,19 @@ export function ProposalDoc({
 
       <ProposalTotals items={items} />
 
-      <NoteThread
-        messages={messages}
-        items={items}
-        mode={editMode}
-        proposalId={proposal.id}
-        token={proposal.share_token}
-        locked={locked}
-        onChanged={onChanged}
-      />
+      {mode === "contractor" ? (
+        <ContractorNotesAndSend bundle={bundle} locked={locked} onChanged={onChanged} />
+      ) : (
+        <NoteThread
+          messages={messages}
+          items={items}
+          mode={editMode}
+          proposalId={proposal.id}
+          token={proposal.share_token}
+          locked={locked}
+          onChanged={onChanged}
+        />
+      )}
 
       {mode === "contractor" && !locked && (
         <>
@@ -767,6 +765,77 @@ function SendEstimateBar({
         {send.isPending ? "Sending…" : "Send estimate"}
       </Button>
     </div>
+  );
+}
+
+function ContractorNotesAndSend({
+  bundle,
+  locked,
+  onChanged,
+}: {
+  bundle: ProposalBundle;
+  locked: boolean;
+  onChanged: () => void;
+}) {
+  const { proposal, items, messages, property } = bundle;
+  const canSend = proposal.status !== "pending" && proposal.status !== "completed";
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(14rem,20rem)] md:items-start">
+        <NoteThread
+          messages={messages}
+          items={items}
+          mode="contractor"
+          proposalId={proposal.id}
+          token={proposal.share_token}
+          locked={locked}
+          onChanged={onChanged}
+        />
+        {canSend ? (
+          <SendEstimateBar
+            proposalId={proposal.id}
+            email={property.homeowner_email}
+            onSent={onChanged}
+          />
+        ) : null}
+      </div>
+      <CustomerEmailPreview bundle={bundle} />
+    </div>
+  );
+}
+
+function CustomerEmailPreview({ bundle }: { bundle: ProposalBundle }) {
+  const { proposal, items, property, company, salesReps } = bundle;
+  const letter = estimateEmailCopy({
+    name: property.homeowner_name,
+    company: company.name,
+    address: `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`,
+    title: proposal.title,
+    coverNote: proposal.cover_note,
+    terms: company.terms,
+    items,
+    salesReps,
+    proposalUrl: `https://planitservice.com/p/${proposal.share_token}`,
+    inviteUrl: `https://planitservice.com/invite/${property.invite_token}`,
+  });
+  return (
+    <section className="space-y-3 rounded-xl bg-muted/60 p-5 shadow-[var(--shadow-border)]">
+      <div>
+        <p className="text-sm tracking-wide text-muted-foreground uppercase">Customer email</p>
+        <h2 className="font-display text-xl font-medium">Preview as it appears in email</h2>
+        <p className="text-sm text-muted-foreground">
+          Same letter the customer gets. They open the estimate from the link to accept.
+        </p>
+        <p className="mt-2 text-sm">
+          <span className="text-muted-foreground">Subject · </span>
+          {letter.subject}
+        </p>
+      </div>
+      <div
+        className="overflow-hidden rounded-lg bg-card p-4 text-sm shadow-[var(--shadow-border)] [&_a]:text-ink [&_a]:underline [&_a]:underline-offset-4"
+        dangerouslySetInnerHTML={{ __html: letter.html }}
+      />
+    </section>
   );
 }
 

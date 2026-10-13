@@ -2088,7 +2088,14 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     } else {
       try {
         const { deliverEstimateEmail } = await import("./mail");
-        await deliverEstimateEmail({ property, proposal, company });
+        const items = await sql<ProposalItem>`select * from proposal_items where proposal_id = ${proposal.id} order by sort_order`;
+        await deliverEstimateEmail({
+          property,
+          proposal,
+          company,
+          items,
+          salesReps: await salesRepsForProposal(sql, proposal),
+        });
         emailed = true;
       } catch (err) {
         console.error("[mail] estimate send failed", err);
@@ -3873,7 +3880,13 @@ export const approveProposal = createServerFn({ method: "POST" })
     let emailed = false;
     try {
       const { deliverEstimateEmail } = await import("./mail");
-      await deliverEstimateEmail({ property, proposal, company });
+      await deliverEstimateEmail({
+        property,
+        proposal,
+        company,
+        items,
+        salesReps: await salesRepsForProposal(sql, proposal),
+      });
       emailed = true;
     } catch (err) {
       console.error("[mail] estimate send after approval failed", err);
@@ -3908,7 +3921,14 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
     if (!property) throw new Error("House not found");
     try {
       const { deliverEstimateEmail } = await import("./mail");
-      await deliverEstimateEmail({ property, proposal, company });
+      const items = await sql<ProposalItem>`select * from proposal_items where proposal_id = ${proposal.id} order by sort_order`;
+      await deliverEstimateEmail({
+        property,
+        proposal,
+        company,
+        items,
+        salesReps: await salesRepsForProposal(sql, proposal),
+      });
     } catch (err) {
       console.error("[mail] estimate send failed", err);
       throw new Error(`Could not email the estimate. Write ${LEGAL_EMAIL}.`);

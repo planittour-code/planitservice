@@ -9,7 +9,7 @@ import {
   paymentSchedule,
   paymentTermLabel,
 } from "./payment";
-import type { Company, Property, Proposal, ProposalItem } from "./types";
+import type { Company, InvoiceSalesRep, Property, Proposal, ProposalItem } from "./types";
 
 function publicUrl(path: string) {
   const origin = (process.env.BETTER_AUTH_URL?.trim() || "https://planitservice.com").replace(/\/+$/, "");
@@ -32,7 +32,9 @@ export async function deliverSalesWelcomeEmail(input: {
 export async function deliverEstimateEmail(input: {
   property: Property;
   proposal: Proposal;
-  company: Pick<Company, "name" | "email">;
+  company: Pick<Company, "name" | "email" | "terms">;
+  items: ProposalItem[];
+  salesReps?: InvoiceSalesRep[];
 }) {
   const { sendEstimateEmail } = await import("@/lib/auth/mail.server");
   await sendEstimateEmail({
@@ -43,6 +45,11 @@ export async function deliverEstimateEmail(input: {
     proposalUrl: publicUrl(`/p/${input.proposal.share_token}`),
     inviteUrl: publicUrl(`/invite/${input.property.invite_token}`),
     replyToken: input.proposal.share_token,
+    title: input.proposal.title,
+    coverNote: input.proposal.cover_note,
+    terms: input.company.terms,
+    items: input.items,
+    salesReps: input.salesReps,
   });
 }
 
