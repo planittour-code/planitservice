@@ -15,6 +15,8 @@ import { PortfolioLookup } from "@/components/portfolio-lookup";
 import { PortfolioWorkBoard } from "@/components/portfolio-work-board";
 import { cn } from "@/lib/utils";
 
+const HOUSE_PREVIEW = 4;
+
 export const Route = createFileRoute("/manage/")({ component: ManageDashboard });
 
 type Filter = "all" | MaintenanceStatus;
@@ -35,6 +37,7 @@ function ManageDashboard() {
 
   const schedule = useMemo(() => {
     const list = portfolio.data?.houses ?? [];
+    const byId = new Map(list.map((h) => [h.id, h]));
     const items: PortfolioUpcoming[] = [];
     for (const house of list) {
       for (const t of house.tasks ?? []) {
@@ -78,12 +81,19 @@ function ManageDashboard() {
       }
     }
     const visible = filter === "all" ? items : items.filter((item) => item.status === filter);
-    visible.sort((a, b) => {
-      const byDate = relevantTaskDate(b).slice(0, 10).localeCompare(relevantTaskDate(a).slice(0, 10));
-      if (byDate !== 0) return byDate;
-      return a.address_line.localeCompare(b.address_line);
-    });
-    return visible;
+    const needs = visible
+      .filter((item) => item.status === "overdue" || item.status === "dueSoon")
+      .sort(sortNeedsDate);
+    const dated = visible.filter((item) => item.status === "scheduled").sort(sortDated);
+    const later = visible.filter((item) => item.status === "current").sort(sortNeedsDate);
+    return {
+      needs: groupByHouse(needs, byId),
+      dated: groupByHouse(dated, byId),
+      later: groupByHouse(later, byId),
+      needCount: needs.length,
+      datedCount: dated.length,
+      laterCount: later.length,
+    };
   }, [portfolio.data?.houses, filter]);
 
   if (portfolio.isLoading) return <Skeleton className="h-48 w-full" />;
@@ -104,7 +114,7 @@ function ManageDashboard() {
           <h1 className="font-display text-3xl font-medium tracking-tight">{name}</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
             {count} of {cap} houses. Calendar and map first, then each property’s house-file photo,
-            then one maintenance schedule with the owner on every line.
+            then the work that still needs a date.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -226,30 +236,7 @@ function ManageDashboard() {
                 </ul>
               </section>
 
-              <section id="maintenance" className="scroll-mt-20 space-y-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div>
-                    <h2 className="font-display text-lg font-bold tracking-tight">Maintenance schedule</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Latest date first. Owner is tagged on every line.
-                    </p>
-                  </div>
-                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">
-                    {schedule.length} {schedule.length === 1 ? "item" : "items"}
-                  </p>
-                </div>
-                {schedule.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nothing on the schedule for this filter.</p>
-                ) : (
-                  <ul className="divide-y divide-border rounded-md bg-card shadow-[var(--shadow-border)]">
-                    {schedule.map((item) => (
-                      <li key={`${item.kind ?? "maintenance"}:${item.id}`}>
-                        <ScheduleLine item={item} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+              <ScheduleBoard schedule={schedule} filter={filter} />
             </>
           )}
         </>
@@ -296,6 +283,266 @@ function PropertyTile({ house }: { house: PortfolioHouse }) {
   );
 }
 
+type HouseBucket = {
+  house: PortfolioHouse;
+  items: PortfolioUpcoming[];
+};
+
+type ScheduleGroups = {
+  needs: HouseBucket[];
+  dated: HouseBucket[];
+  later: HouseBucket[];
+  needCount: number;
+  datedCount: number;
+  laterCount: number;
+};
+
+type LaneKey = "needs" | "dated";
+
+function sortNeedsDate(a: PortfolioUpcoming, b: PortfolioUpcoming) {
+  if (a.status !== b.status) return a.status === "overdue" ? -1 : 1;
+  const byDate = relevantTaskDate(a).slice(0, 10).localeCompare(relevantTaskDate(b).slice(0, 10));
+  if (byDate !== 0) return byDate;
+  return a.address_line.localeCompare(b.address_line);
+}
+
+function sortDated(a: PortfolioUpcoming, b: PortfolioUpcoming) {
+  const byDate = relevantTaskDate(a).slice(0, 10).localeCompare(relevantTaskDate(b).slice(0, 10));
+  if (byDate !== 0) return byDate;
+  return a.address_line.localeCompare(b.address_line);
+}
+
+function groupByHouse(items: PortfolioUpcoming[], byId: Map<string, PortfolioHouse>): HouseBucket[] {
+  const order: string[] = [];
+  const map = new Map<string, PortfolioUpcoming[]>();
+  for (const item of items) {
+    const list = map.get(item.property_id);
+    if (list) list.push(item);
+    else {
+      map.set(item.property_id, [item]);
+      order.push(item.property_id);
+    }
+  }
+  return order
+    .map((id) => {
+      const house = byId.get(id);
+      const grouped = map.get(id) ?? [];
+      if (!house || grouped.length === 0) return null;
+      return { house, items: grouped };
+    })
+    .filter((row): row is HouseBucket => row !== null);
+}
+
+function ScheduleBoard({ schedule, filter }: { schedule: ScheduleGroups; filter: Filter }) {
+  const [lane, setLane] = useState<LaneKey>("needs");
+  const [openLater, setOpenLater] = useState(false);
+  const showNeeds = filter === "all" || filter === "overdue" || filter === "dueSoon";
+  const showDated = filter === "all" || filter === "scheduled";
+  const showLater = filter === "all" || filter === "current";
+  const twoLanes = showNeeds && showDated;
+  const laterOnly = showLater && !showNeeds && !showDated;
+  const empty =
+    (showNeeds ? schedule.needCount : 0) +
+      (showDated ? schedule.datedCount : 0) +
+      (showLater ? schedule.laterCount : 0) ===
+    0;
+
+  return (
+    <section id="maintenance" className="scroll-mt-20 space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 className="font-display text-lg font-bold tracking-tight">Maintenance schedule</h2>
+          <p className="text-sm text-muted-foreground">
+            Overdue and unscheduled first, grouped by house. Owner is on each card.
+          </p>
+        </div>
+        <p className="text-xs font-semibold tabular-nums text-muted-foreground">
+          {schedule.needCount} need a date
+        </p>
+      </div>
+
+      {empty ? (
+        <p className="text-sm text-muted-foreground">Nothing on the schedule for this filter.</p>
+      ) : (
+        <>
+          {twoLanes ? (
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1 md:hidden">
+              {(
+                [
+                  ["needs", "Needs a date", schedule.needCount],
+                  ["dated", "On the calendar", schedule.datedCount],
+                ] as const
+              ).map(([key, label, n]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setLane(key)}
+                  className={cn(
+                    "inline-flex min-h-11 items-center justify-center rounded-full px-3 text-sm",
+                    lane === key ? "bg-card text-foreground shadow-[var(--shadow-border)]" : "text-muted-foreground",
+                  )}
+                >
+                  {label}
+                  <span className="ml-1.5 tabular-nums">{n}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <div className={cn("grid gap-4", twoLanes && "md:grid-cols-2")}>
+            {showNeeds ? (
+              <ScheduleLane
+                title="Needs a date"
+                blurb="Overdue first, then due soon that is not booked."
+                count={schedule.needCount}
+                buckets={schedule.needs}
+                empty="Nothing overdue or due soon."
+                hideTitleOnMobile={twoLanes}
+                className={twoLanes && lane !== "needs" ? "hidden md:block" : undefined}
+              />
+            ) : null}
+            {showDated ? (
+              <ScheduleLane
+                title="On the calendar"
+                blurb="Booked and agreed work, soonest first."
+                count={schedule.datedCount}
+                buckets={schedule.dated}
+                empty="Nothing booked yet."
+                hideTitleOnMobile={twoLanes}
+                className={twoLanes && lane !== "dated" ? "hidden md:block" : undefined}
+              />
+            ) : null}
+          </div>
+
+          {showLater && schedule.laterCount > 0 ? (
+            <div className="rounded-lg bg-card shadow-[var(--shadow-border)]">
+              {laterOnly ? (
+                <div className="px-4 py-3">
+                  <p className="text-sm font-medium">Later this year</p>
+                  <p className="text-xs tabular-nums text-muted-foreground">{schedule.laterCount} current</p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setOpenLater((v) => !v)}
+                  className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                >
+                  <span className="text-sm font-medium">Later this year</span>
+                  <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                    {schedule.laterCount} current
+                  </span>
+                </button>
+              )}
+              {laterOnly || openLater ? (
+                <div className="space-y-3 border-t border-border p-3">
+                  {schedule.later.map((bucket) => (
+                    <HouseWorkCard key={bucket.house.id} bucket={bucket} />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+function ScheduleLane({
+  title,
+  blurb,
+  count,
+  buckets,
+  empty,
+  hideTitleOnMobile,
+  className,
+}: {
+  title: string;
+  blurb: string;
+  count: number;
+  buckets: HouseBucket[];
+  empty: string;
+  hideTitleOnMobile?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("space-y-3", className)}>
+      <div className={hideTitleOnMobile ? "hidden md:block" : undefined}>
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="font-display text-base font-bold tracking-tight">{title}</h3>
+          <p className="text-xs font-semibold tabular-nums text-muted-foreground">{count}</p>
+        </div>
+        <p className="text-sm text-muted-foreground">{blurb}</p>
+      </div>
+      {buckets.length === 0 ? (
+        <p className="rounded-lg bg-card px-4 py-6 text-sm text-muted-foreground shadow-[var(--shadow-border)]">
+          {empty}
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {buckets.map((bucket) => (
+            <li key={bucket.house.id}>
+              <HouseWorkCard bucket={bucket} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function HouseWorkCard({ bucket }: { bucket: HouseBucket }) {
+  const { house, items } = bucket;
+  const extra = items.length - HOUSE_PREVIEW;
+  const overdue = items.filter((item) => item.status === "overdue").length;
+  return (
+    <article className="overflow-hidden rounded-lg bg-card shadow-[var(--shadow-border)]">
+      <Link
+        to="/manage/$id"
+        params={{ id: house.id }}
+        className="flex min-h-11 items-center gap-3 px-3 py-2.5"
+      >
+        <div className="size-11 shrink-0 overflow-hidden rounded-md bg-muted">
+          {house.cover_src ? (
+            <img
+              src={house.cover_src}
+              alt=""
+              className="size-full object-cover outline outline-1 -outline-offset-1 outline-foreground/10"
+            />
+          ) : (
+            <div className="grid size-full place-items-center font-display text-sm text-muted-foreground">
+              {house.address_line.slice(0, 1)}
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{house.address_line}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {house.homeowner_name || `${house.city}, ${house.state}`}
+            {overdue ? ` · ${overdue} overdue` : ""}
+          </p>
+        </div>
+      </Link>
+      <ul className="divide-y divide-border border-t border-border">
+        {items.slice(0, HOUSE_PREVIEW).map((item) => (
+          <li key={`${item.kind ?? "maintenance"}:${item.id}`}>
+            <ScheduleLine item={item} />
+          </li>
+        ))}
+      </ul>
+      {extra > 0 ? (
+        <Link
+          to="/manage/$id"
+          params={{ id: house.id }}
+          className="block min-h-11 px-3 py-2 text-xs font-semibold text-muted-foreground"
+        >
+          {extra} more on this house
+        </Link>
+      ) : null}
+    </article>
+  );
+}
+
 function ScheduleLine({ item }: { item: PortfolioUpcoming }) {
   const when =
     item.kind === "estimate"
@@ -307,20 +554,14 @@ function ScheduleLine({ item }: { item: PortfolioUpcoming }) {
     <Link
       to="/manage/$id"
       params={{ id: item.property_id }}
-      className="flex min-h-14 flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      className="flex min-h-11 items-center justify-between gap-3 px-3 py-2"
     >
-      <div className="min-w-0 space-y-1">
-        <p className="font-medium">{item.title}</p>
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          {item.homeowner_name ? (
-            <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
-              {item.homeowner_name}
-            </span>
-          ) : null}
-          <span>
-            {item.address_line} · {when}
-            {item.kind === "estimate" && item.system_name ? ` · ${item.system_name}` : ""}
-          </span>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{item.title}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {item.homeowner_name ? `${item.homeowner_name} · ` : ""}
+          {when}
+          {item.kind === "estimate" && item.system_name ? ` · ${item.system_name}` : ""}
         </p>
       </div>
       <MaintenanceBadge status={item.status} />
