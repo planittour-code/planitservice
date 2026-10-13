@@ -28,6 +28,14 @@ export async function deliverSalesWelcomeEmail(input: {
   });
 }
 
+export type EstimateSendResult = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  resendId: string | null;
+};
+
 /** Server-only. Import dynamically from createServerFn handlers, never from route modules. */
 export async function deliverEstimateEmail(input: {
   property: Property;
@@ -35,10 +43,11 @@ export async function deliverEstimateEmail(input: {
   company: Pick<Company, "name" | "email" | "terms">;
   items: ProposalItem[];
   salesReps?: InvoiceSalesRep[];
-}) {
+}): Promise<EstimateSendResult> {
   const { sendEstimateEmail } = await import("@/lib/auth/mail.server");
-  await sendEstimateEmail({
-    to: input.property.homeowner_email,
+  const to = input.property.homeowner_email;
+  const sent = await sendEstimateEmail({
+    to,
     name: input.property.homeowner_name,
     company: input.company.name,
     address: `${input.property.address_line}, ${input.property.city}, ${input.property.state} ${input.property.zip}`,
@@ -51,6 +60,7 @@ export async function deliverEstimateEmail(input: {
     items: input.items,
     salesReps: input.salesReps,
   });
+  return { to, subject: sent.subject, html: sent.html, text: sent.text, resendId: sent.resendId };
 }
 
 export async function deliverManagerInviteEmail(input: {

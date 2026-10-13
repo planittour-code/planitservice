@@ -2,6 +2,7 @@ import type { Property, Proposal } from "../../src/lib/housefile/types";
 
 type ResendEvent = {
   type?: string;
+  created_at?: string;
   data?: {
     email_id?: string;
     from?: string;
@@ -44,6 +45,59 @@ export default async function resendWebhookMiddleware(
     return new Response("Invalid payload", { status: 400 });
   }
   if (parsed.type && parsed.type !== "email.received") {
+    try {
+      const { getSql } = await import("../../src/lib/db");
+      const emailId = parsed.data?.email_id;
+      if (!emailId) return json({ ok: true });
+      const sql = await getSql();
+      const sends = await sql<{ id: string; proposal_id: string }>`
+        select id, proposal_id from proposal_sends where resend_id = ${emailId} limit 1
+      `;
+      const send = sends[0];
+      if (!send) return json({ ok: true, ignored: true });
+      const at = parsed.created_at || new Date().toISOString();
+      if (parsed.type === "email.delivered") {
+        await sql`
+          update proposal_sends
+          set delivered_at = coalesce(delivered_at, ${at}::timestamptz)
+          where id = ${send.id}
+        `;
+        await sql`
+          insert into proposal_events (id, proposal_id, send_id, kind, detail)
+          values (${crypto.randomUUID()}, ${send.proposal_id}, ${send.id}, ${"delivered"}, ${null})
+        `;
+      } else if (parsed.type === "email.opened") {
+        await sql`
+          update proposal_sends
+          set opened_at = coalesce(opened_at, ${at}::timestamptz)
+          where id = ${send.id}
+        `;
+        const seen = await sql<{ id: string }>`
+          select id from proposal_events
+          where send_id = ${send.id} and kind = ${"opened"}
+          limit 1
+        `;
+        if (!seen[0]) {
+          await sql`
+            insert into proposal_events (id, proposal_id, send_id, kind, detail)
+            values (${crypto.randomUUID()}, ${send.proposal_id}, ${send.id}, ${"opened"}, ${null})
+          `;
+        }
+      } else if (parsed.type === "email.bounced" || parsed.type === "email.failed") {
+        await sql`
+          update proposal_sends
+          set bounced_at = coalesce(bounced_at, ${at}::timestamptz)
+          where id = ${send.id}
+        `;
+        await sql`
+          insert into proposal_events (id, proposal_id, send_id, kind, detail)
+          values (${crypto.randomUUID()}, ${send.proposal_id}, ${send.id}, ${"bounced"}, ${parsed.type})
+        `;
+      }
+    } catch (err) {
+      console.error("[resend] delivery webhook failed", err);
+      return new Response("Handler failed", { status: 500 });
+    }
     return json({ ok: true });
   }
   try {
@@ -76,6 +130,10 @@ export default async function resendWebhookMiddleware(
     if (proposal.status === "sent") {
       await sql`update proposals set status = ${"revised"} where id = ${proposal.id}`;
     }
+    await sql`
+      insert into proposal_events (id, proposal_id, send_id, kind, detail)
+      values (${crypto.randomUUID()}, ${proposal.id}, ${null}, ${"noted"}, ${"Email reply"})
+    `;
   } catch (err) {
     console.error("[resend] inbound webhook failed", err);
     return new Response("Handler failed", { status: 500 });

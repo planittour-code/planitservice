@@ -59,6 +59,13 @@ function ProposalPage() {
             Property Record
           </Link>
         </Button>
+        {bundle.proposal.status !== "pending" ? (
+          <Button asChild variant="outline" size="sm">
+            <a href={`/p/${bundle.proposal.share_token}`} target="_blank" rel="noreferrer">
+              Customer estimate
+            </a>
+          </Button>
+        ) : null}
       </div>
       <ProposalDoc
         bundle={bundle}

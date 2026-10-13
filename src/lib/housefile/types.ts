@@ -313,6 +313,51 @@ export type HouseFile = {
   totalCount: number;
 };
 
+export type ProposalSend = {
+  id: string;
+  proposal_id: string;
+  to_email: string;
+  subject: string;
+  html: string;
+  body_text: string;
+  snapshot_json: string;
+  resend_id: string | null;
+  created_at: string;
+  delivered_at: string | null;
+  opened_at: string | null;
+  bounced_at: string | null;
+};
+
+export type ProposalEventKind =
+  | "sent"
+  | "delivered"
+  | "opened"
+  | "bounced"
+  | "viewed"
+  | "noted"
+  | "accepted";
+
+export type ProposalEvent = {
+  id: string;
+  proposal_id: string;
+  send_id: string | null;
+  kind: ProposalEventKind;
+  detail: string | null;
+  created_at: string;
+};
+
+export type ProposalDelivery = {
+  lastSend: ProposalSend | null;
+  events: ProposalEvent[];
+  sentAt: string | null;
+  deliveredAt: string | null;
+  emailOpenedAt: string | null;
+  viewedAt: string | null;
+  respondedAt: string | null;
+  acceptedAt: string | null;
+  bouncedAt: string | null;
+};
+
 export type ProposalBundle = {
   proposal: Proposal;
   items: ProposalItem[];
@@ -322,6 +367,7 @@ export type ProposalBundle = {
   house: HouseFile;
   salesRep: InvoiceSalesRep | null;
   salesReps: InvoiceSalesRep[];
+  delivery?: ProposalDelivery;
 };
 
 export type HomeownerHouse = PropertyListRow & {

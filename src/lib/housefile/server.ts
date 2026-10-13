@@ -73,8 +73,11 @@ import type {
   PropertyPhoto,
   Proposal,
   ProposalBundle,
+  ProposalDelivery,
+  ProposalEvent,
   ProposalItem,
   ProposalListRow,
+  ProposalSend,
   ShopClientRow,
   ShopScheduleItem,
   ShopWorkRow,
@@ -1063,6 +1066,157 @@ async function loadHouse(sql: Sql, property: Property): Promise<HouseFile> {
   };
 }
 
+function snapshotFromItems(proposal: Proposal, items: ProposalItem[]) {
+  const included = items.filter((i) => i.included);
+  return JSON.stringify({
+    title: proposal.title,
+    coverNote: proposal.cover_note,
+    items: items.map((i) => ({
+      name: i.name,
+      description: i.description,
+      qty: i.qty,
+      unit: i.unit,
+      unit_price: i.unit_price,
+      included: i.included,
+      optional: i.optional,
+      manufacturer: i.manufacturer,
+      product_name: i.product_name,
+      sku: i.sku,
+      color: i.color,
+      warranty_years: i.warranty_years,
+      warranty_terms: i.warranty_terms,
+      option_id: i.option_id ?? null,
+    })),
+    total: included.reduce((sum, i) => sum + i.qty * i.unit_price, 0),
+  });
+}
+
+async function recordProposalEvent(
+  sql: Sql,
+  proposalId: string,
+  kind: ProposalEvent["kind"],
+  detail?: string | null,
+  sendId?: string | null,
+) {
+  try {
+    await sql`
+      insert into proposal_events (id, proposal_id, send_id, kind, detail)
+      values (${crypto.randomUUID()}, ${proposalId}, ${sendId ?? null}, ${kind}, ${detail ?? null})
+    `;
+  } catch (err) {
+    console.error("[proposal] event insert failed", err);
+  }
+}
+
+async function recordProposalSend(
+  sql: Sql,
+  proposal: Proposal,
+  items: ProposalItem[],
+  letter: { to: string; subject: string; html: string; text: string; resendId: string | null },
+) {
+  const id = crypto.randomUUID();
+  try {
+    await sql`
+      insert into proposal_sends (
+        id, proposal_id, to_email, subject, html, body_text, snapshot_json, resend_id
+      ) values (
+        ${id}, ${proposal.id}, ${letter.to}, ${letter.subject}, ${letter.html}, ${letter.text},
+        ${snapshotFromItems(proposal, items)}, ${letter.resendId}
+      )
+    `;
+    await recordProposalEvent(sql, proposal.id, "sent", letter.to, id);
+  } catch (err) {
+    console.error("[proposal] send snapshot failed", err);
+  }
+}
+
+async function shopUserOwnsProposal(
+  sql: Sql,
+  companyId: string,
+  user: { id: string; email: string | null } | null,
+) {
+  if (!user) return false;
+  const email = user.email?.trim().toLowerCase() ?? "";
+  const member = await sql<{ id: string }>`
+    select id from company_members
+    where company_id = ${companyId}
+      and (user_id = ${user.id} or (${email} <> '' and lower(email) = ${email}))
+    limit 1
+  `;
+  if (member[0]) return true;
+  const owner = await sql<{ user_id: string }>`
+    select user_id from companies where id = ${companyId} limit 1
+  `;
+  return owner[0]?.user_id === user.id;
+}
+
+async function recordEstimateView(sql: Sql, proposal: Proposal) {
+  try {
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const user = await getSessionUser();
+    if (await shopUserOwnsProposal(sql, proposal.company_id, user)) return;
+    const seen = await sql<{ id: string }>`
+      select id from proposal_events
+      where proposal_id = ${proposal.id} and kind = ${"viewed"}
+      limit 1
+    `;
+    if (seen[0]) return;
+    await recordProposalEvent(sql, proposal.id, "viewed", "Opened the estimate");
+  } catch (err) {
+    console.error("[proposal] view record failed", err);
+  }
+}
+
+function earliest(...values: (string | null | undefined)[]) {
+  const dates = values.filter((v): v is string => Boolean(v)).sort();
+  return dates[0] ?? null;
+}
+
+async function loadProposalDelivery(
+  sql: Sql,
+  proposal: Proposal,
+  messages: ProposalMessage[],
+  items: ProposalItem[],
+): Promise<ProposalDelivery> {
+  const empty: ProposalDelivery = {
+    lastSend: null,
+    events: [],
+    sentAt: proposal.sent_at,
+    deliveredAt: null,
+    emailOpenedAt: null,
+    viewedAt: null,
+    respondedAt: null,
+    acceptedAt: proposal.accepted_at,
+    bouncedAt: null,
+  };
+  try {
+    const sends = await sql<ProposalSend>`
+      select * from proposal_sends where proposal_id = ${proposal.id} order by created_at desc limit 1
+    `;
+    const events = await sql<ProposalEvent>`
+      select * from proposal_events where proposal_id = ${proposal.id} order by created_at
+    `;
+    const lastSend = sends[0] ?? null;
+    const homeownerNote = messages.find((m) => m.author_role === "homeowner")?.created_at;
+    const lineNote = items.find((i) => i.homeowner_note)?.homeowner_note ? proposal.sent_at : null;
+    const noted = events.find((e) => e.kind === "noted")?.created_at;
+    return {
+      lastSend,
+      events,
+      sentAt: lastSend?.created_at ?? proposal.sent_at,
+      deliveredAt: lastSend?.delivered_at ?? events.find((e) => e.kind === "delivered")?.created_at ?? null,
+      emailOpenedAt: lastSend?.opened_at ?? events.find((e) => e.kind === "opened")?.created_at ?? null,
+      viewedAt: events.find((e) => e.kind === "viewed")?.created_at ?? null,
+      respondedAt: earliest(noted, homeownerNote, lineNote),
+      acceptedAt: proposal.accepted_at ?? events.find((e) => e.kind === "accepted")?.created_at ?? null,
+      bouncedAt: lastSend?.bounced_at ?? events.find((e) => e.kind === "bounced")?.created_at ?? null,
+    };
+  } catch (err) {
+    console.error("[proposal] delivery load failed", err);
+    return empty;
+  }
+}
+
 async function loadProposal(sql: Sql, proposal: Proposal): Promise<ProposalBundle> {
   const items = await sql<ProposalItem>`
     select * from proposal_items where proposal_id = ${proposal.id} order by sort_order
@@ -1075,15 +1229,19 @@ async function loadProposal(sql: Sql, proposal: Proposal): Promise<ProposalBundl
   const property = propertyRows[0]!;
   const company = companyRows[0]!;
   const house = await loadHouse(sql, property);
+  const hydrated = items.map((i) =>
+    hydrateItem({ ...i, included: Boolean(i.included), optional: Boolean(i.optional) }),
+  );
   return {
     proposal,
-    items: items.map((i) => hydrateItem({ ...i, included: Boolean(i.included), optional: Boolean(i.optional) })),
+    items: hydrated,
     messages,
     property,
     company: publicCompany(asCompany(company)),
     house,
     salesRep: await salesRepForProposal(sql, proposal),
     salesReps: await salesRepsForProposal(sql, proposal),
+    delivery: await loadProposalDelivery(sql, proposal, messages, hydrated),
   };
 }
 
@@ -2089,13 +2247,14 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
       try {
         const { deliverEstimateEmail } = await import("./mail");
         const items = await sql<ProposalItem>`select * from proposal_items where proposal_id = ${proposal.id} order by sort_order`;
-        await deliverEstimateEmail({
+        const letter = await deliverEstimateEmail({
           property,
           proposal,
           company,
           items,
           salesReps: await salesRepsForProposal(sql, proposal),
         });
+        await recordProposalSend(sql, proposal, items, letter);
         emailed = true;
       } catch (err) {
         console.error("[mail] estimate send failed", err);
@@ -2759,6 +2918,7 @@ export const getProposalByToken = createServerFn({ method: "GET" })
     const rows = await sql<Proposal>`select * from proposals where share_token = ${token} limit 1`;
     if (!rows[0]) throw new Error("Proposal not found");
     if (rows[0].status === "pending") throw new Error("This quote is waiting on the shop.");
+    await recordEstimateView(sql, rows[0]);
     return loadProposal(sql, rows[0]);
   });
 
@@ -2873,6 +3033,7 @@ export const reviseProposalPublic = createServerFn({ method: "POST" })
       await sql`update proposals set status = ${"revised"} where id = ${rows[0].id}`;
     }
     if (data.homeownerNote !== undefined && note && note !== items[0].homeowner_note) {
+      await recordProposalEvent(sql, rows[0].id, "noted", items[0].name);
       await notifyEstimateReview(
         sql,
         rows[0],
@@ -2920,6 +3081,7 @@ export const addHomeownerMessage = createServerFn({ method: "POST" })
     if (rows[0].status === "sent") {
       await sql`update proposals set status = ${"revised"} where id = ${rows[0].id}`;
     }
+    await recordProposalEvent(sql, rows[0].id, "noted", "Homeowner note");
     await notifyEstimateReview(
       sql,
       rows[0],
@@ -2974,6 +3136,7 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
     `;
     let emailed = false;
     if (!already) {
+      await recordProposalEvent(sql, proposal.id, "accepted", "Accepted the estimate");
       try {
         const { deliverAcceptedEstimateEmail } = await import("./mail");
         await deliverAcceptedEstimateEmail({
@@ -3904,13 +4067,14 @@ export const approveProposal = createServerFn({ method: "POST" })
     let emailed = false;
     try {
       const { deliverEstimateEmail } = await import("./mail");
-      await deliverEstimateEmail({
+      const letter = await deliverEstimateEmail({
         property,
         proposal,
         company,
         items,
         salesReps: await salesRepsForProposal(sql, proposal),
       });
+      await recordProposalSend(sql, proposal, items, letter);
       emailed = true;
     } catch (err) {
       console.error("[mail] estimate send after approval failed", err);
@@ -3946,13 +4110,14 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
     try {
       const { deliverEstimateEmail } = await import("./mail");
       const items = await sql<ProposalItem>`select * from proposal_items where proposal_id = ${proposal.id} order by sort_order`;
-      await deliverEstimateEmail({
+      const letter = await deliverEstimateEmail({
         property,
         proposal,
         company,
         items,
         salesReps: await salesRepsForProposal(sql, proposal),
       });
+      await recordProposalSend(sql, proposal, items, letter);
     } catch (err) {
       console.error("[mail] estimate send failed", err);
       throw new Error(`Could not email the estimate. Write ${LEGAL_EMAIL}.`);

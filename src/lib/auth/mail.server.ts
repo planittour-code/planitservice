@@ -50,14 +50,14 @@ export async function sendResendEmail(input: {
   replyTo?: string;
   from?: string;
   attachments?: { filename: string; content: string }[];
-}) {
+}): Promise<{ id: string | null }> {
   const key = resendKey();
   if (!key) {
     if (isDeployed()) {
       throw new Error(`We could not send the email. Write ${LEGAL_EMAIL}.`);
     }
     console.info(`[mail] ${input.subject} → ${input.to}\n${input.text}`);
-    return;
+    return { id: null };
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -81,6 +81,8 @@ export async function sendResendEmail(input: {
     console.error(`[mail] Resend rejected send (${res.status}) ${detail}`);
     throw new Error(`We could not send the email. Write ${LEGAL_EMAIL}.`);
   }
+  const payload = (await res.json().catch(() => null)) as { id?: string } | null;
+  return { id: payload?.id?.trim() || null };
 }
 
 export async function sendSalesWelcomeEmail(data: {
@@ -159,7 +161,7 @@ export async function sendEstimateEmail(data: {
   terms?: string | null;
   items?: EstimateEmailLine[];
   salesReps?: { name: string; email?: string | null }[];
-}) {
+}): Promise<{ subject: string; text: string; html: string; resendId: string | null }> {
   const { subject, text, html } = estimateEmailCopy({
     name: data.name,
     company: data.company,
@@ -173,7 +175,7 @@ export async function sendEstimateEmail(data: {
     inviteUrl: data.inviteUrl,
   });
 
-  await sendResendEmail({
+  const sent = await sendResendEmail({
     to: data.to,
     subject,
     text,
@@ -181,6 +183,7 @@ export async function sendEstimateEmail(data: {
     from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
     replyTo: estimateReplyTo(data.replyToken),
   });
+  return { subject, text, html, resendId: sent.id };
 }
 
 export async function sendManagerInviteEmail(data: {

@@ -17,7 +17,7 @@ import { InvoiceDoc } from "@/components/invoice-doc";
 import { Mark } from "@/components/logo";
 import { estimateEmailCopy } from "@/lib/housefile/estimate-email";
 import { lineShowsInstalledProduct, lineShowsQuantity, optionLabel } from "@/lib/housefile/estimate-lines";
-import { money, shortDate } from "@/lib/housefile/format";
+import { money, shortDateTime } from "@/lib/housefile/format";
 import { isDrainageInvoice } from "@/lib/housefile/invoice";
 import {
   checkoutAmount,
@@ -108,7 +108,10 @@ export function ProposalDoc({
   if (showInvoice) {
     return (
       <article className="space-y-8">
-        {mode === "contractor" && !locked ? <ContractorMeta bundle={bundle} onChanged={onChanged} /> : null}
+        {mode === "contractor" ? <SentEstimateCard bundle={bundle} /> : null}
+        {mode === "contractor" && !locked && !proposal.sent_at ? (
+          <ContractorMeta bundle={bundle} onChanged={onChanged} />
+        ) : null}
         <InvoiceDoc bundle={bundle} showLinePrices={mode === "contractor"} showPay={mode !== "contractor"} />
         {notesOpen ? (
           <p className="rounded-lg bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
@@ -164,6 +167,7 @@ export function ProposalDoc({
 
   return (
     <article className="space-y-8">
+      {mode === "contractor" ? <SentEstimateCard bundle={bundle} /> : null}
       <header className="space-y-5">
         <div>
           <p className="font-display text-3xl font-medium tracking-tight md:text-4xl">
@@ -174,7 +178,7 @@ export function ProposalDoc({
           </p>
         </div>
 
-        <EstimateHero bundle={bundle} />
+        {mode === "contractor" && proposal.sent_at ? null : <EstimateHero bundle={bundle} />}
 
         <div className="flex items-center gap-3">
           {brandLogo ? (
@@ -194,11 +198,13 @@ export function ProposalDoc({
           </div>
         </div>
 
-        {proposal.cover_note ? (
+        {mode === "contractor" && proposal.sent_at
+          ? null
+          : proposal.cover_note ? (
           <p className="max-w-2xl whitespace-pre-wrap text-base leading-relaxed">{proposal.cover_note}</p>
         ) : null}
 
-        {(salesReps ?? []).length ? (
+        {mode === "contractor" && proposal.sent_at ? null : (salesReps ?? []).length ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {(salesReps ?? []).length ? (
               <div className="space-y-1">
@@ -229,12 +235,9 @@ export function ProposalDoc({
           </p>
         ) : null}
 
-        {mode === "contractor" && (
+        {mode === "contractor" && !proposal.sent_at && (
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={notesOpen ? "revised" : proposal.status} />
-            {proposal.sent_at ? (
-              <span className="text-sm text-muted-foreground">Sent {shortDate(proposal.sent_at)}</span>
-            ) : null}
           </div>
         )}
 
@@ -255,7 +258,7 @@ export function ProposalDoc({
         ) : null}
       </header>
 
-      {mode === "contractor" && !locked && (
+      {mode === "contractor" && !locked && !proposal.sent_at && (
         <ContractorMeta bundle={bundle} onChanged={onChanged} />
       )}
 
@@ -299,7 +302,7 @@ export function ProposalDoc({
         />
       )}
 
-      {mode === "contractor" && !locked && (
+      {mode === "contractor" && !locked && !proposal.sent_at && (
         <>
           <SectionRule />
           <PhotoGrid file={house} mode={mode} onChanged={onChanged} />
@@ -799,8 +802,91 @@ function ContractorNotesAndSend({
           />
         ) : null}
       </div>
-      <CustomerEmailPreview bundle={bundle} />
+      {proposal.sent_at ? null : <CustomerEmailPreview bundle={bundle} />}
     </div>
+  );
+}
+
+function stamp(iso: string | null | undefined) {
+  return iso ? shortDateTime(iso) : "—";
+}
+
+function DeliveryStep({
+  label,
+  at,
+  done,
+  warn = false,
+}: {
+  label: string;
+  at: string | null | undefined;
+  done: boolean;
+  warn?: boolean;
+}) {
+  return (
+    <li className="min-w-0">
+      <p
+        className={cn(
+          "text-xs font-semibold tracking-wide uppercase",
+          warn ? "text-warning" : done ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {label}
+      </p>
+      <p className={cn("text-sm tabular-nums", done ? "text-foreground" : "text-muted-foreground")}>
+        {done ? stamp(at) : "Not yet"}
+      </p>
+    </li>
+  );
+}
+
+function SentEstimateCard({ bundle }: { bundle: ProposalBundle }) {
+  const delivery = bundle.delivery;
+  const send = delivery?.lastSend;
+  const sentAt = delivery?.sentAt ?? bundle.proposal.sent_at;
+  if (!sentAt && !send) return null;
+  const bounced = Boolean(delivery?.bouncedAt);
+  return (
+    <section className="space-y-4 rounded-xl bg-card p-4 shadow-[var(--shadow-border)] sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm tracking-wide text-muted-foreground uppercase">What they received</p>
+          <h2 className="font-display text-xl font-medium tracking-tight">
+            {send ? "This exact version" : "Sent estimate"}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {send
+              ? `Sent to ${send.to_email}. Later edits on this page do not change this letter.`
+              : `Sent to ${bundle.property.homeowner_email}. The exact letter is kept from the next send.`}
+          </p>
+        </div>
+        <StatusBadge status={bundle.proposal.status} />
+      </div>
+      <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <DeliveryStep label="Sent" at={sentAt} done={Boolean(sentAt)} />
+        <DeliveryStep
+          label={bounced ? "Bounced" : "Delivered"}
+          at={bounced ? delivery?.bouncedAt : delivery?.deliveredAt}
+          done={Boolean(delivery?.deliveredAt || bounced)}
+          warn={bounced}
+        />
+        <DeliveryStep label="Opened email" at={delivery?.emailOpenedAt} done={Boolean(delivery?.emailOpenedAt)} />
+        <DeliveryStep label="Opened estimate" at={delivery?.viewedAt} done={Boolean(delivery?.viewedAt)} />
+        <DeliveryStep label="Responded" at={delivery?.respondedAt} done={Boolean(delivery?.respondedAt)} />
+        <DeliveryStep label="Accepted" at={delivery?.acceptedAt ?? bundle.proposal.accepted_at} done={Boolean(delivery?.acceptedAt ?? bundle.proposal.accepted_at)} />
+      </ol>
+      {send ? (
+        <>
+          <p className="text-sm">
+            <span className="text-muted-foreground">Subject · </span>
+            {send.subject}
+          </p>
+          <div
+            className="overflow-hidden rounded-lg bg-muted/60 p-4 text-sm [&_a]:text-ink [&_a]:underline [&_a]:underline-offset-4"
+            dangerouslySetInnerHTML={{ __html: send.html }}
+          />
+        </>
+      ) : null}
+    </section>
   );
 }
 

@@ -15,6 +15,18 @@ export function shortDate(iso: string | null | undefined) {
   }).format(d);
 }
 
+export function shortDateTime(iso: string | null | undefined) {
+  if (!iso) return "";
+  const d = new Date(iso.length <= 10 ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(d);
+}
+
 export function lastName(name: string | null | undefined) {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   const last = parts.at(-1) ?? "";
