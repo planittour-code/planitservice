@@ -41,3 +41,95 @@
   to = "/homeowner"
   status = 301
   force = true
+
+# Scanner bait — serve a 12-byte static 404 instead of the app HTML.
+[[redirects]]
+  from = "/wordpress"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/wordpress/*"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/wp"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/wp/*"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/blog"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/blog/*"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/wp-json"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/wp-json/*"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/index.php"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/xmlrpc.php"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.env"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.env.*"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.git"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.git/*"
+  to = "/gone.txt"
+  status = 404
+  force = true
+
+[[headers]]
+  for = "/gone.txt"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    X-Robots-Tag = "noindex, nofollow"
+    Content-Type = "text/plain; charset=utf-8"

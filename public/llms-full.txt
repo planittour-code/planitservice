@@ -63,8 +63,8 @@ Prices are billed in USD through Stripe Checkout. PlanitService does not collect
 Live sample shop (Painting Plus, Marietta GA; booking also used as Gutters Plus):
 
 - https://planitservice.com/s/painting-plus
-- https://planitservice.com/s/painting-plus/book
-- https://planitservice.com/s/painting-plus/project
+- https://planitservice.com/s/painting-plus/project (request an estimate)
+- https://planitservice.com/s/painting-plus/book (schedule a visit)
 
 Legal and company:
 

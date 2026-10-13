@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware, optionalAuthMiddleware } from "@/lib/auth/middleware";
-import { getSql, type Sql } from "@/lib/db";
+import { dbSource, getSql, type Sql } from "@/lib/db";
 import { LEGAL_EMAIL } from "@/lib/legal";
 import { MANAGE_INCLUDED } from "./pricing";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, parseBookPhoto, STARTER_BOOK, type PriceBookItem } from "./book";
@@ -2684,7 +2684,31 @@ export const getPublicShop = createServerFn({ method: "GET" })
           limit 1
         `;
     const company = rows[0] ?? aliased[0];
-    if (!company) throw new Error("Shop not found");
+    if (!company) {
+      if (dbSource === "pglite" && (needle === "painting-plus" || needle === "gutters-plus")) {
+        return {
+          slug: needle,
+          name: "Painting Plus",
+          trade: "paint",
+          phone: "6786980393",
+          email: "albin@guttersplus.com",
+          website: null,
+          logo_src: "/painting-plus-logo.svg",
+          street: "129 Powers Ferry Rd, SE",
+          city: "Marietta",
+          state: "GA",
+          zip: "30067",
+          years_in_business: 30,
+          associations: "BBB · Licensed GC",
+          review_google: null,
+          review_trustpilot: null,
+          review_nextdoor: null,
+          review_other: null,
+          trades: ["gutters", "windows", "roof", "siding", "paint", "deck", "drainage"],
+        };
+      }
+      throw new Error("Shop not found");
+    }
     const hydrated = asCompany(company);
     const publicName = needle === "painting-plus" ? "Painting Plus" : hydrated.name;
     return {

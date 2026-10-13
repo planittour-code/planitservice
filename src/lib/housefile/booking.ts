@@ -1,4 +1,4 @@
-import { getSql, type Sql } from "@/lib/db";
+import { dbSource, getSql, type Sql } from "@/lib/db";
 import {
   sendBookingConfirmationEmail,
   sendProjectOpenedEmail,
@@ -109,7 +109,22 @@ export async function shopBySlug(sql: Sql, slug: string): Promise<ShopDesk> {
     limit 1
   `;
   const row = rows[0];
-  if (!row?.slug) throw new Error("Shop not found");
+  if (!row?.slug) {
+    if (dbSource === "pglite" && (needle === "painting-plus" || needle === "gutters-plus")) {
+      return {
+        id: "co_painting_plus_preview",
+        name: "Painting Plus",
+        slug: needle,
+        email: "albin@guttersplus.com",
+        phone: "6786980393",
+        trades: "gutters,windows,roof,siding,paint,deck,drainage",
+        calendarEmail: ALBIN_CALENDAR_EMAIL,
+        from: ALBIN_FROM,
+        replyTo: ALBIN_REPLY_TO,
+      };
+    }
+    throw new Error("Shop not found");
+  }
   const email = row.email?.trim().toLowerCase() || null;
   const calendarEmail =
     email === ALBIN_CALENDAR_EMAIL || needle.includes("gutter") ? ALBIN_CALENDAR_EMAIL : email || ALBIN_CALENDAR_EMAIL;

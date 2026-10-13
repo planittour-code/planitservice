@@ -11,9 +11,19 @@ import { Label } from "@/components/ui/label";
 import { getPublicShop, startPublicProject } from "@/lib/housefile/server";
 import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 import { takeoffReady, workFromId, workTypesFor } from "@/lib/housefile/quote";
+import { pageHead } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/s/$slug/project")({ component: ShopProject });
+export const Route = createFileRoute("/s/$slug/project")({
+  head: ({ params }) =>
+    pageHead({
+      title: "Request an estimate",
+      description:
+        "Pick the work, answer the measurements, and send the address. The shop quotes from what you send.",
+      path: `/s/${params.slug}/project`,
+    }),
+  component: ShopProject,
+});
 
 function ShopProject() {
   const { slug } = Route.useParams();

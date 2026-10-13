@@ -22,7 +22,7 @@ export const Route = createFileRoute("/s/$slug")({
     pageHead({
       title: loaderData?.name ?? "Shop",
       description: loaderData
-        ? `${loaderData.name} quotes on PlanitService. Schedule a visit or start a new project.`
+        ? `${loaderData.name} in ${formatPlace([loaderData.city, loaderData.state]) || "this area"} quotes on PlanitService. Request an estimate or schedule a visit.`
         : "Public shop on PlanitService.",
       path: `/s/${loaderData?.slug ?? params.slug}`,
     }),
@@ -87,13 +87,19 @@ function PublicShopPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PublicHeader compact path="public">
-        <Button asChild variant="outline">
-          <Link to="/login">Sign in</Link>
-        </Button>
+        {call ? (
+          <Button asChild variant="outline">
+            <a href={call}>{phone ?? "Call"}</a>
+          </Button>
+        ) : (
+          <Button asChild variant="outline">
+            <Link to="/login">Sign in</Link>
+          </Button>
+        )}
       </PublicHeader>
-      <JsonLd data={localBusinessJsonLd(shop)} />
+      <JsonLd data={localBusinessJsonLd({ ...shop, trades: trades.map((w) => w.name) })} />
       <main className="mx-auto max-w-3xl space-y-8 px-5 py-10">
-        <div className="space-y-2">
+        <div className="space-y-3">
           {shop.logo_src ? (
             <img
               src={shop.logo_src}
@@ -103,37 +109,49 @@ function PublicShopPage() {
           ) : null}
           <h1 className="font-display text-4xl font-medium tracking-tight">{shop.name}</h1>
           {place ? <p className="text-muted-foreground">{place}</p> : null}
-          {shop.years_in_business ? (
-            <p className="text-sm text-muted-foreground">{shop.years_in_business} years in business</p>
-          ) : null}
+          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+            {trades.length
+              ? `Request an estimate for ${listTradeNames(trades)}, or schedule a visit.`
+              : "Request an estimate or schedule a visit."}
+            {shop.years_in_business ? ` ${shop.years_in_business} years in business.` : ""}
+          </p>
         </div>
+        <section className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/s/$slug/project" params={{ slug }}>
+              Request an estimate
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/s/$slug/book" params={{ slug }}>
+              Schedule a visit
+            </Link>
+          </Button>
+          {phone && call ? (
+            <Button asChild variant="outline">
+              <a href={call}>{phone}</a>
+            </Button>
+          ) : null}
+        </section>
         {trades.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-display text-xl font-medium">Work we quote</h2>
             <ul className="flex flex-wrap gap-2">
               {trades.map((work: WorkType) => (
-                <li
-                  key={work.id}
-                  className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm"
-                >
-                  {work.name}
+                <li key={work.id}>
+                  <Link
+                    to="/s/$slug/project"
+                    params={{ slug }}
+                    className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm hover:bg-muted"
+                  >
+                    {work.name}
+                  </Link>
                 </li>
               ))}
             </ul>
+            <p className="text-sm text-muted-foreground">Pick a category to start the estimate.</p>
           </section>
         )}
-        <section className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link to="/s/$slug/book" params={{ slug }}>
-              Schedule Today
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/s/$slug/project" params={{ slug }}>
-              Request an estimate
-            </Link>
-          </Button>
-        </section>
         {(shop.phone || shop.email || shop.website) && (
           <section className="space-y-2 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
             <h2 className="font-display text-xl font-medium">Contact</h2>
@@ -190,4 +208,11 @@ function PublicShopPage() {
       <PageFooter shop />
     </div>
   );
+}
+
+function listTradeNames(trades: WorkType[]) {
+  const names = trades.map((w) => w.name.toLowerCase());
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names.at(-1)}`;
 }

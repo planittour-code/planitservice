@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GROK_PROVIDERS, authClient, authEnabled, clearSignedOutFlag, grokOauthOnThisHost, justSignedOut, signIn } from "@/lib/auth/client";
+import { signInErrorMessage } from "@/lib/auth/sign-in-error";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { namedShopInviteToken, safeNextPath } from "@/lib/housefile/invite";
 import { useAudience } from "@/lib/housefile/use-audience";
@@ -199,7 +200,7 @@ function Login() {
       clearSignedOutFlag();
       window.location.href = after;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sign in");
+      setError(mode === "in" ? signInErrorMessage(err) : err instanceof Error ? err.message : "Could not create account");
     } finally {
       setBusy(false);
     }

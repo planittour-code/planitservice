@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { LEGAL_EMAIL } from "@/lib/legal";
+import { pageHead } from "@/lib/seo";
 
 const searchSchema = z.object({
   token: z.string().optional(),
@@ -16,9 +17,13 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/reset-password")({
   validateSearch: (s) => searchSchema.parse(s),
-  head: () => ({
-    meta: [{ title: "Choose a new password — PlanitService" }],
-  }),
+  head: () =>
+    pageHead({
+      title: "Choose a new password",
+      description: "Set a new password for the PlanitService account.",
+      path: "/reset-password",
+      index: false,
+    }),
   component: ResetPassword,
 });
 

@@ -9,9 +9,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { bookPublicSlot, getPublicBookingSlots, getPublicShop, startPublicProject } from "@/lib/housefile/server";
 import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
+import { workTypesFor } from "@/lib/housefile/quote";
+import { pageHead } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/s/$slug/book")({ component: ShopOfferPage });
+export const Route = createFileRoute("/s/$slug/book")({
+  head: ({ params }) =>
+    pageHead({
+      title: "Schedule a visit",
+      description: "Pick an open day, or sign up for repeat service. Request an estimate if the job needs a quote first.",
+      path: `/s/${params.slug}/book`,
+    }),
+  component: ShopOfferPage,
+});
 
 type Offer = "visit" | "repeat";
 
@@ -28,6 +38,8 @@ function ShopOfferPage() {
     enabled: Boolean(shop.data),
   });
   const shopName = shop.data?.name ?? slots.data?.shop.name ?? "This shop";
+  const offered = workTypesFor((shop.data?.trades ?? []).join(","));
+  const offersGutters = offered.some((w) => w.id === "gutters");
   const [offer, setOffer] = useState<Offer | null>(null);
   const [start, setStart] = useState("");
   const [name, setName] = useState("");
@@ -69,7 +81,12 @@ function ShopOfferPage() {
       <PublicHeader compact path="public">
         <Button asChild variant="outline" size="sm">
           <Link to="/s/$slug" params={{ slug }}>
-            Shop
+            {shopName}
+          </Link>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/s/$slug/project" params={{ slug }}>
+            Request an estimate
           </Link>
         </Button>
       </PublicHeader>
@@ -78,17 +95,19 @@ function ShopOfferPage() {
           {shop.data?.logo_src ? (
             <img
               src={shop.data.logo_src}
-              alt=""
+              alt={`${shopName} logo`}
               className="h-16 w-auto max-w-[14rem] object-contain sm:h-20"
             />
           ) : null}
           <div className="space-y-2">
             <p className="text-sm font-medium tracking-wide text-primary">{shopName}</p>
             <h1 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
-              Annual service package
+              Schedule a visit
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-              20% off, three visits, and priority scheduling. A one-time visit is on the other side.
+              {offersGutters
+                ? "Pick an open day for one visit, or sign up for the year. Need a quote for paint, roof, or other work? Request an estimate."
+                : "Pick an open day on the calendar. Need a written quote first? Request an estimate."}
             </p>
           </div>
         </header>
@@ -102,27 +121,40 @@ function ShopOfferPage() {
           </section>
         ) : (
           <>
-            <section className="grid gap-3 sm:grid-cols-2">
-              <OfferCard
-                title="Annual service package"
-                points={[
-                  "20% off gutter and downspout cleaning",
-                  "3 visits: spring, fall, and as needed",
-                  "Priority scheduling through the year",
-                ]}
-                action="Sign up for the year"
-                selected={offer === "repeat"}
-                featured
-                onChoose={() => setOffer("repeat")}
-              />
+            <section className={cn("grid gap-3", offersGutters ? "sm:grid-cols-2" : "")}>
+              {offersGutters ? (
+                <OfferCard
+                  title="Annual service package"
+                  points={[
+                    "20% off gutter and downspout cleaning",
+                    "3 visits: spring, fall, and as needed",
+                    "Priority scheduling through the year",
+                  ]}
+                  action="Sign up for the year"
+                  selected={offer === "repeat"}
+                  featured
+                  onChoose={() => setOffer("repeat")}
+                />
+              ) : null}
               <OfferCard
                 title="One visit"
-                points={["Seasonal gutter and downspout cleaning", "Pick an open day on the calendar"]}
+                points={
+                  offersGutters
+                    ? ["Seasonal gutter and downspout cleaning", "Pick an open day on the calendar"]
+                    : ["Pick an open day on the calendar", "The shop confirms the time by email"]
+                }
                 action="Schedule one visit"
                 selected={offer === "visit"}
                 onChoose={() => setOffer("visit")}
               />
             </section>
+            <p className="text-sm text-muted-foreground">
+              Paint, roof, windows, siding, and other quoted work starts on{" "}
+              <Link to="/s/$slug/project" params={{ slug }} className="underline underline-offset-4">
+                Request an estimate
+              </Link>
+              .
+            </p>
 
             {offer === "visit" ? (
               <form
@@ -155,7 +187,9 @@ function ShopOfferPage() {
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      No openings in the next few weeks. Sign up for the year and the shop will find a day.
+                      {offersGutters
+                        ? "No openings in the next few weeks. Sign up for the year and the shop will find a day."
+                        : "No openings in the next few weeks. Request an estimate and the shop will follow up."}
                     </p>
                   )}
                 </fieldset>
@@ -175,7 +209,7 @@ function ShopOfferPage() {
               </form>
             ) : null}
 
-            {offer === "repeat" ? (
+            {offer === "repeat" && offersGutters ? (
               <form
                 className="space-y-4 rounded-xl bg-card p-5 shadow-[var(--shadow-border)]"
                 onSubmit={(e) => {

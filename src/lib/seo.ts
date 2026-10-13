@@ -7,14 +7,19 @@ export function pageHead(opts: {
   title: string;
   description: string;
   path: string;
+  index?: boolean;
 }) {
   const url = `${LEGAL_SITE}${opts.path === "/" ? "" : opts.path}`;
   const title = opts.title.includes(LEGAL_NAME) ? opts.title : `${opts.title} — ${LEGAL_NAME}`;
+  const meta: { title?: string; name?: string; content?: string }[] = [
+    { title },
+    { name: "description", content: opts.description },
+  ];
+  if (opts.index === false) {
+    meta.push({ name: "robots", content: "noindex, nofollow" });
+  }
   return {
-    meta: [
-      { title },
-      { name: "description", content: opts.description },
-    ],
+    meta,
     links: [{ rel: "canonical", href: url }],
   };
 }
@@ -62,11 +67,12 @@ export function localBusinessJsonLd(shop: {
   city?: string | null;
   state?: string | null;
   zip?: string | null;
+  trades?: string[];
 }) {
   const url = `${LEGAL_SITE}/s/${shop.slug}`;
   return {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@type": "HomeAndConstructionBusiness",
     name: shop.name,
     url,
     telephone: shop.phone || undefined,
@@ -79,5 +85,27 @@ export function localBusinessJsonLd(shop: {
       postalCode: shop.zip || undefined,
       addressCountry: "US",
     },
+    hasOfferCatalog: shop.trades?.length
+      ? {
+          "@type": "OfferCatalog",
+          name: "Work we quote",
+          itemListElement: shop.trades.map((name) => ({
+            "@type": "Offer",
+            itemOffered: { "@type": "Service", name },
+          })),
+        }
+      : undefined,
+    potentialAction: [
+      {
+        "@type": "ReserveAction",
+        target: `${url}/book`,
+        name: "Schedule a visit",
+      },
+      {
+        "@type": "OrderAction",
+        target: `${url}/project`,
+        name: "Request an estimate",
+      },
+    ],
   };
 }

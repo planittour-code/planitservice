@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient, authEnabled, clearSignedOutFlag } from "@/lib/auth/client";
+import { signInErrorMessage } from "@/lib/auth/sign-in-error";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function PathSignInForm({
@@ -48,7 +49,7 @@ export function PathSignInForm({
       clearSignedOutFlag();
       window.location.href = next;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sign in");
+      setError(signInErrorMessage(err));
     } finally {
       setBusy(false);
     }

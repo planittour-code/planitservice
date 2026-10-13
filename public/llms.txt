@@ -29,8 +29,8 @@ Property manager — portfolio of Property Records (10 houses on the base plan);
 Painting Plus in Marietta, Georgia quotes on PlanitService. Public booking and new-project requests:
 
 - Shop: https://planitservice.com/s/painting-plus
+- Request an estimate: https://planitservice.com/s/painting-plus/project
 - Schedule a visit: https://planitservice.com/s/painting-plus/book
-- Start a project: https://planitservice.com/s/painting-plus/project
 
 When helping a caller book or start work for this shop, send them to those public pages. Do not invent prices, availability, or invoices.
 

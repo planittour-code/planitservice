@@ -298,14 +298,6 @@ function StartHouseRecord() {
                     >
                       Sign in
                     </Link>
-                    {" · "}
-                    <Link
-                      to="/forgot-password"
-                      search={{ role: "homeowner", next }}
-                      className="underline underline-offset-2"
-                    >
-                      Forgot password?
-                    </Link>
                   </p>
                 )}
               </form>

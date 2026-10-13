@@ -29,6 +29,12 @@ Disallow: /claim/
 Disallow: /auth/
 Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /wordpress
+Disallow: /wp
+Disallow: /blog
+Disallow: /wp-json
+Disallow: /.env
+Disallow: /.git
 Disallow: /u/
 Disallow: /manage/add
 Disallow: /manage/estimates
