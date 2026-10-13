@@ -49,7 +49,7 @@ export function worldPxToLngLat(x: number, y: number, zoom: number): GeoPoint {
 export function tileUrl(z: number, x: number, y: number) {
   const n = 2 ** z;
   const wrapX = ((x % n) + n) % n;
-  return `https://basemaps.cartocdn.com/light_all/${z}/${wrapX}/${y}.png`;
+  return `/api/map-tile?z=${z}&x=${wrapX}&y=${y}`;
 }
 
 export function visibleTiles(
