@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { removeHomeProperty, setPrimaryResidence, updateHomeProperty } from "@/lib/housefile/server";
 import { PROPERTY_ANNUAL, PROPERTY_MONTHLY, PRO_ANNUAL, PRO_MONTHLY, dollars } from "@/lib/housefile/pricing";
+import { BILLING_PORTAL } from "@/lib/housefile/stripe";
+import { startBillingPortal } from "@/lib/housefile/stripe-billing";
 import { useAddressClaimed } from "@/lib/housefile/use-address-claim";
 
 export type HomePropertyRowHouse = {
@@ -22,9 +24,17 @@ export type HomePropertyRowHouse = {
   isPrimaryResidence: boolean;
 };
 
-export function HomePropertyRow({ house }: { house: HomePropertyRowHouse }) {
+export function HomePropertyRow({
+  house,
+  houseCount = 2,
+}: {
+  house: HomePropertyRowHouse;
+  houseCount?: number;
+}) {
   const queryClient = useQueryClient();
+  const lastHouse = houseCount <= 1;
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [address, setAddress] = useState(house.address);
   const [city, setCity] = useState(house.city);
   const [state, setState] = useState(house.state);
@@ -67,9 +77,20 @@ export function HomePropertyRow({ house }: { house: HomePropertyRowHouse }) {
     mutationFn: () => removeHomeProperty({ data: { propertyId: house.id } }),
     onSuccess: () => {
       toast.success("Property removed from this account");
+      setConfirming(false);
       refresh();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not remove"),
+  });
+
+  const portal = useMutation({
+    mutationFn: () => startBillingPortal({ data: { returnPath: "/home/settings" } }),
+    onSuccess: ({ url }) => {
+      window.location.href = url;
+    },
+    onError: () => {
+      window.location.href = BILLING_PORTAL;
+    },
   });
 
   const makePrimary = useMutation({
@@ -132,16 +153,72 @@ export function HomePropertyRow({ house }: { house: HomePropertyRowHouse }) {
             type="button"
             size="sm"
             variant="outline"
-            disabled={remove.isPending}
-            onClick={() => {
-              if (!window.confirm(`Remove ${house.address} from this account?`)) return;
-              remove.mutate();
-            }}
+            disabled={remove.isPending || portal.isPending}
+            onClick={() => setConfirming(true)}
           >
-            {remove.isPending ? "Removing…" : "Remove this property"}
+            Remove this property
           </Button>
         </div>
       </div>
+      {confirming ? (
+        <div className="fixed inset-0 z-50 grid place-items-end p-4 sm:place-items-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-ink/50"
+            aria-label="Close"
+            onClick={() => setConfirming(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`remove-house-${house.id}`}
+            className="relative w-full max-w-md rounded-xl bg-card p-5 shadow-[var(--shadow-border)]"
+          >
+            {lastHouse ? (
+              <>
+                <h3 id={`remove-house-${house.id}`} className="font-display text-xl font-medium tracking-tight">
+                  This is the only house on this account
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {house.address}
+                  {house.city ? `, ${house.city}` : ""}
+                  {house.state ? ` ${house.state}` : ""}
+                  {house.zip ? ` ${house.zip}` : ""}. Cancel the Property Record plan in billing
+                  instead of deleting the last file.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
+                    Keep this house
+                  </Button>
+                  <Button type="button" disabled={portal.isPending} onClick={() => portal.mutate()}>
+                    {portal.isPending ? "Opening billing…" : "Continue to billing"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 id={`remove-house-${house.id}`} className="font-display text-xl font-medium tracking-tight">
+                  Remove this property?
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Double-check the address. {house.address}
+                  {house.city ? `, ${house.city}` : ""}
+                  {house.state ? ` ${house.state}` : ""}
+                  {house.zip ? ` ${house.zip}` : ""} will leave this account.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
+                    Keep this house
+                  </Button>
+                  <Button type="button" disabled={remove.isPending} onClick={() => remove.mutate()}>
+                    {remove.isPending ? "Removing…" : "Remove this property"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
       {editing ? (
         <form
           className="grid gap-3 sm:grid-cols-2"

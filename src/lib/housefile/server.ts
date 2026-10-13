@@ -4644,6 +4644,12 @@ export const removeHomeProperty = createServerFn({ method: "POST" })
       `
     )[0];
     if (!property) throw new Error("Property not found");
+    const remaining = await sql<{ c: number }>`
+      select count(*)::int as c from properties where homeowner_user_id = ${context.userId}
+    `;
+    if (num(remaining[0]?.c) <= 1) {
+      throw new Error("This is the only house on this account. Cancel the plan in billing.");
+    }
     if (property.company_id === HOUSEHOLD_COMPANY) {
       await sql`delete from properties where id = ${property.id} and homeowner_user_id = ${context.userId}`;
     } else {

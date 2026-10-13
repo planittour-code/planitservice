@@ -159,7 +159,7 @@ function AccountPage() {
                   </li>
                 )}
                 {data.houses.map((h) => (
-                  <HomePropertyRow key={h.id} house={h} />
+                  <HomePropertyRow key={h.id} house={h} houseCount={data.houses.length} />
                 ))}
                 {isManage && data.portfolio && (
                   <li className="px-5 py-4">

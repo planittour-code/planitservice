@@ -104,6 +104,7 @@ function HouseholdSettings() {
             {q.data.ownedHouses.map((h) => (
               <HomePropertyRow
                 key={h.id}
+                houseCount={q.data.ownedHouses.length}
                 house={{
                   id: h.id,
                   address: h.address_line,
