@@ -32,4 +32,14 @@ test("mailer uses the shared estimate letter", () => {
   assert.match(mailer, /estimateEmailCopy/);
   assert.match(deliver, /items: input.items/);
   assert.match(deliver, /coverNote: input.proposal.cover_note/);
+  assert.match(deliver, /kind.*estimate/);
+});
+
+test("shop review reads customer letter status from Resend", () => {
+  const server = readFileSync(join(root, "src/lib/housefile/server.ts"), "utf8");
+  const mailer = readFileSync(join(root, "src/lib/auth/mail.server.ts"), "utf8");
+  const webhook = readFileSync(join(root, "server/middleware/resend-webhook.ts"), "utf8");
+  assert.match(server, /syncProposalDeliveryFromResend/);
+  assert.match(mailer, /findCustomerEstimateEmail/);
+  assert.match(webhook, /isShopReviewCopy/);
 });

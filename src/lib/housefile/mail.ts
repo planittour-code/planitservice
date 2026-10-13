@@ -59,6 +59,10 @@ export async function deliverEstimateEmail(input: {
     terms: input.company.terms,
     items: input.items,
     salesReps: input.salesReps,
+    tags: [
+      { name: "kind", value: "estimate" },
+      { name: "proposal_id", value: input.proposal.id },
+    ],
   });
   return { to, subject: sent.subject, html: sent.html, text: sent.text, resendId: sent.resendId };
 }

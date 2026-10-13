@@ -4,6 +4,7 @@ type ResendEvent = {
   type?: string;
   created_at?: string;
   data?: {
+    id?: string;
     email_id?: string;
     from?: string;
     to?: string[];
@@ -11,6 +12,14 @@ type ResendEvent = {
     subject?: string;
   };
 };
+
+function eventEmailId(data?: ResendEvent["data"]) {
+  return data?.email_id?.trim() || data?.id?.trim() || "";
+}
+
+function isShopReviewCopy(subject?: string) {
+  return /needs review/i.test(subject ?? "");
+}
 
 function authorName(from: string | undefined) {
   if (!from) return "Homeowner";
@@ -47,13 +56,34 @@ export default async function resendWebhookMiddleware(
   if (parsed.type && parsed.type !== "email.received") {
     try {
       const { getSql } = await import("../../src/lib/db");
-      const emailId = parsed.data?.email_id;
-      if (!emailId) return json({ ok: true });
+      if (isShopReviewCopy(parsed.data?.subject)) {
+        return json({ ok: true, ignored: true, reason: "review" });
+      }
+      const emailId = eventEmailId(parsed.data);
       const sql = await getSql();
-      const sends = await sql<{ id: string; proposal_id: string }>`
-        select id, proposal_id from proposal_sends where resend_id = ${emailId} limit 1
-      `;
-      const send = sends[0];
+      let send: { id: string; proposal_id: string } | undefined;
+      if (emailId) {
+        send = (
+          await sql<{ id: string; proposal_id: string }>`
+            select id, proposal_id from proposal_sends where resend_id = ${emailId} limit 1
+          `
+        )[0];
+      }
+      const to = parsed.data?.to?.[0]?.trim().toLowerCase() ?? "";
+      const subject = parsed.data?.subject?.trim() ?? "";
+      if (!send && to && subject) {
+        send = (
+          await sql<{ id: string; proposal_id: string }>`
+            select id, proposal_id from proposal_sends
+            where lower(to_email) = ${to} and subject = ${subject}
+            order by created_at desc
+            limit 1
+          `
+        )[0];
+        if (send && emailId) {
+          await sql`update proposal_sends set resend_id = coalesce(resend_id, ${emailId}) where id = ${send.id}`;
+        }
+      }
       if (!send) return json({ ok: true, ignored: true });
       const at = parsed.created_at || new Date().toISOString();
       if (parsed.type === "email.delivered") {
@@ -62,10 +92,17 @@ export default async function resendWebhookMiddleware(
           set delivered_at = coalesce(delivered_at, ${at}::timestamptz)
           where id = ${send.id}
         `;
-        await sql`
-          insert into proposal_events (id, proposal_id, send_id, kind, detail)
-          values (${crypto.randomUUID()}, ${send.proposal_id}, ${send.id}, ${"delivered"}, ${null})
+        const seen = await sql<{ id: string }>`
+          select id from proposal_events
+          where send_id = ${send.id} and kind = ${"delivered"}
+          limit 1
         `;
+        if (!seen[0]) {
+          await sql`
+            insert into proposal_events (id, proposal_id, send_id, kind, detail)
+            values (${crypto.randomUUID()}, ${send.proposal_id}, ${send.id}, ${"delivered"}, ${null})
+          `;
+        }
       } else if (parsed.type === "email.opened") {
         await sql`
           update proposal_sends

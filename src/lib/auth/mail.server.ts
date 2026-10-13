@@ -50,6 +50,7 @@ export async function sendResendEmail(input: {
   replyTo?: string;
   from?: string;
   attachments?: { filename: string; content: string }[];
+  tags?: { name: string; value: string }[];
 }): Promise<{ id: string | null }> {
   const key = resendKey();
   if (!key) {
@@ -74,6 +75,7 @@ export async function sendResendEmail(input: {
       text: input.text,
       html: input.html,
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+      ...(input.tags?.length ? { tags: input.tags } : {}),
     }),
   });
   if (!res.ok) {
@@ -161,6 +163,7 @@ export async function sendEstimateEmail(data: {
   terms?: string | null;
   items?: EstimateEmailLine[];
   salesReps?: { name: string; email?: string | null }[];
+  tags?: { name: string; value: string }[];
 }): Promise<{ subject: string; text: string; html: string; resendId: string | null }> {
   const { subject, text, html } = estimateEmailCopy({
     name: data.name,
@@ -182,6 +185,7 @@ export async function sendEstimateEmail(data: {
     html,
     from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
     replyTo: estimateReplyTo(data.replyToken),
+    tags: data.tags,
   });
   return { subject, text, html, resendId: sent.id };
 }
@@ -360,6 +364,7 @@ export async function sendEstimateReviewEmail(data: {
     html,
     from: `${data.who} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
     replyTo: LEGAL_EMAIL,
+    tags: [{ name: "kind", value: "review" }],
   });
 }
 
@@ -706,6 +711,103 @@ export async function sendTransferClaimEmail(data: {
 <p>Sign in with this email. Jobs, warranties, and maintenance stay with the address.</p>
 <p>${escapeHtml(LEGAL_NAME)}<br>${escapeHtml(LEGAL_SITE)}</p>`;
   await sendResendEmail({ to: data.to, subject, text, html, replyTo: LEGAL_EMAIL });
+}
+
+export type ResendSentEmail = {
+  id: string;
+  to?: string[];
+  from?: string;
+  subject?: string;
+  html?: string | null;
+  text?: string | null;
+  created_at?: string;
+  last_event?: string | null;
+};
+
+function parseResendEmail(raw: unknown): ResendSentEmail | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const id = typeof row.id === "string" ? row.id.trim() : "";
+  if (!id) return null;
+  const to = Array.isArray(row.to)
+    ? row.to.filter((item): item is string => typeof item === "string")
+    : [];
+  return {
+    id,
+    to,
+    from: typeof row.from === "string" ? row.from : undefined,
+    subject: typeof row.subject === "string" ? row.subject : undefined,
+    html: typeof row.html === "string" ? row.html : null,
+    text: typeof row.text === "string" ? row.text : null,
+    created_at: typeof row.created_at === "string" ? row.created_at : undefined,
+    last_event: typeof row.last_event === "string" ? row.last_event : null,
+  };
+}
+
+export async function fetchSentEmail(emailId: string): Promise<ResendSentEmail | null> {
+  const key = resendKey();
+  if (!key) return null;
+  const res = await fetch(`https://api.resend.com/emails/${encodeURIComponent(emailId)}`, {
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error(`[mail] Resend retrieve failed (${res.status}) ${detail}`);
+    return null;
+  }
+  return parseResendEmail(await res.json().catch(() => null));
+}
+
+export async function listSentEmails(limit = 100): Promise<ResendSentEmail[]> {
+  const key = resendKey();
+  if (!key) return [];
+  const res = await fetch(`https://api.resend.com/emails?limit=${Math.min(100, Math.max(1, limit))}`, {
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error(`[mail] Resend list failed (${res.status}) ${detail}`);
+    return [];
+  }
+  const payload = (await res.json().catch(() => null)) as { data?: unknown[] } | null;
+  return (payload?.data ?? []).map(parseResendEmail).filter((row): row is ResendSentEmail => Boolean(row));
+}
+
+function sameEmail(left: string | undefined, right: string | undefined) {
+  return (left ?? "").trim().toLowerCase() === (right ?? "").trim().toLowerCase();
+}
+
+/** Customer estimate letter in Resend — shop review copies use a different subject. */
+export async function findCustomerEstimateEmail(input: {
+  resendId?: string | null;
+  to: string;
+  subject: string;
+}): Promise<ResendSentEmail | null> {
+  if (input.resendId) {
+    const stored = await fetchSentEmail(input.resendId);
+    if (stored) return stored;
+  }
+  const listed = await listSentEmails(100);
+  const match = listed.find(
+    (row) =>
+      (row.to ?? []).some((addr) => sameEmail(addr, input.to)) && row.subject === input.subject,
+  );
+  if (!match) return null;
+  return (await fetchSentEmail(match.id)) ?? match;
+}
+
+export function deliveryFromLastEvent(lastEvent: string | null | undefined, at: string) {
+  const event = (lastEvent ?? "").toLowerCase();
+  if (event === "bounced" || event === "failed" || event === "suppressed") {
+    return { bouncedAt: at };
+  }
+  if (event === "opened" || event === "clicked") {
+    return { deliveredAt: at, openedAt: at };
+  }
+  if (event === "delivered" || event === "complained") {
+    return { deliveredAt: at };
+  }
+  return {};
 }
 
 export async function fetchReceivedEmail(emailId: string) {

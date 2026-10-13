@@ -17,6 +17,7 @@ import {
 } from "./kits";
 import { FIELD_CATALOG } from "./fields";
 import { coverLetter } from "./cover-letter";
+import { estimateEmailSubject } from "./estimate-email";
 import { num, shopSlugFromName, slugToken } from "./format";
 import {
   filledSocials,
@@ -1105,6 +1106,109 @@ async function recordProposalEvent(
     `;
   } catch (err) {
     console.error("[proposal] event insert failed", err);
+  }
+}
+
+async function stampProposalSend(
+  sql: Sql,
+  send: { id: string; proposal_id: string },
+  patch: { deliveredAt?: string; openedAt?: string; bouncedAt?: string },
+) {
+  if (patch.deliveredAt) {
+    await sql`
+      update proposal_sends
+      set delivered_at = coalesce(delivered_at, ${patch.deliveredAt}::timestamptz)
+      where id = ${send.id}
+    `;
+    const seen = await sql<{ id: string }>`
+      select id from proposal_events
+      where send_id = ${send.id} and kind = ${"delivered"}
+      limit 1
+    `;
+    if (!seen[0]) await recordProposalEvent(sql, send.proposal_id, "delivered", null, send.id);
+  }
+  if (patch.openedAt) {
+    await sql`
+      update proposal_sends
+      set opened_at = coalesce(opened_at, ${patch.openedAt}::timestamptz)
+      where id = ${send.id}
+    `;
+    const seen = await sql<{ id: string }>`
+      select id from proposal_events
+      where send_id = ${send.id} and kind = ${"opened"}
+      limit 1
+    `;
+    if (!seen[0]) await recordProposalEvent(sql, send.proposal_id, "opened", null, send.id);
+  }
+  if (patch.bouncedAt) {
+    await sql`
+      update proposal_sends
+      set bounced_at = coalesce(bounced_at, ${patch.bouncedAt}::timestamptz)
+      where id = ${send.id}
+    `;
+    const seen = await sql<{ id: string }>`
+      select id from proposal_events
+      where send_id = ${send.id} and kind = ${"bounced"}
+      limit 1
+    `;
+    if (!seen[0]) await recordProposalEvent(sql, send.proposal_id, "bounced", null, send.id);
+  }
+}
+
+async function syncProposalDeliveryFromResend(
+  sql: Sql,
+  proposal: Proposal,
+  property: Property,
+  companyName: string,
+) {
+  if (!proposal.sent_at) return;
+  try {
+    const { findCustomerEstimateEmail, deliveryFromLastEvent } = await import("@/lib/auth/mail.server");
+    const sends = await sql<ProposalSend>`
+      select * from proposal_sends where proposal_id = ${proposal.id} order by created_at desc limit 1
+    `;
+    const lastSend = sends[0] ?? null;
+    if (lastSend?.delivered_at && lastSend.opened_at && lastSend.html) return;
+    const address = `${property.address_line}, ${property.city}, ${property.state} ${property.zip}`;
+    const subject = lastSend?.subject || estimateEmailSubject(companyName, address);
+    const to = lastSend?.to_email || property.homeowner_email;
+    if (!to) return;
+    const email = await findCustomerEstimateEmail({
+      resendId: lastSend?.resend_id,
+      to,
+      subject,
+    });
+    if (!email) return;
+    let send = lastSend;
+    if (!send) {
+      const id = crypto.randomUUID();
+      const created = email.created_at || proposal.sent_at || new Date().toISOString();
+      await sql`
+        insert into proposal_sends (
+          id, proposal_id, to_email, subject, html, body_text, snapshot_json, resend_id, created_at
+        ) values (
+          ${id}, ${proposal.id}, ${to}, ${email.subject || subject}, ${email.html || ""},
+          ${email.text || ""}, ${"{}"}, ${email.id}, ${created}::timestamptz
+        )
+      `;
+      send = { id, proposal_id: proposal.id } as ProposalSend;
+      await recordProposalEvent(sql, proposal.id, "sent", to, id);
+    } else {
+      if (!send.resend_id) {
+        await sql`update proposal_sends set resend_id = ${email.id} where id = ${send.id}`;
+      }
+      if (!send.html && email.html) {
+        await sql`
+          update proposal_sends
+          set html = ${email.html}, body_text = coalesce(nullif(body_text, ''), ${email.text || ""})
+          where id = ${send.id}
+        `;
+      }
+    }
+    const at = email.created_at || new Date().toISOString();
+    await stampProposalSend(sql, send, deliveryFromLastEvent(email.last_event, at));
+  } catch (err) {
+    console.error("[proposal] Resend delivery sync failed", err);
   }
 }
 
@@ -2307,6 +2411,10 @@ export const getContractorProposal = createServerFn({ method: "GET" })
       select * from proposals where id = ${id} and company_id = ${company.id} limit 1
     `;
     if (!rows[0]) throw new Error("Proposal not found");
+    const property = (await sql<Property>`select * from properties where id = ${rows[0].property_id} limit 1`)[0];
+    if (property) {
+      await syncProposalDeliveryFromResend(sql, rows[0], property, company.name);
+    }
     return loadProposal(sql, rows[0]);
   });
 

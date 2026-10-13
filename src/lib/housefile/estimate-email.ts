@@ -86,10 +86,14 @@ function includedTotal(items: EstimateEmailLine[]) {
   return items.filter((i) => i.included).reduce((sum, i) => sum + i.qty * i.unit_price, 0);
 }
 
+export function estimateEmailSubject(company: string, address: string) {
+  return `${company} sent an estimate for ${address}`;
+}
+
 /** Same letter the customer receives — lines and total, no per-line prices. */
 export function estimateEmailCopy(input: EstimateEmailInput) {
   const first = firstName(input.name);
-  const subject = `${input.company} sent an estimate for ${input.address}`;
+  const subject = estimateEmailSubject(input.company, input.address);
   const included = input.items.filter((item) => item.included && !item.option_id);
   const optionalOpen = input.items.some((item) => item.optional || item.option_id);
   const total = money(includedTotal(input.items));
