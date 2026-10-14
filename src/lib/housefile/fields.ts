@@ -31,7 +31,7 @@ export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo
     id: "paint",
     label: "Exterior Paint",
     blurb: "Body, trim, and front door colors that stay with the house.",
-    photo: "/houses/cat-paint.jpg",
+    photo: "/houses/maple-siding.jpg",
   },
   {
     id: "roof",
@@ -98,7 +98,7 @@ export const FIELD_GROUPS: { id: FieldGroup; label: string; blurb: string; photo
 /** Same photos as FIELD_GROUPS, keyed for estimating work ids (deck / porch) too. */
 export const CATEGORY_PHOTO: Record<string, string> = {
   house: "/houses/cat-house.jpg",
-  paint: "/houses/cat-paint.jpg",
+  paint: "/houses/maple-siding.jpg",
   roof: "/houses/cat-roof.jpg",
   windows: "/houses/cat-windows.jpg",
   gutters: "/houses/cat-gutters.jpg",

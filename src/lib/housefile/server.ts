@@ -68,6 +68,7 @@ import type {
   Job,
   JobSpec,
   JobWithSpecs,
+  WarrantyRecord,
   Property,
   PropertyFact,
   PropertyListRow,
@@ -105,6 +106,7 @@ import type {
   ShopRole,
   UserProfileRow,
 } from "./types";
+import { warrantyExpiry } from "./warranty";
 import {
   houseMaintenanceStatus,
   isCadence,
@@ -1046,6 +1048,7 @@ async function loadHouse(sql: Sql, property: Property): Promise<HouseFile> {
     ...j,
     specs: specsByJob.get(j.id) ?? [],
   }));
+  const warranties = await loadWarranties(sql, property.id);
   const proposals = await sql<ProposalListRow>`
     select pr.*, p.address_line, p.homeowner_name,
       t.name as template_name, t.trade as template_trade
@@ -1062,8 +1065,30 @@ async function loadHouse(sql: Sql, property: Property): Promise<HouseFile> {
     photos,
     jobs: jobsWith,
     proposals,
+    warranties,
     filledCount: facts.length,
     totalCount: FIELD_CATALOG.length,
+  };
+}
+
+async function loadWarranties(sql: Sql, propertyId: string): Promise<WarrantyRecord[]> {
+  try {
+    const rows = await sql<WarrantyRecord>`
+      select * from property_warranties
+      where property_id = ${propertyId}
+      order by updated_at desc
+    `;
+    return rows.map(asWarranty);
+  } catch {
+    return [];
+  }
+}
+
+function asWarranty(row: WarrantyRecord): WarrantyRecord {
+  return {
+    ...row,
+    warranty_years: row.warranty_years == null ? null : num(row.warranty_years),
+    registered: asBool(row.registered),
   };
 }
 
@@ -5212,7 +5237,7 @@ export const updateHomeMaintenance = createServerFn({ method: "POST" })
     )[0];
     if (!task || task.homeowner_user_id !== context.userId) throw new Error("Task not found");
     if (data.cadence !== undefined && !isCadence(data.cadence)) {
-      throw new Error("Pick day, week, or month.");
+      throw new Error("Pick day, week, month, or quarter.");
     }
     const notes = data.notes !== undefined ? data.notes.trim() || null : task.notes;
     const cadence = data.cadence !== undefined ? scheduleCadence(data.cadence) : task.cadence;
@@ -5323,7 +5348,7 @@ export const updatePortfolioMaintenance = createServerFn({ method: "POST" })
     )[0];
     if (!task) throw new Error("Task not found");
     if (data.cadence !== undefined && !isCadence(data.cadence)) {
-      throw new Error("Pick day, week, or month.");
+      throw new Error("Pick day, week, month, or quarter.");
     }
     const notes = data.notes !== undefined ? data.notes.trim() || null : task.notes;
     const cadence = data.cadence !== undefined ? scheduleCadence(data.cadence) : task.cadence;
@@ -7065,6 +7090,272 @@ export const addOfficeMember = createServerFn({ method: "POST" })
       on conflict (portfolio_id, email) do update set user_id = coalesce(excluded.user_id, portfolio_members.user_id)
     `;
     return { ok: true as const, already: false as const, needSeat: false as const };
+  });
+
+type WarrantyWrite = {
+  id?: string;
+  propertyId: string;
+  tradeId: string;
+  jobId?: string | null;
+  proposalId?: string | null;
+  productName?: string;
+  manufacturer?: string;
+  serialNumber?: string;
+  modelNumber?: string;
+  color?: string;
+  sku?: string;
+  purchasedOn?: string;
+  installedOn?: string;
+  warrantyYears?: number | null;
+  warrantyExpires?: string;
+  coverage?: string;
+  installerName?: string;
+  registered?: boolean;
+  registerUrl?: string;
+  claimPhone?: string;
+  notes?: string;
+  barcodeSrc?: string | null;
+  cardSrc?: string | null;
+};
+
+function blankToNull(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed || null;
+}
+
+function assertWarrantyPhoto(src: string | null | undefined, label: string) {
+  if (!src) return null;
+  if (src.startsWith("data:image/") || src.startsWith("/")) return src;
+  throw new Error(`${label} photo is not a valid image`);
+}
+
+async function writeWarranty(sql: Sql, propertyId: string, createdBy: "contractor" | "homeowner", data: WarrantyWrite) {
+  if (!data.tradeId.trim()) throw new Error("Pick a trade for this warranty");
+  const years = data.warrantyYears == null || Number.isNaN(Number(data.warrantyYears)) ? null : num(data.warrantyYears);
+  const expires =
+    blankToNull(data.warrantyExpires) || warrantyExpiry(blankToNull(data.installedOn), years);
+  const barcode = assertWarrantyPhoto(data.barcodeSrc, "Barcode");
+  const card = assertWarrantyPhoto(data.cardSrc, "Warranty card");
+  const id = data.id?.trim() || crypto.randomUUID();
+  const existing = data.id
+    ? (
+        await sql<WarrantyRecord>`
+          select * from property_warranties
+          where id = ${id} and property_id = ${propertyId} limit 1
+        `
+      )[0]
+    : undefined;
+  if (data.id && !existing) throw new Error("Warranty not found");
+  await sql`
+    insert into property_warranties (
+      id, property_id, trade_id, job_id, proposal_id,
+      product_name, manufacturer, serial_number, model_number, color, sku,
+      purchased_on, installed_on, warranty_years, warranty_expires, coverage,
+      installer_name, registered, register_url, claim_phone, notes,
+      barcode_src, card_src, created_by, updated_at
+    )
+    values (
+      ${id}, ${propertyId}, ${data.tradeId.trim()},
+      ${blankToNull(data.jobId)}, ${blankToNull(data.proposalId)},
+      ${blankToNull(data.productName)}, ${blankToNull(data.manufacturer)},
+      ${blankToNull(data.serialNumber)}, ${blankToNull(data.modelNumber)},
+      ${blankToNull(data.color)}, ${blankToNull(data.sku)},
+      ${blankToNull(data.purchasedOn)}, ${blankToNull(data.installedOn)},
+      ${years}, ${expires}, ${blankToNull(data.coverage)},
+      ${blankToNull(data.installerName)}, ${Boolean(data.registered)},
+      ${blankToNull(data.registerUrl)}, ${blankToNull(data.claimPhone)},
+      ${blankToNull(data.notes)},
+      ${barcode ?? existing?.barcode_src ?? null},
+      ${card ?? existing?.card_src ?? null},
+      ${existing?.created_by ?? createdBy},
+      now()
+    )
+    on conflict (id) do update set
+      trade_id = excluded.trade_id,
+      job_id = excluded.job_id,
+      proposal_id = excluded.proposal_id,
+      product_name = excluded.product_name,
+      manufacturer = excluded.manufacturer,
+      serial_number = excluded.serial_number,
+      model_number = excluded.model_number,
+      color = excluded.color,
+      sku = excluded.sku,
+      purchased_on = excluded.purchased_on,
+      installed_on = excluded.installed_on,
+      warranty_years = excluded.warranty_years,
+      warranty_expires = excluded.warranty_expires,
+      coverage = excluded.coverage,
+      installer_name = excluded.installer_name,
+      registered = excluded.registered,
+      register_url = excluded.register_url,
+      claim_phone = excluded.claim_phone,
+      notes = excluded.notes,
+      barcode_src = coalesce(excluded.barcode_src, property_warranties.barcode_src),
+      card_src = coalesce(excluded.card_src, property_warranties.card_src),
+      updated_at = now()
+  `;
+  const saved = (
+    await sql<WarrantyRecord>`select * from property_warranties where id = ${id} limit 1`
+  )[0];
+  if (!saved) throw new Error("Could not save the warranty");
+  return asWarranty(saved);
+}
+
+async function invoiceForPropertyProposal(
+  sql: Sql,
+  property: Property,
+  proposalId: string,
+): Promise<import("./invoice").InvoiceView> {
+  const proposal = (
+    await sql<Proposal>`
+      select * from proposals
+      where id = ${proposalId} and property_id = ${property.id} limit 1
+    `
+  )[0];
+  if (!proposal) throw new Error("Invoice not found for this house");
+  const items = await sql<ProposalItem>`
+    select * from proposal_items where proposal_id = ${proposal.id} order by sort_order
+  `;
+  const companyRows = await sql<Company>`select * from companies where id = ${proposal.company_id}`;
+  const company = companyRows[0];
+  if (!company) throw new Error("Shop not found");
+  const hydrated = items.map((i) =>
+    hydrateItem({ ...i, included: Boolean(i.included), optional: Boolean(i.optional) }),
+  );
+  return {
+    proposal: {
+      id: proposal.id,
+      sent_at: proposal.sent_at,
+      accepted_at: proposal.accepted_at,
+      created_at: proposal.created_at,
+      payment_link: proposal.payment_link,
+    },
+    items: hydrated,
+    property,
+    company: publicCompany(asCompany(company)),
+    salesRep: await salesRepForProposal(sql, proposal),
+    salesReps: await salesRepsForProposal(sql, proposal),
+  };
+}
+
+export const getTradeInvoice = createServerFn({ method: "POST" })
+  .middleware([optionalAuthMiddleware])
+  .validator((input: { propertyId: string; proposalId: string; token?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const property = (
+      await sql<Property>`select * from properties where id = ${data.propertyId} limit 1`
+    )[0];
+    if (!property) throw new Error("Property not found");
+    const token = data.token?.trim() ?? "";
+    const tokenOk = Boolean(token) && (property.share_token === token || property.invite_token === token);
+    if (!tokenOk) {
+      const userId = context.userId;
+      if (!userId) throw new Error("Sign in to open this invoice");
+      let allowed = property.homeowner_user_id === userId;
+      if (!allowed) {
+        try {
+          const { company } = await shopFor(sql, userId, context.email);
+          allowed = property.company_id === company.id;
+        } catch {
+          allowed = false;
+        }
+      }
+      if (!allowed) {
+        const member = await sql<{ id: string }>`
+          select pm.id from portfolio_members pm
+          join portfolios po on po.id = pm.portfolio_id
+          join portfolio_properties pp on pp.portfolio_id = po.id
+          where pm.user_id = ${userId} and pp.property_id = ${property.id}
+          limit 1
+        `;
+        allowed = Boolean(member[0]);
+      }
+      if (!allowed) throw new Error("Property not found");
+    }
+    return invoiceForPropertyProposal(sql, property, data.proposalId);
+  });
+
+export const saveWarrantyContractor = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: WarrantyWrite) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const company = await companyFor(sql, context.userId, session?.email);
+    await requireOwnedProperty(sql, company.id, data.propertyId);
+    return writeWarranty(sql, data.propertyId, "contractor", data);
+  });
+
+export const saveWarrantyPublic = createServerFn({ method: "POST" })
+  .validator((input: WarrantyWrite & { token: string }) => input)
+  .handler(async ({ data }) => {
+    const sql = await getSql();
+    const rows = await sql<Property>`
+      select * from properties where share_token = ${data.token} or invite_token = ${data.token} limit 1
+    `;
+    if (!rows[0] || rows[0].id !== data.propertyId) throw new Error("Property Record not found");
+    return writeWarranty(sql, rows[0].id, "homeowner", data);
+  });
+
+export const saveWarrantyHome = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: WarrantyWrite) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const rows = await sql<Property>`
+      select * from properties where id = ${data.propertyId} and homeowner_user_id = ${context.userId} limit 1
+    `;
+    if (!rows[0]) throw new Error("Property not found");
+    return writeWarranty(sql, rows[0].id, "homeowner", data);
+  });
+
+export const deleteWarrantyContractor = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string; warrantyId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    const session = await getSessionUser();
+    const company = await companyFor(sql, context.userId, session?.email);
+    await requireOwnedProperty(sql, company.id, data.propertyId);
+    await sql`
+      delete from property_warranties
+      where id = ${data.warrantyId} and property_id = ${data.propertyId}
+    `;
+    return { ok: true as const };
+  });
+
+export const deleteWarrantyPublic = createServerFn({ method: "POST" })
+  .validator((input: { token: string; warrantyId: string }) => input)
+  .handler(async ({ data }) => {
+    const sql = await getSql();
+    const rows = await sql<Property>`
+      select * from properties where share_token = ${data.token} or invite_token = ${data.token} limit 1
+    `;
+    if (!rows[0]) throw new Error("Property Record not found");
+    await sql`
+      delete from property_warranties
+      where id = ${data.warrantyId} and property_id = ${rows[0].id}
+    `;
+    return { ok: true as const };
+  });
+
+export const deleteWarrantyHome = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { propertyId: string; warrantyId: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const rows = await sql<Property>`
+      select * from properties where id = ${data.propertyId} and homeowner_user_id = ${context.userId} limit 1
+    `;
+    if (!rows[0]) throw new Error("Property not found");
+    await sql`
+      delete from property_warranties
+      where id = ${data.warrantyId} and property_id = ${rows[0].id}
+    `;
+    return { ok: true as const };
   });
 
 

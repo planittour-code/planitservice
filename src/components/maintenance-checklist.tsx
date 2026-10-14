@@ -21,6 +21,7 @@ const CADENCE_CHECKS: { value: Cadence; label: string }[] = [
   { value: "daily", label: "Day" },
   { value: "weekly", label: "Week" },
   { value: "monthly", label: "Month" },
+  { value: "quarterly", label: "Quarterly" },
 ];
 
 export type MaintenanceAddInput = {

@@ -8,8 +8,8 @@ import {
   KnownProviders,
   PhotoGrid,
   RecordSection,
-  WarrantyList,
 } from "@/components/house-panels";
+import { WarrantyList } from "@/components/warranty-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,8 +129,8 @@ function ManageRecord() {
               : " · Not claimed yet"}
         </p>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Add photos first. Then fill house data and the jobs at this address. Shops quote in their
-          own shop.
+          Add photos first. Then house data, the maintenance schedule, and the jobs at this address.
+          Shops quote in their own shop.
         </p>
       </header>
 
@@ -171,6 +171,47 @@ function ManageRecord() {
       <div id="house-data" className="scroll-mt-20">
         <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       </div>
+      <RecordSection
+        id="maintenance"
+        title="Maintenance Schedule"
+        blurb={`${due.length} due in the next two weeks. Marked-done work files into a month folder for the service record.`}
+        photo={CATEGORY_PHOTO.systems}
+        countLabel={`${open.length} open`}
+        chips={
+          due.length ? (
+            <ul className="flex flex-wrap gap-1.5">
+              {due.slice(0, 6).map((t) => (
+                <li key={t.id} className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
+                  {t.title}
+                </li>
+              ))}
+            </ul>
+          ) : undefined
+        }
+      >
+        <MaintenanceChecklist
+          tasks={open}
+          completedTasks={tasks.filter((t) => t.completed_at)}
+          clientSince={p.created_at}
+          donePending={done.isPending}
+          removePending={removeTask.isPending}
+          addPending={addTask.isPending}
+          updatePending={updateTask.isPending}
+          extra={(t) => (
+            <ScheduleTask
+              task={t}
+              pending={schedule.isPending}
+              onSave={(scheduledOn, scheduledNote) =>
+                schedule.mutate({ taskId: t.id, scheduledOn, scheduledNote })
+              }
+            />
+          )}
+          onDone={(taskId) => done.mutate(taskId)}
+          onRemove={(taskId) => removeTask.mutate(taskId)}
+          onAdd={(input) => addTask.mutate(input)}
+          onUpdate={(input) => updateTask.mutate(input)}
+        />
+      </RecordSection>
       <div id="jobs" className="scroll-mt-20">
         <JobTimeline file={house} />
       </div>
@@ -178,7 +219,12 @@ function ManageRecord() {
         <KnownProviders providers={q.data.knownProviders ?? []} />
       </div>
       <div id="warranties" className="scroll-mt-20">
-        <WarrantyList file={house} />
+        <WarrantyList
+          file={house}
+          mode="homeowner"
+          token={p.share_token}
+          onChanged={() => q.refetch()}
+        />
       </div>
       <RecordSection
         id="request-estimates"
@@ -246,48 +292,6 @@ function ManageRecord() {
           </ul>
         </RecordSection>
       ) : null}
-
-      <RecordSection
-        id="maintenance"
-        title="Maintenance Schedule"
-        blurb={`${due.length} due in the next two weeks. Marked-done work files into a month folder for the service record.`}
-        photo={CATEGORY_PHOTO.systems}
-        countLabel={`${open.length} open`}
-        chips={
-          due.length ? (
-            <ul className="flex flex-wrap gap-1.5">
-              {due.slice(0, 6).map((t) => (
-                <li key={t.id} className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
-                  {t.title}
-                </li>
-              ))}
-            </ul>
-          ) : undefined
-        }
-      >
-        <MaintenanceChecklist
-          tasks={open}
-          completedTasks={tasks.filter((t) => t.completed_at)}
-          clientSince={p.created_at}
-          donePending={done.isPending}
-          removePending={removeTask.isPending}
-          addPending={addTask.isPending}
-          updatePending={updateTask.isPending}
-          onDone={(taskId) => done.mutate(taskId)}
-          onRemove={(taskId) => removeTask.mutate(taskId)}
-          onAdd={(input) => addTask.mutate(input)}
-          onUpdate={(input) => updateTask.mutate(input)}
-          extra={(t) => (
-            <ScheduleTask
-              task={t}
-              pending={schedule.isPending}
-              onSave={(scheduledOn, scheduledNote) =>
-                schedule.mutate({ taskId: t.id, scheduledOn, scheduledNote })
-              }
-            />
-          )}
-        />
-      </RecordSection>
     </div>
   );
 }

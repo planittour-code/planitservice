@@ -81,8 +81,10 @@ export function cadenceLabel(c: string) {
   return c;
 }
 
-export function isScheduleCadence(value: string): value is "daily" | "weekly" | "monthly" {
-  return value === "daily" || value === "weekly" || value === "monthly";
+export function isScheduleCadence(
+  value: string,
+): value is "daily" | "weekly" | "monthly" | "quarterly" {
+  return value === "daily" || value === "weekly" || value === "monthly" || value === "quarterly";
 }
 
 export function scheduleCadence(value: string): Cadence {

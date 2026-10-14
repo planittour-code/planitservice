@@ -7,8 +7,8 @@ import {
   MissingChips,
   PhotoGrid,
   SectionRule,
-  WarrantyList,
 } from "@/components/house-panels";
+import { WarrantyList } from "@/components/warranty-panel";
 import { EstimateGroups, HomeownerHeader } from "@/components/homeowner-chrome";
 import { RfpForm, RfpList } from "@/components/rfp-panel";
 import { SampleLock } from "@/components/sample-lock";
@@ -141,7 +141,12 @@ function HousePage() {
           <JobTimeline file={file} />
         </div>
         <div id="warranties">
-          <WarrantyList file={file} />
+          <WarrantyList
+            file={file}
+            mode="homeowner"
+            token={token}
+            onChanged={() => q.refetch()}
+          />
         </div>
         <div id="house-data">
           <FactsPanel file={file} mode="homeowner" token={token} onChanged={() => q.refetch()} />

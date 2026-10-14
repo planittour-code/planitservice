@@ -6,8 +6,8 @@ import {
   JobTimeline,
   MissingChips,
   PhotoGrid,
-  WarrantyList,
 } from "@/components/house-panels";
+import { WarrantyList } from "@/components/warranty-panel";
 import { FileSectionNav, CONTRACTOR_SECTIONS } from "@/components/file-section-nav";
 import { QuoteTypePicker } from "@/components/quote-type";
 import { StatusBadge } from "@/components/status-badge";
@@ -104,7 +104,12 @@ function PropertyPage() {
         <JobTimeline file={file} mode="materials" defaultOpen />
       </div>
       <div id="warranties" className="scroll-mt-20">
-        <WarrantyList file={file} defaultOpen />
+        <WarrantyList
+          file={file}
+          defaultOpen
+          mode="contractor"
+          onChanged={() => q.refetch()}
+        />
       </div>
       <div id="house-data" className="scroll-mt-20">
         <FactsPanel file={file} mode="contractor" onChanged={() => q.refetch()} />

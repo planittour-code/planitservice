@@ -196,6 +196,35 @@ export type JobSpec = {
 
 export type JobWithSpecs = Job & { specs: JobSpec[] };
 
+export type WarrantyRecord = {
+  id: string;
+  property_id: string;
+  trade_id: string;
+  job_id: string | null;
+  proposal_id: string | null;
+  product_name: string | null;
+  manufacturer: string | null;
+  serial_number: string | null;
+  model_number: string | null;
+  color: string | null;
+  sku: string | null;
+  purchased_on: string | null;
+  installed_on: string | null;
+  warranty_years: number | null;
+  warranty_expires: string | null;
+  coverage: string | null;
+  installer_name: string | null;
+  registered: boolean;
+  register_url: string | null;
+  claim_phone: string | null;
+  notes: string | null;
+  barcode_src: string | null;
+  card_src: string | null;
+  created_by: "contractor" | "homeowner";
+  created_at: string;
+  updated_at: string;
+};
+
 export type PropertyListRow = Property & {
   fact_count: number;
   photo_count: number;
@@ -309,6 +338,7 @@ export type HouseFile = {
   photos: PropertyPhoto[];
   jobs: JobWithSpecs[];
   proposals: ProposalListRow[];
+  warranties: WarrantyRecord[];
   filledCount: number;
   totalCount: number;
 };

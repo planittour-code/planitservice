@@ -33,7 +33,7 @@ import {
   upsertFactContractor,
   upsertFactPublic,
 } from "@/lib/housefile/server";
-import type { HouseFile, JobSpec, JobWithSpecs } from "@/lib/housefile/types";
+import type { HouseFile, JobWithSpecs } from "@/lib/housefile/types";
 import { cn } from "@/lib/utils";
 
 export function RecordSection({
@@ -904,93 +904,6 @@ export function PreviousJobsStrip({ jobs }: { jobs: JobWithSpecs[] }) {
         ))}
       </ul>
     </aside>
-  );
-}
-
-function manufacturerMark(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
-  return name.slice(0, 2).toUpperCase() || "M";
-}
-
-export function WarrantyList({
-  file,
-  defaultOpen,
-}: {
-  file: HouseFile;
-  defaultOpen?: boolean;
-}) {
-  const items: (JobSpec & { jobTitle: string; completed: string })[] = [];
-  for (const job of file.jobs) {
-    for (const spec of job.specs) {
-      if (spec.warranty_terms || spec.warranty_years) {
-        items.push({ ...spec, jobTitle: job.title, completed: job.completed_at });
-      }
-    }
-  }
-  const makers = [
-    ...new Map(
-      items
-        .map((w) => w.manufacturer?.trim())
-        .filter((name): name is string => Boolean(name))
-        .map((name) => [name.toLowerCase(), name]),
-    ).values(),
-  ];
-  return (
-    <RecordSection
-      defaultOpen={defaultOpen}
-      title="Manufacturer warranties"
-      blurb="Tied to this address, not a PDF in a drawer."
-      photo={CATEGORY_PHOTO.systems}
-      countLabel={`${items.length} on file`}
-      chips={
-        makers.length ? (
-          <ul className="flex flex-wrap gap-1.5">
-            {makers.map((name) => (
-              <li
-                key={name}
-                className="inline-flex items-center gap-1.5 rounded-full bg-muted py-0.5 pr-2.5 pl-0.5 text-xs font-semibold"
-              >
-                <span className="grid size-6 place-items-center rounded-full bg-secondary text-[10px] font-bold text-white">
-                  {manufacturerMark(name)}
-                </span>
-                {name}
-              </li>
-            ))}
-          </ul>
-        ) : undefined
-      }
-    >
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          When a job is marked complete, product warranties are copied here.
-        </p>
-      ) : (
-      <ul className="space-y-2">
-        {items.map((w) => (
-          <li key={w.id} className="rounded-md bg-background px-3 py-2 shadow-[var(--shadow-border)]">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="font-medium">
-                {w.manufacturer ? `${w.manufacturer} ` : ""}
-                {w.product_name || w.label}
-              </p>
-              {w.warranty_expires ? (
-                <span className="text-sm tabular-nums text-muted-foreground">
-                  Through {shortDate(w.warranty_expires)}
-                </span>
-              ) : (
-                <span className="text-sm text-muted-foreground">See terms</span>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">{w.warranty_terms}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              From {w.jobTitle} · {shortDate(w.completed)}
-            </p>
-          </li>
-        ))}
-      </ul>
-      )}
-    </RecordSection>
   );
 }
 

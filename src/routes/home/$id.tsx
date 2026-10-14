@@ -9,8 +9,8 @@ import {
   KnownProviders,
   PhotoGrid,
   RecordSection,
-  WarrantyList,
 } from "@/components/house-panels";
+import { WarrantyList } from "@/components/warranty-panel";
 import { CATEGORY_PHOTO } from "@/lib/housefile/fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,7 +148,8 @@ function HomeRecord() {
           {p.city}, {p.state} {p.zip}
         </p>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Photos first. Then the job history, materials, measurements, and warranties agreed for this house.
+          Photos first. Then house data, the maintenance schedule, job history, materials,
+          measurements, and warranties agreed for this house.
         </p>
       </header>
 
@@ -158,19 +159,6 @@ function HomeRecord() {
       <div id="house-data" className="scroll-mt-20">
         <FactsPanel file={house} mode="homeowner" token={p.share_token} onChanged={() => q.refetch()} />
       </div>
-      <div id="jobs" className="scroll-mt-20">
-        <JobTimeline file={house} defaultOpen />
-      </div>
-      <div id="materials" className="scroll-mt-20">
-        <JobTimeline file={house} mode="materials" defaultOpen />
-      </div>
-      <div id="shops" className="scroll-mt-20">
-        <KnownProviders providers={q.data.knownProviders ?? []} />
-      </div>
-      <div id="warranties" className="scroll-mt-20">
-        <WarrantyList file={house} defaultOpen />
-      </div>
-
       <RecordSection
         id="maintenance"
         title="Maintenance Schedule"
@@ -203,6 +191,24 @@ function HomeRecord() {
           onUpdate={(input) => updateTask.mutate(input)}
         />
       </RecordSection>
+      <div id="jobs" className="scroll-mt-20">
+        <JobTimeline file={house} defaultOpen />
+      </div>
+      <div id="materials" className="scroll-mt-20">
+        <JobTimeline file={house} mode="materials" defaultOpen />
+      </div>
+      <div id="shops" className="scroll-mt-20">
+        <KnownProviders providers={q.data.knownProviders ?? []} />
+      </div>
+      <div id="warranties" className="scroll-mt-20">
+        <WarrantyList
+          file={house}
+          defaultOpen
+          mode="homeowner"
+          token={p.share_token}
+          onChanged={() => q.refetch()}
+        />
+      </div>
 
       <RecordSection
         id="transfer"
