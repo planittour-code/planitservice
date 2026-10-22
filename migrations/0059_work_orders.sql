@@ -21,7 +21,7 @@ create table if not exists work_orders (
     check (status in ('scheduled', 'in_progress', 'complete', 'cancelled')),
   notes text,
   -- Contractor toggle: when true the worker-facing email shows line prices + total.
-  show_prices boolean not null default false,
+  show_prices boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint work_orders_proposal_uniq unique (proposal_id),

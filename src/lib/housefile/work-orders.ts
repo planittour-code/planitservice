@@ -376,8 +376,8 @@ export type WorkOrderPatch = {
  * Assignment email (AC 4.3a). The worker needs no account: the email is plain
  * info with no link. Content is shop name, property address, WO number, dates,
  * and a line-item summary (name, qty/unit, description). Prices and the total
- * appear only when the shop turned on the WO's show_prices toggle; off (the
- * default) is price-free per 4.3a. Homeowner name/email/phone never appear.
+ * follow the WO's show_prices toggle (AC 4.3b, default ON); when OFF the
+ * email carries no price or total. Homeowner name/email/phone never appear.
  */
 export type WorkOrderAssignmentEmail = {
   to: string;
@@ -426,7 +426,7 @@ export function renderWorkOrderAssignmentEmail(input: {
   items: { name: string; qty: number; unit: string; description: string | null; unit_price?: number }[];
 }): WorkOrderAssignmentEmail {
   const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-  const priced = input.showPrices === true;
+  const priced = input.showPrices !== false;
   const total = input.items.reduce((sum, i) => sum + Number(i.qty) * Number(i.unit_price ?? 0), 0);
   const label = workOrderNumberLabel(input.number);
   const subject = `${input.shopName} assigned you ${label} at ${input.address}`;
@@ -499,7 +499,7 @@ async function buildAssignmentEmail(sql: Sql, wo: WorkOrder, to: string): Promis
     address: prop ? `${prop.address_line}, ${prop.city}, ${prop.state} ${prop.zip}` : "",
     startDate: wo.start_date,
     endDate: wo.end_date,
-    showPrices: wo.show_prices === true,
+    showPrices: wo.show_prices !== false,
     items,
   });
 }
@@ -552,7 +552,7 @@ export async function updateWorkOrderFields(
   if (startDate && endDate && endDate < startDate) throw new Error("End date is before the start date.");
   const notes = patch.notes !== undefined ? patch.notes?.trim() || null : wo.notes;
   if (notes && notes.length > 4000) throw new Error("Keep notes under 4,000 characters.");
-  const showPrices = patch.showPrices !== undefined ? patch.showPrices === true : wo.show_prices === true;
+  const showPrices = patch.showPrices !== undefined ? patch.showPrices === true : wo.show_prices !== false;
 
   const changes: string[] = [];
   if (assignee !== wo.assignee_email) {
@@ -561,7 +561,7 @@ export async function updateWorkOrderFields(
   if (startDate !== wo.start_date) changes.push(`start: ${startDate ?? "none"}`);
   if (endDate !== wo.end_date) changes.push(`end: ${endDate ?? "none"}`);
   if (notes !== wo.notes) changes.push("notes");
-  if (showPrices !== (wo.show_prices === true)) changes.push(showPrices ? "prices shown to worker" : "prices hidden from worker");
+  if (showPrices !== (wo.show_prices !== false)) changes.push(showPrices ? "prices shown to worker" : "prices hidden from worker");
   if (changes.length === 0) return wo;
 
   const updated = await sql<WorkOrder>`

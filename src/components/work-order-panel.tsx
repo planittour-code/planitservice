@@ -80,13 +80,13 @@ export function WorkOrderPanel({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [showPrices, setShowPrices] = useState(false);
+  const [showPrices, setShowPrices] = useState(true);
   useEffect(() => {
     setAssignee(wo?.assignee_email ?? "");
     setStartDate(wo?.start_date ?? "");
     setEndDate(wo?.end_date ?? "");
     setNotes(wo?.notes ?? "");
-    setShowPrices(wo?.show_prices === true);
+    setShowPrices(wo ? wo.show_prices !== false : true);
     // Reset the form only when the saved WO changes, not on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wo?.id, wo?.updated_at]);
@@ -248,7 +248,7 @@ export function WorkOrderPanel({
             onChange={(e) => setAssignee(e.target.value)}
           />
           {!emailOk ? <p className="text-xs text-destructive">Enter a valid email address.</p> : (
-            <p className="text-xs text-muted-foreground">They get one email with the job details when assigned. Prices only if “Show prices” is on.</p>
+            <p className="text-xs text-muted-foreground">They get one email with the job details when assigned. Prices are included unless you turn off “Show prices”.</p>
           )}
         </div>
         <div className="space-y-1">

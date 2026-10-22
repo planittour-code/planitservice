@@ -99,7 +99,7 @@ test("4.1 manual create: idempotent, one per proposal, line-item snapshot", asyn
   assert.equal(first.workOrder.status, "scheduled");
   assert.equal(first.workOrder.number, 1);
   assert.equal(first.workOrder.assignee_email, null);
-  assert.equal(first.workOrder.show_prices, false);
+  assert.equal(first.workOrder.show_prices, true); // 4.3b: new WO shows prices by default
   // Duplicate create returns the existing WO.
   const again = await ensureWorkOrder(sql, proposalId, "test");
   assert.equal(again.created, false);
@@ -172,7 +172,7 @@ test("4.3a assignment email: first set 1, unchanged save 0, case-only 0, change 
   await updateWorkOrderFields(sql, shop.id, workOrder.id, { assigneeEmail: "sam@crew.example" }, "o", opts);
   await updateWorkOrderFields(sql, shop.id, workOrder.id, { assigneeEmail: "SAM@crew.example" }, "o", opts);
   await updateWorkOrderFields(sql, shop.id, workOrder.id, { startDate: "2026-11-02", endDate: "2026-11-03", notes: "n" }, "o", opts);
-  await updateWorkOrderFields(sql, shop.id, workOrder.id, { showPrices: true }, "o", opts);
+  await updateWorkOrderFields(sql, shop.id, workOrder.id, { showPrices: false }, "o", opts);
   await setWorkOrderStatus(sql, shop.id, workOrder.id, "in_progress", "o");
   assert.equal(m.sent.length, 1);
   await updateWorkOrderFields(sql, shop.id, workOrder.id, { assigneeEmail: "lee@crew.example" }, "o", opts);
@@ -187,50 +187,52 @@ test("4.3a assignment email: first set 1, unchanged save 0, case-only 0, change 
   assert.ok(events.filter((e) => e.kind === "notified").every((e) => e.created_at));
 });
 
-test("4.3a email content: shop, address, WO number, dates, items; no homeowner; prices only when toggled", async () => {
+test("4.3a/4.3b email content: shop, address, WO number, dates, items; prices ON by default, OFF hides them; no homeowner", async () => {
   const { sql } = await freshDb();
   const shop = await seedShop(sql, "alpha");
   const { proposalId } = await seedSold(sql, shop.id, "77 Elm St");
   const { workOrder } = await ensureWorkOrder(sql, proposalId, "o");
+  assert.equal(workOrder.show_prices, true);
   const m = mockMailer();
   await updateWorkOrderFields(
     sql, shop.id, workOrder.id,
     { assigneeEmail: "sam@crew.example", startDate: "2026-11-02", endDate: "2026-11-04" }, "o", { notify: m.notify },
   );
-  const off = m.sent[0];
-  for (const body of [off.text, off.html]) {
+  const on = m.sent[0];
+  for (const body of [on.text, on.html]) {
     assert.match(body, /alpha Gutters/);
     assert.match(body, /77 Elm St, Austin, TX 78701/);
     assert.match(body, /WO-0001/);
     assert.match(body, /Nov 2, 2026/);
     assert.match(body, /Nov 4, 2026/);
-    assert.match(body, /Seamless gutter \(120 lf\)/);
-    assert.match(body, /Downspout \(4 ea\)/);
     assert.match(body, /6 in\. K-style, white/);
     assert.doesNotMatch(body, /declined/);
-    assert.doesNotMatch(body, /\$|Total|1,140|240/);
-    assertNoHomeowner(body);
-  }
-  assertNoHomeowner(off.subject);
-  assert.equal(off.shopReplyTo, `office@${shop.id}.example`);
-  // Toggle ON: same render now carries line prices + total (toggling alone sent nothing).
-  await updateWorkOrderFields(sql, shop.id, workOrder.id, { showPrices: true }, "o", { notify: m.notify });
-  assert.equal(m.sent.length, 1);
-  await updateWorkOrderFields(sql, shop.id, workOrder.id, { assigneeEmail: "lee@crew.example" }, "o", { notify: m.notify });
-  const on = m.sent[1];
-  for (const body of [on.text, on.html]) {
     assert.match(body, /Seamless gutter \(120 lf\) - \$1,140\.00/);
     assert.match(body, /Downspout \(4 ea\) - \$240\.00/);
     assert.match(body, /Total: \$1,380\.00/);
     assertNoHomeowner(body);
   }
-  // Pure renderer (the worker-facing view) agrees for both states.
+  assertNoHomeowner(on.subject);
+  assert.equal(on.shopReplyTo, `office@${shop.id}.example`);
+  // Shop turns prices OFF: no email from the toggle; the next assignment email is price-free.
+  await updateWorkOrderFields(sql, shop.id, workOrder.id, { showPrices: false }, "o", { notify: m.notify });
+  assert.equal(m.sent.length, 1);
+  await updateWorkOrderFields(sql, shop.id, workOrder.id, { assigneeEmail: "lee@crew.example" }, "o", { notify: m.notify });
+  const off = m.sent[1];
+  for (const body of [off.text, off.html]) {
+    assert.match(body, /Seamless gutter \(120 lf\)/);
+    assert.match(body, /Downspout \(4 ea\)/);
+    assert.doesNotMatch(body, /\$|Total|1,140|240/);
+    assertNoHomeowner(body);
+  }
+  assertNoHomeowner(off.subject);
+  // Pure renderer (the worker-facing view): default ON, explicit OFF is price-free.
   const base = {
     to: "x@y.example", shopName: "S", shopReplyTo: null, workOrderId: "w", number: 3, address: "1 A St",
     startDate: null, endDate: null, items: [{ name: "Item", qty: 2, unit: "ea", description: null, unit_price: 5 }],
   };
-  assert.doesNotMatch(renderWorkOrderAssignmentEmail(base).text, /\$/);
-  assert.match(renderWorkOrderAssignmentEmail({ ...base, showPrices: true }).text, /Total: \$10\.00/);
+  assert.match(renderWorkOrderAssignmentEmail(base).text, /Total: \$10\.00/);
+  assert.doesNotMatch(renderWorkOrderAssignmentEmail({ ...base, showPrices: false }).text, /\$|Total/);
 });
 
 test("4.3a a mail failure does not block the save and is logged", async () => {
