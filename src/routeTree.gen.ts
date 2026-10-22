@@ -26,6 +26,8 @@ import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SlaRouteImport } from './routes/sla'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiCtaRouteImport } from './routes/api/cta'
+import { Route as ApiMapTileRouteImport } from './routes/api/map-tile'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
 import { Route as AppCampaignRouteImport } from './routes/app/campaign'
@@ -150,6 +152,16 @@ const TermsRoute = TermsRouteImport.update({
 const ApiCtaRoute = ApiCtaRouteImport.update({
   id: '/api/cta',
   path: '/api/cta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMapTileRoute = ApiMapTileRouteImport.update({
+  id: '/api/map-tile',
+  path: '/api/map-tile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -371,6 +383,8 @@ export interface FileRoutesByFullPath {
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
   '/api/cta': typeof ApiCtaRoute
+  '/api/map-tile': typeof ApiMapTileRoute
+  '/api/search': typeof ApiSearchRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -427,6 +441,8 @@ export interface FileRoutesByTo {
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
   '/api/cta': typeof ApiCtaRoute
+  '/api/map-tile': typeof ApiMapTileRoute
+  '/api/search': typeof ApiSearchRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -487,6 +503,8 @@ export interface FileRoutesById {
   '/sla': typeof SlaRoute
   '/terms': typeof TermsRoute
   '/api/cta': typeof ApiCtaRoute
+  '/api/map-tile': typeof ApiMapTileRoute
+  '/api/search': typeof ApiSearchRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -548,6 +566,8 @@ export interface FileRouteTypes {
     | '/sla'
     | '/terms'
     | '/api/cta'
+    | '/api/map-tile'
+    | '/api/search'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -604,6 +624,8 @@ export interface FileRouteTypes {
     | '/sla'
     | '/terms'
     | '/api/cta'
+    | '/api/map-tile'
+    | '/api/search'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -663,6 +685,8 @@ export interface FileRouteTypes {
     | '/sla'
     | '/terms'
     | '/api/cta'
+    | '/api/map-tile'
+    | '/api/search'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -723,6 +747,8 @@ export interface RootRouteChildren {
   SlaRoute: typeof SlaRoute
   TermsRoute: typeof TermsRoute
   ApiCtaRoute: typeof ApiCtaRoute
+  ApiMapTileRoute: typeof ApiMapTileRoute
+  ApiSearchRoute: typeof ApiSearchRoute
   BookAlbinRoute: typeof BookAlbinRoute
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
@@ -857,6 +883,20 @@ declare module '@tanstack/react-router' {
       path: '/api/cta'
       fullPath: '/api/cta'
       preLoaderRoute: typeof ApiCtaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/map-tile': {
+      id: '/api/map-tile'
+      path: '/api/map-tile'
+      fullPath: '/api/map-tile'
+      preLoaderRoute: typeof ApiMapTileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -1279,6 +1319,8 @@ const rootRouteChildren: RootRouteChildren = {
   SlaRoute: SlaRoute,
   TermsRoute: TermsRoute,
   ApiCtaRoute: ApiCtaRoute,
+  ApiMapTileRoute: ApiMapTileRoute,
+  ApiSearchRoute: ApiSearchRoute,
   BookAlbinRoute: BookAlbinRoute,
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,
@@ -1296,3 +1338,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
