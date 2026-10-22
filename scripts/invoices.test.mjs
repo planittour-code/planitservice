@@ -15,6 +15,7 @@ const {
   invoiceNoProcessingLine,
   invoicePayUrl,
   invoiceSeqLabel,
+  invoiceStatusLabel,
   listInvoicesForProperty,
   loadInvoice,
   loadInvoiceForWorkOrder,
@@ -335,4 +336,25 @@ test("Counsel line on invoice view/PDF copy and invoice email text", () => {
     assert.doesNotMatch(text, /fee/i);
     assert.match(text, /INV-0003/);
   }
+});
+
+test("status label is viewer-aware: shop Paid; homeowner and PM Marked paid", async () => {
+  assert.equal(invoiceStatusLabel("paid", "shop"), "Paid");
+  assert.equal(invoiceStatusLabel("partially_paid", "shop"), "Partially paid");
+  assert.equal(invoiceStatusLabel("paid"), "Paid", "default is the shop's own view");
+  assert.equal(invoiceStatusLabel("paid", "homeowner"), "Marked paid");
+  assert.equal(invoiceStatusLabel("partially_paid", "homeowner"), "Partially marked paid");
+  assert.equal(invoiceStatusLabel("paid", "pm"), "Marked paid");
+  assert.equal(invoiceStatusLabel("partially_paid", "pm"), "Partially marked paid");
+  for (const v of ["shop", "homeowner", "pm"]) {
+    assert.equal(invoiceStatusLabel("sent", v), "Sent");
+    assert.equal(invoiceStatusLabel("void", v), "Void");
+  }
+  const panel = await readFile(join(root, "src/components/invoice-panel.tsx"), "utf8");
+  const home = await readFile(join(root, "src/routes/home/$id.tsx"), "utf8");
+  const manage = await readFile(join(root, "src/routes/manage/$id.tsx"), "utf8");
+  assert.match(panel, /<InvoiceBadge status=\{r\.status\} viewer=\{viewer\} \/>/);
+  assert.match(panel, /<InvoiceBadge status=\{inv\.status\} \/>/, "shop panel keeps shop wording");
+  assert.match(home, /<PropertyInvoices propertyId=\{p\.id\} viewer="homeowner" \/>/);
+  assert.match(manage, /<PropertyInvoices propertyId=\{p\.id\} viewer="pm" \/>/);
 });
