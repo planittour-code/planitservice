@@ -501,32 +501,45 @@ async function bundle(sql: Sql, invoice: Invoice, includeEvents: boolean): Promi
  * address (copied rows live on the viewer's own property row, never via the
  * shop's company_id). Everyone else: no.
  */
-async function viewerMaySee(sql: Sql, viewer: InvoiceViewer, invoice: Pick<Invoice, "company_id" | "property_id">): Promise<boolean> {
-  if (viewer.kind === "shop") return viewer.companyId === invoice.company_id;
+/**
+ * Rows the invoice is explicitly attached to: the issuing shop's row, plus
+ * every File row that got a copy of the same accepted job (jobs.proposal_id,
+ * written on accept / 0031). No address-text matching here.
+ */
+const LINKED_ROWS = (sql: Sql, invoice: Pick<Invoice, "property_id" | "proposal_id">) => sql`
+  select ${invoice.property_id}::text as id
+  union
+  select j.property_id from jobs j where j.proposal_id = ${invoice.proposal_id}
+`;
+
+/** Same entitlement rules as search.server.ts (feat/search-api). */
+async function entitledRow(sql: Sql, viewer: Exclude<InvoiceViewer, { kind: "shop" }>, propertyId: string) {
   if (viewer.kind === "homeowner") {
-    const rows = await sql`
-      select 1 from properties src
-      join properties mine
-        on mine.id = src.id
-        or (lower(trim(mine.address_line)) = lower(trim(src.address_line)) and coalesce(mine.zip, '') = coalesce(src.zip, ''))
-      where src.id = ${invoice.property_id} and mine.homeowner_user_id = ${viewer.userId}
-      limit 1
-    `;
+    const rows = await sql`select 1 from properties where id = ${propertyId} and homeowner_user_id = ${viewer.userId} limit 1`;
     return Boolean(rows[0]);
   }
   const rows = await sql`
-    select 1 from properties src
-    join properties mine
-      on mine.id = src.id
-      or (lower(trim(mine.address_line)) = lower(trim(src.address_line)) and coalesce(mine.zip, '') = coalesce(src.zip, ''))
-    join portfolio_properties pp on pp.property_id = mine.id
+    select 1 from portfolio_properties pp
     join portfolios pf on pf.id = pp.portfolio_id and pf.paid_at is not null
-    where src.id = ${invoice.property_id}
+    where pp.property_id = ${propertyId}
       and (pf.user_id = ${viewer.userId}
         or exists (select 1 from portfolio_members m where m.portfolio_id = pf.id and m.user_id = ${viewer.userId}))
     limit 1
   `;
   return Boolean(rows[0]);
+}
+
+async function viewerMaySee(
+  sql: Sql,
+  viewer: InvoiceViewer,
+  invoice: Pick<Invoice, "company_id" | "property_id" | "proposal_id">,
+): Promise<boolean> {
+  if (viewer.kind === "shop") return viewer.companyId === invoice.company_id;
+  const linked = await LINKED_ROWS(sql, invoice);
+  for (const row of linked as unknown as { id: string }[]) {
+    if (await entitledRow(sql, viewer, row.id)) return true;
+  }
+  return false;
 }
 
 /**
@@ -571,15 +584,14 @@ export async function listInvoicesForProperty(
   viewer: Exclude<InvoiceViewer, { kind: "shop" }>,
   propertyId: string,
 ): Promise<InvoiceSummary[]> {
-  // propertyId is the viewer's own row; invoices sit on the shop's row at the
-  // same address, so match by address and then re-check each one.
+  // propertyId is the viewer's own row. Invoices reach it only through the
+  // explicit job copy for the same proposal, never through address text.
+  if (!(await entitledRow(sql, viewer, propertyId))) return [];
   const rows = await sql<Invoice>`
     select i.* from invoices i
-    join properties src on src.id = i.property_id
-    join properties mine on mine.id = ${propertyId}
     where i.status <> 'draft'
-      and (src.id = mine.id
-        or (lower(trim(src.address_line)) = lower(trim(mine.address_line)) and coalesce(src.zip, '') = coalesce(mine.zip, '')))
+      and (i.property_id = ${propertyId}
+        or exists (select 1 from jobs j where j.proposal_id = i.proposal_id and j.property_id = ${propertyId}))
     order by i.created_at
   `;
   const out: InvoiceSummary[] = [];

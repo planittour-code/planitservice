@@ -229,7 +229,7 @@ test("5.4 paid is status only: no jobs / job_specs / filing writes", async () =>
   const src = (await readFile(join(root, "src/lib/housefile/invoices.ts"), "utf8"))
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/\/\/.*$/gm, "");
-  assert.doesNotMatch(src, /\bjobs\b|job_specs|writeAccepted|property_warranties/);
+  assert.doesNotMatch(src, /(insert\s+into|update|delete\s+from)\s+(jobs|job_specs|property_warranties)\b|writeAccepted|writeJobOnFile/i);
 });
 
 test("tenancy + 5.7 visibility: shop, homeowner, entitled PM yes; other shop / stranger / unpaid PM no", async () => {
@@ -247,6 +247,8 @@ test("tenancy + 5.7 visibility: shop, homeowner, entitled PM yes; other shop / s
   await sql`insert into portfolios (id, user_id, name, paid_at) values ('pf1', 'pm_owner', 'PM Co', now()), ('pf2', 'pm_unpaid', 'Free PM', null)`;
   await sql`insert into portfolio_members (id, portfolio_id, user_id, email) values ('m1', 'pf1', 'pm_staff', 'staff@pm.example')`;
   await sql`insert into portfolio_properties (portfolio_id, property_id) values ('pf1', ${pmProp}), ('pf2', ${pmProp})`;
+  // Explicit link (as written on accept / 0031): the job copy for this proposal on the PM row.
+  await sql`insert into jobs (id, company_id, property_id, proposal_id, title, summary, completed_at) values (${`job_${pmProp}`}, ${a.id}, ${pmProp}, ${s.invoice.proposal_id}, 'Job', 'Job', current_date)`;
 
   for (const viewer of [
     { kind: "shop", companyId: a.id },
@@ -282,6 +284,25 @@ test("tenancy + 5.7 visibility: shop, homeowner, entitled PM yes; other shop / s
   const d = await woFor(sql, a, "9 Shared Ln");
   const draft = (await ensureInvoiceForWorkOrder(sql, a.id, d.workOrder.id, ACT)).invoice;
   await assert.rejects(loadInvoice(sql, { kind: "homeowner", userId: "ho_1" }, draft.id), /not found/);
+});
+
+test("no address matching: unentitled same-address rows see nothing", async () => {
+  const { sql } = await freshDb();
+  const a = await seedShop(sql, "alpha");
+  const b = await seedShop(sql, "beta");
+  const s = await sentInvoice(sql, a, "4 Elm St");
+  // A household row at the SAME street + zip, claimed by another user, with no job copy.
+  const other = `prop_other_${(n += 1)}`;
+  await sql`insert into properties (id, company_id, share_token, invite_token, address_line, city, state, zip, homeowner_name, homeowner_email, homeowner_phone, homeowner_user_id) values (${other}, ${b.id}, ${`t_${other}`}, ${`i_${other}`}, ${"4 elm st"}, ${"Austin"}, ${"TX"}, ${"78701"}, ${"N"}, ${"n@x.example"}, ${"512-555-0101"}, ${"ho_neighbor"})`;
+  // A paid PM portfolio holding that same-address row, also with no job copy.
+  await sql`insert into portfolios (id, user_id, name, paid_at) values ('pfx', 'pm_x', 'PM X', now())`;
+  await sql`insert into portfolio_properties (portfolio_id, property_id) values ('pfx', ${other})`;
+  for (const viewer of [{ kind: "homeowner", userId: "ho_neighbor" }, { kind: "pm", userId: "pm_x" }]) {
+    await assert.rejects(loadInvoice(sql, viewer, s.invoice.id), /not found/, viewer.kind);
+    assert.equal((await listInvoicesForProperty(sql, viewer, other)).length, 0, viewer.kind);
+  }
+  // Not entitled to the row they ask about: empty, even for the real row.
+  assert.equal((await listInvoicesForProperty(sql, { kind: "homeowner", userId: "ho_neighbor" }, s.propertyId)).length, 0);
 });
 
 test("no fee: Pay link prefills the plain amount due; only the issuing shop's link", () => {
