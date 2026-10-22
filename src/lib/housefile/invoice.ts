@@ -1,4 +1,5 @@
 import { GUTTERS_PLUS_DRAINAGE_KIT } from "./kits";
+import { invoiceNoProcessingLine } from "./invoices";
 import { customerCode, depositPercent, paymentInvoiceNumber, paymentTermLabel } from "./payment";
 import type { HouseCompany, InvoiceSalesRep, Property, Proposal, ProposalItem } from "./types";
 
@@ -86,12 +87,13 @@ export function invoicePaymentCopy(input: {
   const due = invoiceDueLabel(input.paymentTerms);
   const terms = paymentTermLabel(input.paymentTerms);
   const portal = input.hasPortal
-    ? "Pay online with the Payment Portal below. The amount includes a 3% card fee. The invoice number and customer are already filled in. The card stays on the payment page."
+    ? `Pay ${input.companyName} online with the link below. Payment goes directly to ${input.companyName}.`
     : "Ask the shop how they take payment.";
   return [
     `Thank you for your business. Payment is ${due.toLowerCase()} (${terms}).`,
     portal,
     `Invoice # ${input.invoiceNo}.`,
+    invoiceNoProcessingLine(input.companyName),
   ].join(" ");
 }
 
