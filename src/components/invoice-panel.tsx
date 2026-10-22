@@ -10,6 +10,7 @@ import {
   invoiceNoProcessingLine,
   invoiceSeqLabel,
   invoiceStatusLabel,
+  type InvoiceViewer,
   PAYMENT_METHODS,
   RETRACT_WINDOW_DAYS,
   type InvoiceItemInput,
@@ -29,34 +30,29 @@ import {
   voidInvoiceFn,
 } from "@/lib/housefile/server";
 
-export function InvoiceBadge({ status }: { status: InvoiceStatus }) {
+export function InvoiceBadge({ status, viewer = "shop" }: { status: InvoiceStatus; viewer?: InvoiceViewer["kind"] }) {
   const variant =
     status === "paid" ? "muted" : status === "void" ? "outline" : status === "partially_paid" ? "warning" : "default";
-  return <Badge variant={variant}>{invoiceStatusLabel(status)}</Badge>;
+  return <Badge variant={variant}>{invoiceStatusLabel(status, viewer)}</Badge>;
 }
 
 /**
- * Pay buttons (Sprint 1 #6): "Pay {Shop} online" + the direct-to-shop disclaimer.
- * Opening a link never changes status; the shop marks paid (5.3). Falls back
- * to payment-terms text when no link resolves (6.4).
+ * The one Pay button (Sprint 1 #6): "Pay {Shop} online" + the direct-to-shop
+ * disclaimer. Opening it never changes status; the shop marks paid (5.3).
+ * Falls back to payment-terms text when no link resolves (6.4).
  */
-export function PayButtons({ buttons, shopName }: { buttons: PayButton[]; shopName: string }) {
-  if (!buttons.length) {
+export function PayButtonRow({ button, shopName }: { button: PayButton | null; shopName: string }) {
+  if (!button) {
     return <p className="text-sm text-muted-foreground">Contact {shopName} for payment terms.</p>;
   }
   return (
-    <div className="space-y-1" data-testid="invoice-pay-buttons">
-      <div className="flex flex-wrap gap-2">
-        {buttons.map((b) => (
-          <Button key={b.href} asChild>
-            <a href={b.href} target="_blank" rel="noopener noreferrer">
-              {b.label}
-              {b.via ? <span className="ml-1 opacity-80">({b.via})</span> : null}
-            </a>
-          </Button>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">{buttons[0]!.disclaimer}</p>
+    <div className="space-y-1" data-testid="invoice-pay-button">
+      <Button asChild>
+        <a href={button.href} target="_blank" rel="noopener noreferrer">
+          {button.label}
+        </a>
+      </Button>
+      <p className="text-xs text-muted-foreground">{button.disclaimer}</p>
     </div>
   );
 }
@@ -291,9 +287,9 @@ export function InvoicePanel({ workOrderId, workOrderStatus }: { workOrderId: st
       ) : null}
 
       {inv.status === "sent" || inv.status === "partially_paid" ? (
-        <PayButtons buttons={bundle.payButtons} shopName={bundle.shopName} />
+        <PayButtonRow button={bundle.payButton} shopName={bundle.shopName} />
       ) : null}
-      {bundle.payButtons.length ? null : (
+      {bundle.payButton ? null : (
         <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(bundle.shopName)}</p>
       )}
     </section>
@@ -301,7 +297,8 @@ export function InvoicePanel({ workOrderId, workOrderStatus }: { workOrderId: st
 }
 
 /** Read-only list for the homeowner (/home) and an entitled PM (portfolio file). */
-export function PropertyInvoices({ propertyId }: { propertyId: string }) {
+/** Homeowner / PM view (read-only). `viewer` picks the Counsel status wording. */
+export function PropertyInvoices({ propertyId, viewer }: { propertyId: string; viewer: "homeowner" | "pm" }) {
   const q = useQuery({
     queryKey: ["property-invoices", propertyId],
     queryFn: () => listPropertyInvoices({ data: propertyId }),
@@ -318,16 +315,16 @@ export function PropertyInvoices({ propertyId }: { propertyId: string }) {
               <span>
                 {r.shopName} · {invoiceSeqLabel(r.seq)} # {r.number}
               </span>
-              <InvoiceBadge status={r.status} />
+              <InvoiceBadge status={r.status} viewer={viewer} />
             </p>
             <p className="text-muted-foreground">
               Total {money(r.total)} · Amount due {money(r.amountDue)}
               {r.due_date ? ` · Due ${shortDate(r.due_date)}` : ""}
             </p>
             {r.status === "sent" || r.status === "partially_paid" ? (
-              <PayButtons buttons={r.payButtons} shopName={r.shopName} />
+              <PayButtonRow button={r.payButton} shopName={r.shopName} />
             ) : null}
-            {r.payButtons.length ? null : (
+            {r.payButton ? null : (
               <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(r.shopName)}</p>
             )}
           </li>

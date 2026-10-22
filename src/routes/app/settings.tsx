@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
-import { depositPercent, MAX_PAYMENT_LINKS, normalizePaymentLink, paymentTermLabel } from "@/lib/housefile/payment";
+import { depositPercent, isHttpsPaymentLink, paymentTermLabel } from "@/lib/housefile/payment";
 import { SEAT_MONTHLY, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { parseTradeLogos, parseTradeTokens, shopLogoChoices, workTypesFor, type WorkType } from "@/lib/housefile/quote";
 import {
@@ -49,7 +49,6 @@ function SettingsPage() {
   const [paymentTerms, setPaymentTerms] = useState("0");
   const [paymentLink, setPaymentLink] = useState("");
   const [paintPaymentLink, setPaintPaymentLink] = useState("");
-  const [payLinks, setPayLinks] = useState<{ label: string; url: string }[]>([]);
   const [pickingTrades, setPickingTrades] = useState(false);
 
   useEffect(() => {
@@ -65,7 +64,6 @@ function SettingsPage() {
     setPaymentTerms(String(depositPercent(q.data.company.payment_terms)));
     setPaymentLink(q.data.company.payment_link ?? "");
     setPaintPaymentLink(q.data.company.paint_payment_link ?? "");
-    setPayLinks(q.data.company.payment_links ?? []);
   }, [q.data]);
 
   const save = useMutation({
@@ -83,7 +81,6 @@ function SettingsPage() {
           payment_terms: paymentTerms,
           payment_link: paymentLink,
           paint_payment_link: paintPaymentLink,
-          payment_links: payLinks,
         },
       }),
     onSuccess: async (company) => {
@@ -455,20 +452,21 @@ function SettingsPage() {
           </p>
         </div>
         <div className="space-y-0.5">
-          <Label htmlFor="pay">Gutters payment link</Label>
+          <Label htmlFor="pay">Payment link 1</Label>
           <Input
             id="pay"
             inputMode="url"
-            placeholder="https://pay.example.com/gutters"
+            placeholder="https://pay.example.com/your-shop"
             value={paymentLink}
             onChange={(e) => setPaymentLink(e.target.value)}
           />
+          <PayLinkHint value={paymentLink} saved={q.data?.company.payment_link} />
           <p className="text-sm text-muted-foreground">
-            Used only on gutter estimates. Homeowners get this after they accept.
+            Used on gutter estimates, and on every other service when payment link 2 is empty.
           </p>
         </div>
         <div className="space-y-0.5">
-          <Label htmlFor="paint-pay">{q.data?.company.name?.trim() || "Shop"} payment link</Label>
+          <Label htmlFor="paint-pay">Payment link 2</Label>
           <Input
             id="paint-pay"
             inputMode="url"
@@ -476,46 +474,11 @@ function SettingsPage() {
             value={paintPaymentLink}
             onChange={(e) => setPaintPaymentLink(e.target.value)}
           />
+          <PayLinkHint value={paintPaymentLink} saved={q.data?.company.paint_payment_link} />
           <p className="text-sm text-muted-foreground">
-            Used for every service except gutters.
+            Used for every service except gutters. Invoices show one &ldquo;Pay online&rdquo; button; payments go directly
+            to you and PlanitService does not process or hold them.
           </p>
-        </div>
-        <div className="space-y-2">
-          <Label>Other payment links (up to {MAX_PAYMENT_LINKS})</Label>
-          <p className="text-sm text-muted-foreground">
-            Shown as extra &ldquo;Pay {q.data?.company.name?.trim() || "your shop"} online&rdquo; buttons on your invoices. Payments go
-            directly to you; PlanitService does not process or hold them. https links only.
-          </p>
-          {payLinks.map((link, idx) => (
-            <div key={idx} className="flex flex-wrap items-center gap-2">
-              <Input
-                aria-label={`Payment link ${idx + 1} label`}
-                placeholder="Label, e.g. Card or ACH"
-                className="w-48"
-                value={link.label}
-                onChange={(e) => setPayLinks(payLinks.map((l, i) => (i === idx ? { ...l, label: e.target.value } : l)))}
-              />
-              <Input
-                aria-label={`Payment link ${idx + 1} URL`}
-                inputMode="url"
-                placeholder="https://"
-                className="grow"
-                value={link.url}
-                onChange={(e) => setPayLinks(payLinks.map((l, i) => (i === idx ? { ...l, url: e.target.value } : l)))}
-              />
-              {link.url.trim() && !normalizePaymentLink(link.url) ? (
-                <span className="text-sm text-destructive">Use an https:// link</span>
-              ) : null}
-              <Button type="button" variant="ghost" onClick={() => setPayLinks(payLinks.filter((_, i) => i !== idx))}>
-                Remove
-              </Button>
-            </div>
-          ))}
-          {payLinks.length < MAX_PAYMENT_LINKS ? (
-            <Button type="button" variant="outline" onClick={() => setPayLinks([...payLinks, { label: "", url: "" }])}>
-              Add payment link
-            </Button>
-          ) : null}
         </div>
         <Button type="submit" disabled={save.isPending}>
           Save
@@ -891,4 +854,15 @@ function TeamSection() {
       ) : null}
     </section>
   );
+}
+
+/**
+ * Client hint for AC 6.3: a new or edited link must be https. The link already
+ * saved is not an edit, so an older http link shows no warning (grandfathered).
+ * The server enforces the same rule on save.
+ */
+function PayLinkHint({ value, saved }: { value: string; saved: string | null | undefined }) {
+  const raw = value.trim();
+  if (!raw || raw === (saved ?? "").trim() || isHttpsPaymentLink(raw)) return null;
+  return <p className="text-sm text-destructive">Use an https:// link</p>;
 }

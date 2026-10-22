@@ -216,7 +216,7 @@ function ManageRecord() {
       <div id="jobs" className="scroll-mt-20">
         <JobTimeline file={house} />
       </div>
-      <PropertyInvoices propertyId={p.id} />
+      <PropertyInvoices propertyId={p.id} viewer="pm" />
       <div id="shops" className="scroll-mt-20">
         <KnownProviders providers={q.data.knownProviders ?? []} />
       </div>
