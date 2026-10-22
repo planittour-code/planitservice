@@ -10,6 +10,7 @@ import {
   invoiceNoProcessingLine,
   invoiceSeqLabel,
   invoiceStatusLabel,
+  type InvoiceViewer,
   PAYMENT_METHODS,
   RETRACT_WINDOW_DAYS,
   type InvoiceItemInput,
@@ -28,10 +29,10 @@ import {
   voidInvoiceFn,
 } from "@/lib/housefile/server";
 
-export function InvoiceBadge({ status }: { status: InvoiceStatus }) {
+export function InvoiceBadge({ status, viewer = "shop" }: { status: InvoiceStatus; viewer?: InvoiceViewer["kind"] }) {
   const variant =
     status === "paid" ? "muted" : status === "void" ? "outline" : status === "partially_paid" ? "warning" : "default";
-  return <Badge variant={variant}>{invoiceStatusLabel(status)}</Badge>;
+  return <Badge variant={variant}>{invoiceStatusLabel(status, viewer)}</Badge>;
 }
 
 const fail = (error: unknown) => toast.error(error instanceof Error ? error.message : "Something went wrong");
@@ -269,7 +270,8 @@ export function InvoicePanel({ workOrderId, workOrderStatus }: { workOrderId: st
 }
 
 /** Read-only list for the homeowner (/home) and an entitled PM (portfolio file). */
-export function PropertyInvoices({ propertyId }: { propertyId: string }) {
+/** Homeowner / PM view (read-only). `viewer` picks the Counsel status wording. */
+export function PropertyInvoices({ propertyId, viewer }: { propertyId: string; viewer: "homeowner" | "pm" }) {
   const q = useQuery({
     queryKey: ["property-invoices", propertyId],
     queryFn: () => listPropertyInvoices({ data: propertyId }),
@@ -286,7 +288,7 @@ export function PropertyInvoices({ propertyId }: { propertyId: string }) {
               <span>
                 {r.shopName} · {invoiceSeqLabel(r.seq)} # {r.number}
               </span>
-              <InvoiceBadge status={r.status} />
+              <InvoiceBadge status={r.status} viewer={viewer} />
             </p>
             <p className="text-muted-foreground">
               Total {money(r.total)} · Amount due {money(r.amountDue)}

@@ -117,16 +117,22 @@ export function invoiceSeqLabel(seq: number): string {
   return `INV-${String(seq).padStart(4, "0")}`;
 }
 
-export function invoiceStatusLabel(status: InvoiceStatus): string {
+/**
+ * Status label for one viewer (Counsel): the issuing shop sees "Paid" /
+ * "Partially paid"; homeowner- and PM-facing views see "Marked paid" /
+ * "Partially marked paid", because PlanitService never verifies a payment.
+ */
+export function invoiceStatusLabel(status: InvoiceStatus, viewer: InvoiceViewer["kind"] = "shop"): string {
+  const outside = viewer !== "shop";
   switch (status) {
     case "draft":
       return "Draft";
     case "sent":
       return "Sent";
     case "partially_paid":
-      return "Partially paid";
+      return outside ? "Partially marked paid" : "Partially paid";
     case "paid":
-      return "Paid";
+      return outside ? "Marked paid" : "Paid";
     case "void":
       return "Void";
   }

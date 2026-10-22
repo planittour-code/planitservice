@@ -195,7 +195,7 @@ function HomeRecord() {
       <div id="jobs" className="scroll-mt-20">
         <JobTimeline file={house} defaultOpen />
       </div>
-      <PropertyInvoices propertyId={p.id} />
+      <PropertyInvoices propertyId={p.id} viewer="homeowner" />
       <div id="materials" className="scroll-mt-20">
         <JobTimeline file={house} mode="materials" defaultOpen />
       </div>
