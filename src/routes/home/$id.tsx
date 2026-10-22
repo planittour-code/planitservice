@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PropertyInvoices } from "@/components/invoice-panel";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -194,6 +195,7 @@ function HomeRecord() {
       <div id="jobs" className="scroll-mt-20">
         <JobTimeline file={house} defaultOpen />
       </div>
+      <PropertyInvoices propertyId={p.id} />
       <div id="materials" className="scroll-mt-20">
         <JobTimeline file={house} mode="materials" defaultOpen />
       </div>

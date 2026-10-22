@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PropertyInvoices } from "@/components/invoice-panel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -215,6 +216,7 @@ function ManageRecord() {
       <div id="jobs" className="scroll-mt-20">
         <JobTimeline file={house} />
       </div>
+      <PropertyInvoices propertyId={p.id} />
       <div id="shops" className="scroll-mt-20">
         <KnownProviders providers={q.data.knownProviders ?? []} />
       </div>
