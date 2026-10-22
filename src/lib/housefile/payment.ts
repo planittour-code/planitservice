@@ -131,7 +131,7 @@ export function mxPaymentUrl(
   return url.toString();
 }
 
-/** Gutters keep the shop payment link. Every other service uses the Painting Plus link. */
+/** Gutters keep the shop payment link. Every other service uses the shop's paint payment link. */
 export function shopPaymentLinkForWork(
   workId: string | null | undefined,
   shop: { payment_link?: string | null; paint_payment_link?: string | null },
