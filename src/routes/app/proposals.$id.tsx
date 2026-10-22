@@ -97,7 +97,6 @@ function ProposalPage() {
       <WorkOrderPanel
         proposalId={bundle.proposal.id}
         proposalStatus={bundle.proposal.status}
-        members={team.data?.members ?? []}
         onChanged={() => q.refetch()}
       />
       <ProposalDoc

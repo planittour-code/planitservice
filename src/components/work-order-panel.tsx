@@ -13,8 +13,8 @@ import {
   updateWorkOrder,
   updateWorkOrderStatus,
 } from "@/lib/housefile/server";
-import type { CompanyMember } from "@/lib/housefile/types";
 import {
+  isValidAssigneeEmail,
   nextWorkOrderStatuses,
   workOrderNumberLabel,
   workOrderStatusLabel,
@@ -61,12 +61,10 @@ const ACTION_LABEL: Record<WorkOrderStatus, string> = {
 export function WorkOrderPanel({
   proposalId,
   proposalStatus,
-  members,
   onChanged,
 }: {
   proposalId: string;
   proposalStatus: string;
-  members: CompanyMember[];
   onChanged?: () => void;
 }) {
   const sold = proposalStatus === "accepted" || proposalStatus === "completed";
@@ -79,24 +77,38 @@ export function WorkOrderPanel({
   const wo = bundle?.workOrder ?? null;
 
   const [assignee, setAssignee] = useState("");
-  const [memberId, setMemberId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [showPrices, setShowPrices] = useState(false);
   useEffect(() => {
-    setAssignee(wo?.assignee ?? "");
-    setMemberId(wo?.assignee_member_id ?? "");
+    setAssignee(wo?.assignee_email ?? "");
     setStartDate(wo?.start_date ?? "");
     setEndDate(wo?.end_date ?? "");
     setNotes(wo?.notes ?? "");
+    setShowPrices(wo?.show_prices === true);
+    // Reset the form only when the saved WO changes, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wo?.id, wo?.updated_at]);
+  const emailOk = isValidAssigneeEmail(assignee);
+  const datesOk = !startDate || !endDate || endDate >= startDate;
 
   const refresh = () => {
     void q.refetch();
     onChanged?.();
   };
   const create = useMutation({
-    mutationFn: () => createWorkOrder({ data: { proposalId } }),
+    mutationFn: () =>
+      createWorkOrder({
+        data: {
+          proposalId,
+          patch: {
+            assigneeEmail: assignee.trim().toLowerCase() || null,
+            startDate: startDate || null,
+            endDate: endDate || null,
+          },
+        },
+      }),
     onSuccess: () => {
       toast.success("Work order ready");
       refresh();
@@ -118,11 +130,11 @@ export function WorkOrderPanel({
         data: {
           workOrderId: wo!.id,
           patch: {
-            assignee: assignee.trim() || null,
-            assigneeMemberId: memberId || null,
+            assigneeEmail: assignee.trim().toLowerCase() || null,
             startDate: startDate || null,
             endDate: endDate || null,
             notes: notes.trim() || null,
+            showPrices,
           },
         },
       }),
@@ -141,7 +153,41 @@ export function WorkOrderPanel({
       <section className="rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
         <h2 className="font-display text-lg font-medium">Work order</h2>
         <p className="text-sm text-muted-foreground">No work order on this sold estimate yet.</p>
-        <Button className="mt-3" type="button" disabled={create.isPending} onClick={() => create.mutate()}>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1">
+            <Label htmlFor="wo-new-assignee">Assignee email (optional)</Label>
+            <Input
+              id="wo-new-assignee"
+              type="email"
+              value={assignee}
+              maxLength={254}
+              aria-invalid={!emailOk}
+              onChange={(e) => setAssignee(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="wo-new-start">Start date</Label>
+            <Input id="wo-new-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="wo-new-end">End date</Label>
+            <Input
+              id="wo-new-end"
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+        </div>
+        {!emailOk ? <p className="mt-1 text-xs text-destructive">Enter a valid email address.</p> : null}
+        {!datesOk ? <p className="mt-1 text-xs text-destructive">End date can’t be before the start date.</p> : null}
+        <Button
+          className="mt-3"
+          type="button"
+          disabled={create.isPending || !emailOk || !datesOk}
+          onClick={() => create.mutate()}
+        >
           {create.isPending ? "Opening…" : "Create work order"}
         </Button>
       </section>
@@ -150,7 +196,6 @@ export function WorkOrderPanel({
 
   const closed = wo.status === "complete" || wo.status === "cancelled";
   const total = bundle!.items.reduce((sum, i) => sum + i.qty * i.unit_price, 0);
-  const pickable = members.filter((m) => !m.id.startsWith("owner-"));
 
   return (
     <section className="space-y-4 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
@@ -184,39 +229,27 @@ export function WorkOrderPanel({
         className="grid gap-3 sm:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
+          if (!emailOk || !datesOk) return;
           save.mutate();
         }}
       >
         <div className="space-y-1">
-          <Label htmlFor="wo-member">Assign to team</Label>
-          <select
-            id="wo-member"
-            className="h-10 w-full rounded-md bg-background px-3 text-sm shadow-[var(--shadow-border)]"
-            value={memberId}
-            disabled={closed}
-            onChange={(e) => {
-              setMemberId(e.target.value);
-              const m = pickable.find((x) => x.id === e.target.value);
-              if (m) setAssignee(m.name || m.email);
-            }}
-          >
-            <option value="">Nobody picked</option>
-            {pickable.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name || m.email}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="wo-assignee">Assignee (crew or sub)</Label>
+          <Label htmlFor="wo-assignee">Assignee email (worker)</Label>
           <Input
             id="wo-assignee"
+            type="email"
+            inputMode="email"
+            autoComplete="off"
+            placeholder="crew@example.com"
             value={assignee}
             disabled={closed}
-            maxLength={120}
+            maxLength={254}
+            aria-invalid={!emailOk}
             onChange={(e) => setAssignee(e.target.value)}
           />
+          {!emailOk ? <p className="text-xs text-destructive">Enter a valid email address.</p> : (
+            <p className="text-xs text-muted-foreground">They get one email with the job details when assigned. Prices only if “Show prices” is on.</p>
+          )}
         </div>
         <div className="space-y-1">
           <Label htmlFor="wo-start">Start date</Label>
@@ -238,6 +271,7 @@ export function WorkOrderPanel({
             disabled={closed}
             onChange={(e) => setEndDate(e.target.value)}
           />
+          {!datesOk ? <p className="text-xs text-destructive">End date can’t be before the start date.</p> : null}
         </div>
         <div className="space-y-1 sm:col-span-2">
           <Label htmlFor="wo-notes">Internal notes (shop only)</Label>
@@ -249,9 +283,18 @@ export function WorkOrderPanel({
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
+        <label className="flex items-center gap-2 text-sm sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={showPrices}
+            disabled={closed}
+            onChange={(e) => setShowPrices(e.target.checked)}
+          />
+          Show prices to the worker (line prices and total in their email)
+        </label>
         {!closed ? (
           <div className="sm:col-span-2">
-            <Button type="submit" size="sm" disabled={save.isPending}>
+            <Button type="submit" size="sm" disabled={save.isPending || !emailOk || !datesOk}>
               {save.isPending ? "Saving…" : "Save work order"}
             </Button>
           </div>
