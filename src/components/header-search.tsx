@@ -2,15 +2,21 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 import {
   hitFromValue,
   hitValue,
   isFocusShortcut,
+  isSlashShortcut,
   looksLikeAddress,
   newEstimateUrl,
   opensPreview,
   previewUrl,
+  type RecentHit,
+  readRecents,
+  recentsOrFallback,
+  recordRecent,
   SEARCH_DEBOUNCE_MS,
   searchChips,
   searchUrl,
@@ -67,8 +73,22 @@ const shortDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateStrin
  * the API decides scope from the session, so HO sees only their own houses.
  * `surface="shop"` adds the "New estimate at this address" no-results action.
  */
-export function HeaderSearch({ surface, className }: { surface: "shop" | "manage" | "home"; className?: string }) {
+export function HeaderSearch({
+  surface,
+  tenant,
+  className,
+}: {
+  surface: "shop" | "manage" | "home";
+  /** Recents are stored per tenant + user (e.g. the shop's company id). */
+  tenant?: string;
+  className?: string;
+}) {
   const navigate = useNavigate();
+  const { user } = useCurrentUserState();
+  const userId = user?.id ?? "";
+  const tenantKey = tenant || surface;
+  const storage = typeof window === "undefined" ? null : window.localStorage;
+  const [opened, setOpened] = useState<RecentHit[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -82,7 +102,7 @@ export function HeaderSearch({ surface, className }: { surface: "shop" | "manage
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isFocusShortcut(e)) {
+      if (isFocusShortcut(e) || isSlashShortcut(e)) {
         e.preventDefault();
         setOpen(true);
         inputRef.current?.focus();
@@ -109,7 +129,15 @@ export function HeaderSearch({ surface, className }: { surface: "shop" | "manage
     staleTime: 15_000,
     placeholderData: (prev) => prev,
   });
-  const hits = results.data?.hits ?? [];
+  // Re-read on open so visits from other tabs / pages show up.
+  useEffect(() => {
+    if (open) setOpened(readRecents(storage, tenantKey, userId));
+  }, [open, storage, tenantKey, userId]);
+  const apiHits = results.data?.hits ?? [];
+  const emptyQuery = !debounced.trim();
+  const hits: Hit[] = emptyQuery && !type
+    ? recentsOrFallback(opened, apiHits).map((h) => ({ match: "recent", ...h }))
+    : apiHits;
   const activeHit = hitFromValue(hits, active);
   const previewProperty = previewFor
     ? (hitFromValue(hits, previewFor)?.property_id ?? null)
@@ -132,7 +160,8 @@ export function HeaderSearch({ surface, className }: { surface: "shop" | "manage
     setPreviewFor(null);
     inputRef.current?.blur();
   };
-  const go = (url: string) => {
+  const go = (url: string, hit?: Hit) => {
+    if (hit) setOpened(recordRecent(storage, tenantKey, userId, hit));
     close();
     setQ("");
     void navigate({ to: url });
@@ -209,7 +238,7 @@ export function HeaderSearch({ surface, className }: { surface: "shop" | "manage
                   <Command.Item
                     key={hitValue(h)}
                     value={hitValue(h)}
-                    onSelect={() => go(h.url)}
+                    onSelect={() => go(h.url, h)}
                     className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm data-[selected=true]:bg-muted"
                   >
                     <span className="w-16 shrink-0 text-xs text-muted-foreground">{TYPE_LABEL[h.type] ?? h.type}</span>

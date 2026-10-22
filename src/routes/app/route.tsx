@@ -112,7 +112,7 @@ function AppLayout() {
             </AppNavLink>
           </nav>
         )}
-        {!onboardPath && <HeaderSearch surface="shop" className="order-last sm:order-none sm:ml-3" />}
+        {!onboardPath && <HeaderSearch surface="shop" tenant={dash.data?.company?.id} className="order-last sm:order-none sm:ml-3" />}
         {!onboardPath && (
           <Button asChild size="sm" className="ml-auto sm:ml-3">
             <Link to="/app/new">Start a Quote</Link>

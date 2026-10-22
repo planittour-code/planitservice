@@ -90,3 +90,92 @@ export const TYPE_LABEL: Record<string, string> = {
   work_order: "Work order",
   invoice: "Invoice",
 };
+
+/** Focus is somewhere typing happens: "/" must not hijack it there. */
+type TargetLike = { tagName?: string; isContentEditable?: boolean } | null | undefined;
+export function isTypingTarget(t: TargetLike): boolean {
+  if (!t) return false;
+  if (t.isContentEditable) return true;
+  const tag = (t.tagName ?? "").toUpperCase();
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+/** "/" opens search, unless the user is typing in a field or holding a modifier. */
+export function isSlashShortcut(e: KeyLike & { target?: unknown }): boolean {
+  return (
+    e.key === "/" &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    !e.altKey &&
+    !isTypingTarget(e.target as TargetLike)
+  );
+}
+
+// ---- Recently opened records (localStorage, per tenant + user) ----
+
+export const RECENT_MAX = 8;
+
+export type RecentHit = {
+  type: string;
+  id: string;
+  property_id: string | null;
+  label: string;
+  sublabel: string;
+  url: string;
+};
+
+type StorageLike = Pick<Storage, "getItem" | "setItem">;
+
+export function recentKey(tenant: string, userId: string): string {
+  return `planit.search.recent.v1:${tenant}:${userId}`;
+}
+
+function isRecent(v: unknown): v is RecentHit {
+  const r = v as RecentHit;
+  return Boolean(r) && typeof r.type === "string" && typeof r.id === "string" &&
+    typeof r.url === "string" && r.url.startsWith("/") && typeof r.label === "string";
+}
+
+export function readRecents(storage: StorageLike | null | undefined, tenant: string, userId: string): RecentHit[] {
+  if (!storage || !userId) return [];
+  try {
+    const raw = JSON.parse(storage.getItem(recentKey(tenant, userId)) ?? "[]");
+    return Array.isArray(raw) ? raw.filter(isRecent).slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Pure: put `hit` first, drop older copies of the same record, cap at RECENT_MAX. */
+export function pushRecent(list: RecentHit[], hit: RecentHit): RecentHit[] {
+  const clean: RecentHit = {
+    type: hit.type,
+    id: hit.id,
+    property_id: hit.property_id ?? null,
+    label: hit.label,
+    sublabel: hit.sublabel ?? "",
+    url: hit.url,
+  };
+  return [clean, ...list.filter((h) => !(h.type === hit.type && h.id === hit.id))].slice(0, RECENT_MAX);
+}
+
+export function recordRecent(
+  storage: StorageLike | null | undefined,
+  tenant: string,
+  userId: string,
+  hit: RecentHit,
+): RecentHit[] {
+  if (!storage || !userId || !isRecent(hit)) return [];
+  const next = pushRecent(readRecents(storage, tenant, userId), hit);
+  try {
+    storage.setItem(recentKey(tenant, userId), JSON.stringify(next));
+  } catch {
+    // Quota / private mode: recents are best-effort.
+  }
+  return next;
+}
+
+/** Empty query: opened records first; if none, the API's recently updated ones. */
+export function recentsOrFallback<T>(opened: RecentHit[], apiRecent: T[]): (RecentHit | T)[] {
+  return opened.length ? opened : apiRecent;
+}

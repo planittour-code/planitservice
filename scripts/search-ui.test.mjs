@@ -61,3 +61,77 @@ test("no-results new-estimate action uses the existing quote flow", () => {
   assert.ok(!looksLikeAddress("Johnson"));
   assert.ok(!looksLikeAddress("555 1234"));
 });
+
+import {
+  isSlashShortcut,
+  isTypingTarget,
+  pushRecent,
+  readRecents,
+  RECENT_MAX,
+  recentKey,
+  recentsOrFallback,
+  recordRecent,
+} from "../src/lib/housefile/search-ui.ts";
+
+function memStorage() {
+  const m = new Map();
+  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), m };
+}
+const rec = (id, type = "property") => ({ type, id, property_id: id, label: `L ${id}`, sublabel: "", url: `/app/properties/${id}` });
+
+test("'/' opens search except while typing or with modifiers", () => {
+  assert.ok(isSlashShortcut({ key: "/", target: { tagName: "DIV" } }));
+  assert.ok(isSlashShortcut({ key: "/", target: null }));
+  for (const tagName of ["INPUT", "TEXTAREA", "SELECT", "input"]) {
+    assert.ok(!isSlashShortcut({ key: "/", target: { tagName } }), tagName);
+  }
+  assert.ok(!isSlashShortcut({ key: "/", target: { tagName: "DIV", isContentEditable: true } }));
+  assert.ok(!isSlashShortcut({ key: "/", ctrlKey: true }));
+  assert.ok(!isSlashShortcut({ key: "?", target: null }));
+  assert.ok(isTypingTarget({ tagName: "textarea" }));
+  assert.ok(!isTypingTarget({ tagName: "BUTTON" }));
+});
+
+test("recents: most recent first, deduped, capped at 8", () => {
+  let list = [];
+  for (let i = 0; i < 12; i += 1) list = pushRecent(list, rec(`p${i}`));
+  assert.equal(list.length, RECENT_MAX);
+  assert.equal(list[0].id, "p11");
+  list = pushRecent(list, rec("p5"));
+  assert.deepEqual(list.slice(0, 2).map((h) => h.id), ["p5", "p11"]);
+  assert.equal(list.filter((h) => h.id === "p5").length, 1);
+  // Same id, different type is a different record.
+  list = pushRecent(list, rec("p5", "job"));
+  assert.equal(list.filter((h) => h.id === "p5").length, 2);
+});
+
+test("recents are stored per tenant + user", () => {
+  const s = memStorage();
+  recordRecent(s, "co_a", "u1", rec("a1"));
+  recordRecent(s, "co_a", "u1", rec("a2"));
+  recordRecent(s, "co_b", "u1", rec("b1"));
+  recordRecent(s, "co_a", "u2", rec("x1"));
+  assert.deepEqual(readRecents(s, "co_a", "u1").map((h) => h.id), ["a2", "a1"]);
+  assert.deepEqual(readRecents(s, "co_b", "u1").map((h) => h.id), ["b1"]);
+  assert.deepEqual(readRecents(s, "co_a", "u2").map((h) => h.id), ["x1"]);
+  assert.deepEqual(readRecents(s, "home", "u1"), []);
+  assert.notEqual(recentKey("co_a", "u1"), recentKey("co_a", "u2"));
+});
+
+test("recents tolerate junk, missing user and storage failures", () => {
+  const s = memStorage();
+  s.setItem(recentKey("t", "u"), "{not json");
+  assert.deepEqual(readRecents(s, "t", "u"), []);
+  s.setItem(recentKey("t", "u"), JSON.stringify([{ id: 1 }, rec("ok"), { ...rec("evil"), url: "https://evil.example" }]));
+  assert.deepEqual(readRecents(s, "t", "u").map((h) => h.id), ["ok"]);
+  assert.deepEqual(readRecents(null, "t", "u"), []);
+  assert.deepEqual(recordRecent(s, "t", "", rec("z")), []);
+  const throwing = { getItem: () => null, setItem: () => { throw new Error("quota"); } };
+  assert.equal(recordRecent(throwing, "t", "u", rec("z")).length, 1);
+});
+
+test("empty query falls back to API recents only when nothing was opened", () => {
+  const api = [{ id: "api1" }];
+  assert.deepEqual(recentsOrFallback([], api), api);
+  assert.deepEqual(recentsOrFallback([rec("o")], api).map((h) => h.id), ["o"]);
+});
