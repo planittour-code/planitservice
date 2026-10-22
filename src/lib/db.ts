@@ -46,6 +46,7 @@ const globalRef = globalThis as typeof globalThis & {
   __pgSqlPromise__?: Promise<Sql>;
   __pgliteInstance__?: Promise<import("@electric-sql/pglite").PGlite>;
   __pgliteMigrateChain__?: Promise<void>;
+  __pgPool__?: import("pg").Pool;
 };
 
 /**
@@ -92,6 +93,7 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
     const pool = new Pool({ connectionString: databaseUrl });
+    globalRef.__pgPool__ = pool;
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
@@ -192,6 +194,50 @@ export function getSql(): Promise<Sql> {
     throw err;
   });
   return sqlPromise;
+}
+
+/**
+ * Run `fn` inside one database transaction. Every query issued through the
+ * `tx` handle commits or rolls back together; a thrown error rolls back.
+ * Only use `tx` inside `fn` — calling the shared `getSql()` client from inside
+ * would run outside the transaction (and on PGLite would wait on it).
+ */
+export async function withTransaction<T>(fn: (tx: Sql) => Promise<T>): Promise<T> {
+  await getSql();
+  if (dbSource === "neon") {
+    const pool = globalRef.__pgPool__;
+    if (!pool) throw new Error("Postgres pool not initialized");
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const tx = toSql(async <R>(text: string, params: unknown[]) => {
+        const res = await client.query(text, params);
+        return res.rows as R[];
+      });
+      const out = await fn(tx);
+      await client.query("COMMIT");
+      return out;
+    } catch (err) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        // connection already broken; the original error matters more
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+  const pg = await globalRef.__pgliteInstance__;
+  if (!pg) throw new Error("PGLite instance failed to initialize");
+  return pg.transaction(async (t) =>
+    fn(
+      toSql(async <R>(text: string, params: unknown[]) => {
+        const res = await t.query<R>(text, params);
+        return res.rows;
+      }),
+    ),
+  );
 }
 
 /**
