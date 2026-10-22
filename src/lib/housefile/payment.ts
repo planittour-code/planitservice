@@ -48,11 +48,70 @@ export function paymentSchedule(total: number, terms: string | null | undefined)
   ];
 }
 
+/**
+ * Normalize a shop-entered payment link (AC 6.3). https only: a bare host gets
+ * https://, any other scheme (http:, javascript:, data:, mailto:, ...) is
+ * rejected as null. Existing https links come back byte-identical.
+ */
 export function normalizePaymentLink(value: string | null | undefined) {
   const raw = value?.trim() ?? "";
   if (!raw) return null;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return raw;
-  return `https://${raw}`;
+  const href = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  if (!/^https:\/\//i.test(href)) return null;
+  try {
+    const url = new URL(href);
+    if (url.protocol !== "https:" || !url.hostname.includes(".")) return null;
+  } catch {
+    return null;
+  }
+  return href;
+}
+
+export const MAX_PAYMENT_LINKS = 2;
+export type ShopPaymentLink = { label: string; url: string };
+
+/**
+ * Validate the generic payment links from shop settings. Throws on more than
+ * 2, a missing label, or a URL that is not https. Blank rows are dropped.
+ */
+export function normalizePaymentLinks(input: unknown): ShopPaymentLink[] {
+  if (input == null) return [];
+  if (!Array.isArray(input)) throw new Error("Payment links must be a list");
+  const rows = input
+    .map((row) => ({
+      label: String((row as { label?: unknown })?.label ?? "").trim(),
+      url: String((row as { url?: unknown })?.url ?? "").trim(),
+    }))
+    .filter((row) => row.label || row.url);
+  if (rows.length > MAX_PAYMENT_LINKS) throw new Error(`Up to ${MAX_PAYMENT_LINKS} payment links`);
+  return rows.map((row) => {
+    if (!row.label) throw new Error("Each payment link needs a label");
+    const url = normalizePaymentLink(row.url);
+    if (!url) throw new Error(`"${row.label}" needs a valid https:// link`);
+    return { label: row.label.slice(0, 40), url };
+  });
+}
+
+/** Read stored links defensively (never throws; drops anything invalid). */
+export function storedPaymentLinks(value: unknown): ShopPaymentLink[] {
+  const list = typeof value === "string" ? safeJson(value) : value;
+  if (!Array.isArray(list)) return [];
+  const out: ShopPaymentLink[] = [];
+  for (const row of list) {
+    const label = String((row as { label?: unknown })?.label ?? "").trim();
+    const url = normalizePaymentLink(String((row as { url?: unknown })?.url ?? ""));
+    if (label && url) out.push({ label, url });
+    if (out.length === MAX_PAYMENT_LINKS) break;
+  }
+  return out;
+}
+
+function safeJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 /** Alphabetic house code from the Property Record invite. MX Merchant invoice numbers stay numeric. */
@@ -125,11 +184,28 @@ export function mxPaymentUrl(
   return url.toString();
 }
 
-/** Gutters keep the shop payment link. Every other service uses the shop's paint payment link. */
+/**
+ * Per-shop routing by work type, using only that shop's own fields (AC 6.2/6.8):
+ * gutters -> payment_link; paint and everything else -> paint_payment_link ||
+ * payment_link. No shop-specific assumptions, no other company's link.
+ */
 export function shopPaymentLinkForWork(
   workId: string | null | undefined,
   shop: { payment_link?: string | null; paint_payment_link?: string | null },
 ) {
   if (workId === "gutters") return shop.payment_link ?? null;
   return shop.paint_payment_link || shop.payment_link || null;
+}
+
+/**
+ * AC 6.2 resolution for an invoice: the proposal's own payment_link (set from
+ * the same shop's settings), else the issuing shop's routing for the work type,
+ * else none. `shop` must be the invoice's own company row.
+ */
+export function resolveInvoicePaymentLink(input: {
+  proposalPaymentLink: string | null | undefined;
+  workId: string | null | undefined;
+  shop: { payment_link?: string | null; paint_payment_link?: string | null };
+}) {
+  return normalizePaymentLink(input.proposalPaymentLink || shopPaymentLinkForWork(input.workId, input.shop));
 }

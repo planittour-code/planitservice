@@ -18,7 +18,6 @@ import {
 import {
   addInvoiceNote,
   ensureInvoiceForWorkOrder,
-  invoicePayUrl,
   invoiceSeqLabel,
   listInvoicesForProperty,
   loadInvoice,
@@ -60,7 +59,7 @@ import {
   type ProfileHat,
   type UserProfile,
 } from "./profile";
-import { normalizePaymentLink, shopPaymentLinkForWork } from "./payment";
+import { normalizePaymentLink, normalizePaymentLinks, shopPaymentLinkForWork, storedPaymentLinks } from "./payment";
 import {
   addressKey,
   assertAddressAvailable,
@@ -171,6 +170,7 @@ function asCompany(row: Company): Company {
     payment_terms: row.payment_terms ?? null,
     payment_link: row.payment_link ?? null,
     paint_payment_link: row.paint_payment_link ?? null,
+    payment_links: storedPaymentLinks(row.payment_links),
     kits_seeded_at: row.kits_seeded_at ?? null,
     slug: row.slug ?? null,
     stripe_customer_id: row.stripe_customer_id ?? null,
@@ -1871,6 +1871,7 @@ export const updateCompany = createServerFn({ method: "POST" })
       payment_terms?: string | null;
       payment_link?: string | null;
       paint_payment_link?: string | null;
+      payment_links?: { label: string; url: string }[] | null;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -1879,6 +1880,8 @@ export const updateCompany = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can change shop settings.");
+    // Validate before any write (AC 6.3): max 2, label required, https only.
+    const paymentLinks = data.payment_links === undefined ? company.payment_links : normalizePaymentLinks(data.payment_links);
     const name = data.name.trim() || company.name;
     let nextSlug = company.slug;
     if (name !== company.name || !company.slug) {
@@ -1937,7 +1940,8 @@ export const updateCompany = createServerFn({ method: "POST" })
           slug = ${nextSlug},
           payment_terms = ${data.payment_terms === undefined ? company.payment_terms : (data.payment_terms ?? "").trim().slice(0, 80) || null},
           payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)},
-          paint_payment_link = ${data.paint_payment_link === undefined ? company.paint_payment_link : normalizePaymentLink(data.paint_payment_link)}
+          paint_payment_link = ${data.paint_payment_link === undefined ? company.paint_payment_link : normalizePaymentLink(data.paint_payment_link)},
+          payment_links = ${JSON.stringify(paymentLinks)}::jsonb
       where id = ${company.id}
     `;
     if (data.trades !== undefined) {
@@ -7590,14 +7594,7 @@ export const sendInvoiceFn = createServerFn({ method: "POST" })
     )[0];
     let emailed = false;
     if (ctx?.homeowner_email) {
-      const payUrl = invoicePayUrl({
-        proposalPaymentLink: ctx.proposal_link,
-        shopPaymentLink: ctx.shop_link,
-        invoiceNumber: inv.number,
-        amountDue: bundle.totals.amountDue,
-        inviteToken: ctx.invite_token,
-        propertyId: inv.property_id,
-      });
+      const payUrl = bundle.payButtons[0]?.href ?? null;
       try {
         const { deliverInvoiceEmail } = await import("./mail");
         await deliverInvoiceEmail({
@@ -7613,6 +7610,7 @@ export const sendInvoiceFn = createServerFn({ method: "POST" })
             dueDate: inv.due_date,
             amountDue: bundle.totals.amountDue,
             payUrl,
+            payButtons: bundle.payButtons,
             propertyAddress: ctx.address_line ?? "",
           }),
         });
