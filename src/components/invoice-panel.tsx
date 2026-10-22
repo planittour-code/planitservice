@@ -15,6 +15,7 @@ import {
   type InvoiceItemInput,
   type InvoiceStatus,
   type InvoiceSummary,
+  type PayButton,
 } from "@/lib/housefile/invoices";
 import {
   addInvoiceNoteFn,
@@ -32,6 +33,32 @@ export function InvoiceBadge({ status }: { status: InvoiceStatus }) {
   const variant =
     status === "paid" ? "muted" : status === "void" ? "outline" : status === "partially_paid" ? "warning" : "default";
   return <Badge variant={variant}>{invoiceStatusLabel(status)}</Badge>;
+}
+
+/**
+ * Pay buttons (Sprint 1 #6): "Pay {Shop} online" + the direct-to-shop disclaimer.
+ * Opening a link never changes status; the shop marks paid (5.3). Falls back
+ * to payment-terms text when no link resolves (6.4).
+ */
+export function PayButtons({ buttons, shopName }: { buttons: PayButton[]; shopName: string }) {
+  if (!buttons.length) {
+    return <p className="text-sm text-muted-foreground">Contact {shopName} for payment terms.</p>;
+  }
+  return (
+    <div className="space-y-1" data-testid="invoice-pay-buttons">
+      <div className="flex flex-wrap gap-2">
+        {buttons.map((b) => (
+          <Button key={b.href} asChild>
+            <a href={b.href} target="_blank" rel="noopener noreferrer">
+              {b.label}
+              {b.via ? <span className="ml-1 opacity-80">({b.via})</span> : null}
+            </a>
+          </Button>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">{buttons[0]!.disclaimer}</p>
+    </div>
+  );
 }
 
 const fail = (error: unknown) => toast.error(error instanceof Error ? error.message : "Something went wrong");
@@ -263,7 +290,12 @@ export function InvoicePanel({ workOrderId, workOrderStatus }: { workOrderId: st
         </div>
       ) : null}
 
-      <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(bundle.shopName)}</p>
+      {inv.status === "sent" || inv.status === "partially_paid" ? (
+        <PayButtons buttons={bundle.payButtons} shopName={bundle.shopName} />
+      ) : null}
+      {bundle.payButtons.length ? null : (
+        <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(bundle.shopName)}</p>
+      )}
     </section>
   );
 }
@@ -292,7 +324,12 @@ export function PropertyInvoices({ propertyId }: { propertyId: string }) {
               Total {money(r.total)} · Amount due {money(r.amountDue)}
               {r.due_date ? ` · Due ${shortDate(r.due_date)}` : ""}
             </p>
-            <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(r.shopName)}</p>
+            {r.status === "sent" || r.status === "partially_paid" ? (
+              <PayButtons buttons={r.payButtons} shopName={r.shopName} />
+            ) : null}
+            {r.payButtons.length ? null : (
+              <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(r.shopName)}</p>
+            )}
           </li>
         ))}
       </ul>
