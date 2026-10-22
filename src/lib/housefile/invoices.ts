@@ -23,7 +23,6 @@ import {
   normalizePaymentLink,
   paymentInvoiceNumber,
   resolveInvoicePaymentLink,
-  storedPaymentLinks,
 } from "./payment";
 import { workForTemplate } from "./quote";
 
@@ -101,8 +100,6 @@ export type InvoiceTotals = { total: number; paid: number; amountDue: number };
 export type PayButton = {
   /** "Pay {Shop} online" (Counsel 6.7). */
   label: string;
-  /** Shop's own name for the link, e.g. "Card or ACH"; null for the routed link. */
-  via: string | null;
   href: string;
   /** "Payments go directly to {Shop}..." shown under every button. */
   disclaimer: string;
@@ -117,8 +114,8 @@ export type InvoiceBundle = {
   totals: InvoiceTotals;
   /** Display lines for the payment history ("Marked paid by {Shop} on {date}"). */
   history: string[];
-  /** Pay buttons (Sprint 1 #6). Empty when nothing resolves or nothing is due. */
-  payButtons: PayButton[];
+  /** The one Pay button (Sprint 1 #6, 6.1 ruling); null when no link resolves or nothing is due. */
+  payButton: PayButton | null;
 };
 
 /** Who is looking. The shop passes companyId; homeowner/PM pass userId. */
@@ -137,16 +134,22 @@ export function invoiceSeqLabel(seq: number): string {
   return `INV-${String(seq).padStart(4, "0")}`;
 }
 
-export function invoiceStatusLabel(status: InvoiceStatus): string {
+/**
+ * Status label for one viewer (Counsel): the issuing shop sees "Paid" /
+ * "Partially paid"; homeowner- and PM-facing views see "Marked paid" /
+ * "Partially marked paid", because PlanitService never verifies a payment.
+ */
+export function invoiceStatusLabel(status: InvoiceStatus, viewer: InvoiceViewer["kind"] = "shop"): string {
+  const outside = viewer !== "shop";
   switch (status) {
     case "draft":
       return "Draft";
     case "sent":
       return "Sent";
     case "partially_paid":
-      return "Partially paid";
+      return outside ? "Partially marked paid" : "Partially paid";
     case "paid":
-      return "Paid";
+      return outside ? "Marked paid" : "Paid";
     case "void":
       return "Void";
   }
@@ -512,7 +515,7 @@ async function bundle(sql: Sql, invoice: Invoice, includeEvents: boolean): Promi
     events,
     totals,
     history: paymentHistoryLines(name, payments),
-    payButtons: await payButtonsFor(sql, invoice, name, totals.amountDue),
+    payButton: await payButtonFor(sql, invoice, name, totals.amountDue),
   };
 }
 
@@ -588,7 +591,7 @@ export type InvoiceSummary = {
   due_date: string | null;
   total: number;
   amountDue: number;
-  payButtons: PayButton[];
+  payButton: PayButton | null;
 };
 
 /**
@@ -623,7 +626,7 @@ export async function listInvoicesForProperty(
       due_date: b.invoice.due_date,
       total: b.totals.total,
       amountDue: b.totals.amountDue,
-      payButtons: b.payButtons,
+      payButton: b.payButton,
     });
   }
   return out;
@@ -632,12 +635,13 @@ export async function listInvoicesForProperty(
 // ---------------------------------------------------------------- pay buttons (#6)
 
 /**
- * Pure: the Pay buttons for an invoice. The routed link (AC 6.2) comes first,
- * then the shop's up-to-2 generic links, deduped. Every href is the issuing
- * shop's own; MX links get the plain amount due prefilled (no fee, 6.9).
- * Only for sent / partially paid invoices with something due (6.4).
+ * Pure: the single Pay button for an invoice (6.1 ruling: one button). The
+ * link is the AC 6.2 resolution (proposal link, else the issuing shop's
+ * gutters/paint routing), always the issuing shop's own; MX links get the
+ * plain amount due prefilled (no fee, 6.9). Only for sent / partially paid
+ * invoices with something due (6.4).
  */
-export function invoicePayButtons(input: {
+export function invoicePayButton(input: {
   status: InvoiceStatus;
   shopName: string;
   amountDue: number;
@@ -645,44 +649,32 @@ export function invoicePayButtons(input: {
   propertyId: string;
   inviteToken?: string | null;
   routedLink: string | null;
-  genericLinks: { label: string; url: string }[];
-}): PayButton[] {
-  if (input.status !== "sent" && input.status !== "partially_paid") return [];
-  if (input.amountDue <= 0) return [];
+}): PayButton | null {
+  if (input.status !== "sent" && input.status !== "partially_paid") return null;
+  if (input.amountDue <= 0) return null;
+  const base = normalizePaymentLink(input.routedLink);
+  if (!base) return null;
   const code = customerCode(input.inviteToken || input.propertyId);
-  const prefill = (base: string) =>
-    mxPaymentUrl(base, {
-      amount: input.amountDue,
-      invoiceNumber: input.invoiceNumber,
-      customerCode: code,
-      memo: `Customer ${code} · invoice ${input.invoiceNumber}`,
-    });
-  const out: PayButton[] = [];
-  const seen = new Set<string>();
-  const push = (url: string | null, via: string | null) => {
-    const base = normalizePaymentLink(url);
-    if (!base || seen.has(base)) return;
-    seen.add(base);
-    const href = prefill(base);
-    if (href) out.push({ label: payShopOnlineLabel(input.shopName), via, href, disclaimer: invoiceNoProcessingLine(input.shopName) });
-  };
-  push(input.routedLink, null);
-  for (const link of input.genericLinks.slice(0, 2)) push(link.url, link.label);
-  return out;
+  const href = mxPaymentUrl(base, {
+    amount: input.amountDue,
+    invoiceNumber: input.invoiceNumber,
+    customerCode: code,
+    memo: `Customer ${code} · invoice ${input.invoiceNumber}`,
+  });
+  if (!href) return null;
+  return { label: payShopOnlineLabel(input.shopName), href, disclaimer: invoiceNoProcessingLine(input.shopName) };
 }
 
-async function payButtonsFor(sql: Sql, invoice: Invoice, name: string, amountDue: number): Promise<PayButton[]> {
+async function payButtonFor(sql: Sql, invoice: Invoice, name: string, amountDue: number): Promise<PayButton | null> {
   // Only the invoice's own proposal and own company row (AC 6.8).
   const rows = await sql<{
     proposal_link: string | null;
     template_id: string | null;
     payment_link: string | null;
     paint_payment_link: string | null;
-    payment_links: unknown;
     invite_token: string | null;
   }>`
-    select pr.payment_link as proposal_link, pr.template_id, c.payment_link, c.paint_payment_link, c.payment_links,
-      p.invite_token
+    select pr.payment_link as proposal_link, pr.template_id, c.payment_link, c.paint_payment_link, p.invite_token
     from invoices i
     join proposals pr on pr.id = i.proposal_id and pr.company_id = i.company_id
     join companies c on c.id = i.company_id
@@ -691,8 +683,8 @@ async function payButtonsFor(sql: Sql, invoice: Invoice, name: string, amountDue
     limit 1
   `;
   const r = rows[0];
-  if (!r) return [];
-  return invoicePayButtons({
+  if (!r) return null;
+  return invoicePayButton({
     status: invoice.status,
     shopName: name,
     amountDue,
@@ -704,7 +696,6 @@ async function payButtonsFor(sql: Sql, invoice: Invoice, name: string, amountDue
       workId: r.template_id ? workForTemplate(r.template_id)?.id : null,
       shop: r,
     }),
-    genericLinks: storedPaymentLinks(r.payment_links),
   });
 }
 
@@ -719,16 +710,13 @@ export function renderInvoiceText(input: {
   amountDue: number;
   payUrl: string | null;
   propertyAddress: string;
-  payButtons?: PayButton[];
 }): string {
   const lines = [
     `Invoice ${invoiceSeqLabel(input.seq)} (# ${input.number}) from ${input.shopName}`,
     `Property: ${input.propertyAddress}`,
     `Amount due: $${input.amountDue.toFixed(2)}`,
     input.dueDate ? `Due: ${longDate(input.dueDate)}` : null,
-    ...(input.payButtons?.length
-      ? input.payButtons.map((b) => `${b.label}${b.via ? ` (${b.via})` : ""}: ${b.href}`)
-      : [input.payUrl ? `${payShopOnlineLabel(input.shopName)}: ${input.payUrl}` : `Contact ${input.shopName} for payment terms.`]),
+    input.payUrl ? `${payShopOnlineLabel(input.shopName)}: ${input.payUrl}` : `Contact ${input.shopName} for payment terms.`,
     "",
     invoiceNoProcessingLine(input.shopName),
   ];

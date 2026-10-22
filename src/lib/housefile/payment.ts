@@ -48,70 +48,55 @@ export function paymentSchedule(total: number, terms: string | null | undefined)
   ];
 }
 
+/** Bare host gets https://; anything with a scheme is left as typed. */
+function withScheme(raw: string) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+}
+
 /**
- * Normalize a shop-entered payment link (AC 6.3). https only: a bare host gets
- * https://, any other scheme (http:, javascript:, data:, mailto:, ...) is
- * rejected as null. Existing https links come back byte-identical.
+ * Render-time payment link. http and https both render, byte-identical to what
+ * is stored, so links saved before the https rule keep their Pay button
+ * (grandfathered, never auto-upgraded). javascript:, data:, mailto: and any
+ * other scheme never render. Returns null when nothing usable is stored.
  */
 export function normalizePaymentLink(value: string | null | undefined) {
   const raw = value?.trim() ?? "";
   if (!raw) return null;
-  const href = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
-  if (!/^https:\/\//i.test(href)) return null;
+  const href = withScheme(raw);
   try {
     const url = new URL(href);
-    if (url.protocol !== "https:" || !url.hostname.includes(".")) return null;
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || !url.hostname) return null;
   } catch {
     return null;
   }
   return href;
 }
 
-export const MAX_PAYMENT_LINKS = 2;
-export type ShopPaymentLink = { label: string; url: string };
+/** Client and server check for a NEW or edited link (AC 6.3): https only. */
+export function isHttpsPaymentLink(value: string | null | undefined) {
+  const href = normalizePaymentLink(value);
+  if (!href) return false;
+  const url = new URL(href);
+  return url.protocol === "https:" && url.hostname.includes(".");
+}
 
 /**
- * Validate the generic payment links from shop settings. Throws on more than
- * 2, a missing label, or a URL that is not https. Blank rows are dropped.
+ * Save-time validation (AC 6.3). Blank clears the link. A value equal to one
+ * already stored for this shop/estimate is not an edit, so it is kept exactly
+ * as stored even if it is http (no rewrite, no upgrade). Anything newly
+ * entered or edited must be https, else this throws before any write.
  */
-export function normalizePaymentLinks(input: unknown): ShopPaymentLink[] {
-  if (input == null) return [];
-  if (!Array.isArray(input)) throw new Error("Payment links must be a list");
-  const rows = input
-    .map((row) => ({
-      label: String((row as { label?: unknown })?.label ?? "").trim(),
-      url: String((row as { url?: unknown })?.url ?? "").trim(),
-    }))
-    .filter((row) => row.label || row.url);
-  if (rows.length > MAX_PAYMENT_LINKS) throw new Error(`Up to ${MAX_PAYMENT_LINKS} payment links`);
-  return rows.map((row) => {
-    if (!row.label) throw new Error("Each payment link needs a label");
-    const url = normalizePaymentLink(row.url);
-    if (!url) throw new Error(`"${row.label}" needs a valid https:// link`);
-    return { label: row.label.slice(0, 40), url };
-  });
-}
-
-/** Read stored links defensively (never throws; drops anything invalid). */
-export function storedPaymentLinks(value: unknown): ShopPaymentLink[] {
-  const list = typeof value === "string" ? safeJson(value) : value;
-  if (!Array.isArray(list)) return [];
-  const out: ShopPaymentLink[] = [];
-  for (const row of list) {
-    const label = String((row as { label?: unknown })?.label ?? "").trim();
-    const url = normalizePaymentLink(String((row as { url?: unknown })?.url ?? ""));
-    if (label && url) out.push({ label, url });
-    if (out.length === MAX_PAYMENT_LINKS) break;
-  }
-  return out;
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
+export function acceptPaymentLink(
+  input: string | null | undefined,
+  stored: (string | null | undefined)[],
+  field = "Payment link",
+): string | null {
+  const raw = input?.trim() ?? "";
+  if (!raw) return null;
+  const same = stored.find((v) => v != null && v.trim() === raw);
+  if (same != null) return same;
+  if (!isHttpsPaymentLink(raw)) throw new Error(`${field} must be a valid https:// link`);
+  return withScheme(raw);
 }
 
 /** Alphabetic house code from the Property Record invite. MX Merchant invoice numbers stay numeric. */

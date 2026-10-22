@@ -27,8 +27,6 @@ export type Company = {
   payment_terms: string | null;
   payment_link: string | null;
   paint_payment_link: string | null;
-  /** Up to 2 generic links (label + https URL), Sprint 1 #6. */
-  payment_links: { label: string; url: string }[];
   kits_seeded_at: string | null;
   slug: string | null;
   stripe_customer_id: string | null;
