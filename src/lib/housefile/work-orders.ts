@@ -1,6 +1,7 @@
 /**
- * Work orders (Sprint 1 #4). One WO per proposal, created when the estimate is
- * accepted and kept in sync with the legacy proposal columns:
+ * Work orders (Sprint 1 #4). One WO per proposal, opened by the shop with
+ * "Create work order" once the estimate is accepted (accept itself never
+ * creates one), and kept in sync with the legacy proposal columns:
  *
  *   WO start_date   <-> proposals.scheduled_on
  *   WO in_progress   -> proposals.started_work_at (first time only)
@@ -10,7 +11,7 @@
  * on accept (writeAcceptedWorkToFiles in server.ts).
  *
  * Every read and write is scoped by company_id. Keep this module free of
- * "@/..." imports so scripts (backfill, tests) can load it with plain Node.
+ * "@/..." imports so tests can load it with plain Node.
  */
 import type { Sql } from "../db";
 
@@ -23,12 +24,12 @@ export type WorkOrder = {
   property_id: string;
   proposal_id: string;
   number: number;
-  assignee: string | null;
-  assignee_member_id: string | null;
+  assignee_email: string | null;
   start_date: string | null;
   end_date: string | null;
   status: WorkOrderStatus;
   notes: string | null;
+  show_prices: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -57,7 +58,7 @@ export type WorkOrderEvent = {
   work_order_id: string;
   company_id: string;
   actor: string;
-  kind: "created" | "status" | "updated";
+  kind: "created" | "status" | "updated" | "notified" | "notify_failed";
   from_status: WorkOrderStatus | null;
   to_status: WorkOrderStatus | null;
   detail: string | null;
@@ -126,6 +127,21 @@ function isoDate(value: string | null | undefined): string | null {
   return s;
 }
 
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/** Trim + lowercase; null for blank. Throws on a malformed address. */
+export function normalizeAssigneeEmail(value: string | null | undefined): string | null {
+  const s = (value ?? "").trim().toLowerCase();
+  if (!s) return null;
+  if (s.length > 254 || !EMAIL_RE.test(s)) throw new Error("Enter a valid email for the assignee.");
+  return s;
+}
+
+export function isValidAssigneeEmail(value: string): boolean {
+  const s = value.trim().toLowerCase();
+  return s === "" || (s.length <= 254 && EMAIL_RE.test(s));
+}
+
 function hydrate(row: WorkOrder): WorkOrder {
   return {
     ...row,
@@ -152,8 +168,8 @@ async function logEvent(
 
 /**
  * Create the WO for an accepted/completed proposal, or return the one that
- * exists. Idempotent: proposal_id is UNIQUE, so a repeat (double accept,
- * backfill re-run, "Create work order" click) never makes a second.
+ * exists. Idempotent: proposal_id is UNIQUE, so a repeat "Create work order"
+ * click (or a race between two) never makes a second.
  * Returns null when the proposal is not sold yet.
  */
 export async function ensureWorkOrder(
@@ -324,8 +340,9 @@ export async function setWorkOrderStatus(
 }
 
 /**
- * Legacy "mark job complete" entry point (completeProposal). Makes sure the WO
- * exists and lands on complete, so the proposal and WO agree.
+ * Legacy "mark job complete" entry point (completeProposal). If the shop has
+ * opened a WO it lands on complete, so the proposal and WO agree. No WO is
+ * created here (WOs are only opened by the shop); returns null when none.
  */
 export async function completeWorkOrderForProposal(
   sql: Sql,
@@ -333,10 +350,11 @@ export async function completeWorkOrderForProposal(
   proposalId: string,
   actor: string,
 ): Promise<WorkOrder | null> {
-  const ensured = await ensureWorkOrder(sql, proposalId, actor);
-  if (!ensured) return null;
-  const wo = ensured.workOrder;
-  if (wo.company_id !== companyId) throw new Error("Work order not found");
+  const rows = await sql<WorkOrder>`
+    select * from work_orders where proposal_id = ${proposalId} and company_id = ${companyId} limit 1
+  `;
+  if (!rows[0]) return null;
+  const wo = hydrate(rows[0]);
   if (wo.status === "cancelled") throw new Error("This work order was cancelled.");
   if (wo.status === "complete") {
     await sql`update proposals set status = ${"completed"} where id = ${proposalId} and company_id = ${companyId}`;
@@ -346,59 +364,211 @@ export async function completeWorkOrderForProposal(
 }
 
 export type WorkOrderPatch = {
-  assignee?: string | null;
-  assigneeMemberId?: string | null;
+  assigneeEmail?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   notes?: string | null;
+  /** Worker-facing renders include prices + total when true. Never triggers a resend. */
+  showPrices?: boolean;
 };
 
-/** Edit assignee, dates, notes. Start date mirrors to proposals.scheduled_on. */
+/**
+ * Assignment email (AC 4.3a). The worker needs no account: the email is plain
+ * info with no link. Content is shop name, property address, WO number, dates,
+ * and a line-item summary (name, qty/unit, description). Prices and the total
+ * appear only when the shop turned on the WO's show_prices toggle; off (the
+ * default) is price-free per 4.3a. Homeowner name/email/phone never appear.
+ */
+export type WorkOrderAssignmentEmail = {
+  to: string;
+  shopName: string;
+  shopReplyTo: string | null;
+  workOrderId: string;
+  subject: string;
+  text: string;
+  html: string;
+};
+
+/** Sends one assignment email. Server wires this to mail.ts; tests mock it. */
+export type AssignmentNotifier = (email: WorkOrderAssignmentEmail) => Promise<void>;
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function longDate(day: string | null): string {
+  if (!day) return "Not set";
+  const d = new Date(`${day}T12:00:00Z`);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** Pure renderer. Takes only the fields allowed in the email. */
+export function renderWorkOrderAssignmentEmail(input: {
+  to: string;
+  shopName: string;
+  shopReplyTo: string | null;
+  workOrderId: string;
+  number: number;
+  address: string;
+  startDate: string | null;
+  endDate: string | null;
+  showPrices?: boolean;
+  items: { name: string; qty: number; unit: string; description: string | null; unit_price?: number }[];
+}): WorkOrderAssignmentEmail {
+  const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const priced = input.showPrices === true;
+  const total = input.items.reduce((sum, i) => sum + Number(i.qty) * Number(i.unit_price ?? 0), 0);
+  const label = workOrderNumberLabel(input.number);
+  const subject = `${input.shopName} assigned you ${label} at ${input.address}`;
+  const lines = input.items.map((i) => {
+    const qty = `${Number(i.qty)} ${i.unit}`.trim();
+    const desc = i.description?.trim();
+    const price = priced ? ` - ${usd(Number(i.qty) * Number(i.unit_price ?? 0))}` : "";
+    return { head: `${i.name} (${qty})${price}`, desc: desc || null };
+  });
+  const text = [
+    `${input.shopName} assigned you work order ${label}.`,
+    "",
+    `Property: ${input.address}`,
+    `Start: ${longDate(input.startDate)}`,
+    `End: ${longDate(input.endDate)}`,
+    "",
+    "Work:",
+    ...(lines.length
+      ? lines.flatMap((l) => [`- ${l.head}`, ...(l.desc ? [`  ${l.desc}`] : [])])
+      : ["- See the shop for details"]),
+    ...(priced ? ["", `Total: ${usd(total)}`] : []),
+    "",
+    `Questions? Reply to this email to reach ${input.shopName}.`,
+  ].join("\n");
+  const html = `<p>${escapeHtml(input.shopName)} assigned you work order <strong>${escapeHtml(label)}</strong>.</p>
+<p>Property: ${escapeHtml(input.address)}<br>Start: ${escapeHtml(longDate(input.startDate))}<br>End: ${escapeHtml(longDate(input.endDate))}</p>
+<p><strong>Work</strong></p>
+<ul>${
+    lines.length
+      ? lines
+          .map((l) => `<li>${escapeHtml(l.head)}${l.desc ? `<br><span>${escapeHtml(l.desc)}</span>` : ""}</li>`)
+          .join("")
+      : "<li>See the shop for details</li>"
+  }</ul>${priced ? `\n<p><strong>Total: ${escapeHtml(usd(total))}</strong></p>` : ""}
+<p>Questions? Reply to this email to reach ${escapeHtml(input.shopName)}.</p>`;
+  return {
+    to: input.to,
+    shopName: input.shopName,
+    shopReplyTo: input.shopReplyTo,
+    workOrderId: input.workOrderId,
+    subject,
+    text,
+    html,
+  };
+}
+
+async function buildAssignmentEmail(sql: Sql, wo: WorkOrder, to: string): Promise<WorkOrderAssignmentEmail> {
+  const shop = (
+    await sql<{ name: string; email: string | null }>`
+      select name, email from companies where id = ${wo.company_id} limit 1
+    `
+  )[0];
+  // Address columns only; never the homeowner's name, email or phone.
+  const prop = (
+    await sql<{ address_line: string; city: string; state: string; zip: string }>`
+      select address_line, city, state, zip from properties
+      where id = ${wo.property_id} and company_id = ${wo.company_id} limit 1
+    `
+  )[0];
+  const items = await sql<{ name: string; qty: number; unit: string; description: string | null; unit_price: number }>`
+    select name, qty, unit, description, unit_price from work_order_items
+    where work_order_id = ${wo.id} order by sort_order, name
+  `;
+  return renderWorkOrderAssignmentEmail({
+    to,
+    shopName: shop?.name ?? "Your contractor",
+    shopReplyTo: shop?.email ?? null,
+    workOrderId: wo.id,
+    number: wo.number,
+    address: prop ? `${prop.address_line}, ${prop.city}, ${prop.state} ${prop.zip}` : "",
+    startDate: wo.start_date,
+    endDate: wo.end_date,
+    showPrices: wo.show_prices === true,
+    items,
+  });
+}
+
+/**
+ * Send the assignment email iff the assignee moved to a different address
+ * (first set counts). Never throws: a mail failure is logged, not surfaced,
+ * so the WO save stands. Each attempt is recorded in the activity log.
+ */
+async function notifyAssigneeIfChanged(
+  sql: Sql,
+  wo: WorkOrder,
+  previousEmail: string | null,
+  actor: string,
+  notify: AssignmentNotifier | undefined,
+): Promise<void> {
+  const to = wo.assignee_email;
+  if (!notify || !to || to === previousEmail) return;
+  try {
+    const email = await buildAssignmentEmail(sql, wo, to);
+    await notify(email);
+    await logEvent(sql, wo, actor, "notified", null, null, `Assignment email sent to ${to}`);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    try {
+      await logEvent(sql, wo, actor, "notify_failed", null, null, `Assignment email to ${to} failed: ${reason.slice(0, 300)}`);
+    } catch {
+      // logging must not undo the save either
+    }
+  }
+}
+
+/** Edit assignee email, dates, notes. Emails a newly assigned worker (4.3a). Start date mirrors to proposals.scheduled_on. */
 export async function updateWorkOrderFields(
   sql: Sql,
   companyId: string,
   workOrderId: string,
   patch: WorkOrderPatch,
   actor: string,
+  opts: { notify?: AssignmentNotifier } = {},
 ): Promise<WorkOrder> {
   const wo = await ownedWorkOrder(sql, companyId, workOrderId);
   if (wo.status === "complete" || wo.status === "cancelled") {
     throw new Error("This work order is closed.");
   }
-  let assigneeMemberId = wo.assignee_member_id;
-  let assignee = wo.assignee;
-  if (patch.assigneeMemberId !== undefined) {
-    assigneeMemberId = patch.assigneeMemberId || null;
-    if (assigneeMemberId) {
-      const member = await sql<{ id: string; email: string }>`
-        select id, email from company_members where id = ${assigneeMemberId} and company_id = ${companyId} limit 1
-      `;
-      if (!member[0]) throw new Error("Pick someone on your team.");
-      if (patch.assignee === undefined) assignee = member[0].email;
-    }
-  }
-  if (patch.assignee !== undefined) assignee = patch.assignee?.trim() || null;
-  if (assignee && assignee.length > 120) throw new Error("Keep the assignee under 120 characters.");
+  const assignee =
+    patch.assigneeEmail !== undefined ? normalizeAssigneeEmail(patch.assigneeEmail) : wo.assignee_email;
   const startDate = patch.startDate !== undefined ? isoDate(patch.startDate) : wo.start_date;
   const endDate = patch.endDate !== undefined ? isoDate(patch.endDate) : wo.end_date;
   if (startDate && endDate && endDate < startDate) throw new Error("End date is before the start date.");
   const notes = patch.notes !== undefined ? patch.notes?.trim() || null : wo.notes;
   if (notes && notes.length > 4000) throw new Error("Keep notes under 4,000 characters.");
+  const showPrices = patch.showPrices !== undefined ? patch.showPrices === true : wo.show_prices === true;
 
   const changes: string[] = [];
-  if (assignee !== wo.assignee || assigneeMemberId !== wo.assignee_member_id) {
+  if (assignee !== wo.assignee_email) {
     changes.push(`assignee: ${assignee ?? "none"}`);
   }
   if (startDate !== wo.start_date) changes.push(`start: ${startDate ?? "none"}`);
   if (endDate !== wo.end_date) changes.push(`end: ${endDate ?? "none"}`);
   if (notes !== wo.notes) changes.push("notes");
+  if (showPrices !== (wo.show_prices === true)) changes.push(showPrices ? "prices shown to worker" : "prices hidden from worker");
   if (changes.length === 0) return wo;
 
   const updated = await sql<WorkOrder>`
     update work_orders
-    set assignee = ${assignee}, assignee_member_id = ${assigneeMemberId},
+    set assignee_email = ${assignee},
         start_date = ${startDate}::date, end_date = ${endDate}::date,
-        notes = ${notes}, updated_at = now()
+        notes = ${notes}, show_prices = ${showPrices}, updated_at = now()
     where id = ${wo.id} and company_id = ${companyId}
     returning *
   `;
@@ -409,7 +579,9 @@ export async function updateWorkOrderFields(
     `;
   }
   await logEvent(sql, wo, actor, "updated", null, null, `Changed ${changes.join(", ")}`);
-  return hydrate(updated[0]!);
+  const saved = hydrate(updated[0]!);
+  await notifyAssigneeIfChanged(sql, saved, wo.assignee_email, actor, opts.notify);
+  return saved;
 }
 
 /** Legacy schedule path (scheduleSoldEstimate) mirrors into the WO. */

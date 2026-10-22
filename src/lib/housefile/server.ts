@@ -10,6 +10,8 @@ import {
   updateWorkOrderFields,
   workOrderStatusForProposal,
   type WorkOrderBundle,
+  normalizeAssigneeEmail,
+  type AssignmentNotifier,
   type WorkOrderPatch,
   type WorkOrderPublicStatus as WorkOrderPublicStatusLite,
 } from "./work-orders";
@@ -2668,7 +2670,7 @@ export const completeProposal = createServerFn({ method: "POST" })
     await withTransaction(async (tx) => {
       // Idempotent: filing already happened on accept; this never adds a second row.
       await writeAcceptedWorkToFiles(tx, proposal);
-      // One action: proposal -> completed and WO -> complete together.
+      // One action: proposal -> completed and, if the shop opened one, WO -> complete.
       await completeWorkOrderForProposal(tx, company.id, proposal.id, actor);
       await tx`update proposals set status = ${"completed"} where id = ${proposal.id} and company_id = ${company.id}`;
     });
@@ -3281,10 +3283,6 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
       throw new Error("Resolve the open notes before this estimate can be accepted.");
     }
     const already = rows[0].status === "accepted" || rows[0].status === "completed";
-    const { stampComplimentaryWindow } = await import("./booking");
-    // Accept, file the job (0031), and open the work order in ONE transaction:
-    // either all land or none do.
-    const proposal = await withTransaction(async (sql) => {
     if (!already) {
       const hold = sundayOfWeek();
       const started = new Date();
@@ -3296,6 +3294,7 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
             scheduled_on = coalesce(scheduled_on, ${hold}::date)
         where id = ${rows[0].id}
       `;
+      const { stampComplimentaryWindow } = await import("./booking");
       await stampComplimentaryWindow(sql, rows[0].property_id, started);
       await sql`
         update proposal_items
@@ -3303,11 +3302,8 @@ export const acceptProposalPublic = createServerFn({ method: "POST" })
         where proposal_id = ${rows[0].id} and included = true
       `;
     }
-    const accepted = (await sql<Proposal>`select * from proposals where id = ${rows[0].id}`)[0]!;
-    await writeAcceptedWorkToFiles(sql, accepted);
-    await ensureWorkOrder(sql, accepted.id, "Homeowner (accepted estimate)");
-    return accepted;
-    });
+    const proposal = (await sql<Proposal>`select * from proposals where id = ${rows[0].id}`)[0]!;
+    await writeAcceptedWorkToFiles(sql, proposal);
     const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0]!;
     const company = asCompany(
       (await sql<Company>`select * from companies where id = ${proposal.company_id}`)[0]!,
@@ -7439,23 +7435,44 @@ export const getWorkOrderForProposal = createServerFn({ method: "GET" })
     return loadWorkOrderForProposal(sql, company.id, proposalId);
   });
 
-/** "Create work order": idempotent, never makes a second WO for a proposal. */
+/** Assignment email via the shop's normal sender (mail.ts). Plain info, no link. */
+const sendAssignmentEmail: AssignmentNotifier = async (email) => {
+  const { deliverWorkOrderAssignmentEmail } = await import("./mail");
+  await deliverWorkOrderAssignmentEmail(email);
+};
+
+/**
+ * "Create work order" (manual only, AC 4.1): idempotent, never makes a second
+ * WO for a proposal. Optional assignee/dates apply only when this call created
+ * the WO; a duplicate click returns the existing WO untouched.
+ */
 export const createWorkOrder = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { proposalId: string }) => input)
+  .validator((input: { proposalId: string; patch?: Pick<WorkOrderPatch, "assigneeEmail" | "startDate" | "endDate"> }) => {
+    // Fail before anything is created.
+    if (input.patch?.assigneeEmail) normalizeAssigneeEmail(input.patch.assigneeEmail);
+    const { startDate, endDate } = input.patch ?? {};
+    if (startDate && endDate && endDate < startDate) throw new Error("End date is before the start date.");
+    return input;
+  })
   .handler(async ({ context, data }): Promise<WorkOrderBundle> => {
-    const { company, actor } = await shopForWorkOrders(context.userId);
-    return withTransaction(async (tx) => {
+    const { sql, company, actor } = await shopForWorkOrders(context.userId);
+    const made = await withTransaction(async (tx) => {
       const owned = await tx<{ id: string }>`
         select id from proposals where id = ${data.proposalId} and company_id = ${company.id} limit 1
       `;
       if (!owned[0]) throw new Error("Proposal not found");
-      const made = await ensureWorkOrder(tx, data.proposalId, actor);
-      if (!made) throw new Error("Open a work order after the estimate is accepted.");
-      const bundle = await loadWorkOrderForProposal(tx, company.id, data.proposalId);
-      if (!bundle) throw new Error("Work order not found");
-      return bundle;
+      const ensured = await ensureWorkOrder(tx, data.proposalId, actor);
+      if (!ensured) throw new Error("Open a work order after the estimate is accepted.");
+      return ensured;
     });
+    const p = data.patch;
+    if (made.created && p && (p.assigneeEmail || p.startDate || p.endDate)) {
+      await updateWorkOrderFields(sql, company.id, made.workOrder.id, p, actor, { notify: sendAssignmentEmail });
+    }
+    const bundle = await loadWorkOrderForProposal(sql, company.id, data.proposalId);
+    if (!bundle) throw new Error("Work order not found");
+    return bundle;
   });
 
 export const updateWorkOrderStatus = createServerFn({ method: "POST" })
@@ -7473,9 +7490,11 @@ export const updateWorkOrder = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { workOrderId: string; patch: WorkOrderPatch }) => input)
   .handler(async ({ context, data }) => {
-    const { company, actor } = await shopForWorkOrders(context.userId);
-    await withTransaction((tx) =>
-      updateWorkOrderFields(tx, company.id, data.workOrderId, data.patch, actor),
-    );
+    const { sql, company, actor } = await shopForWorkOrders(context.userId);
+    // Not in a transaction: the assignment email is sent after the row saves,
+    // and a mail failure is logged without undoing the save (AC 4.3a).
+    await updateWorkOrderFields(sql, company.id, data.workOrderId, data.patch, actor, {
+      notify: sendAssignmentEmail,
+    });
     return { ok: true as const };
   });

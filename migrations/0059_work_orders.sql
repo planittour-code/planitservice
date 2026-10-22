@@ -1,8 +1,8 @@
 -- Sprint 1 #4: one work order per accepted estimate (proposal).
 -- 0058 is reserved for the parallel search-index PR (feat/search-index).
--- Created inside the accept transaction (acceptProposalPublic); existing
--- accepted/completed proposals are filled by scripts/backfill-work-orders.mjs.
--- Filing to the Property Record (jobs) is unchanged: it still happens on accept.
+-- Opened by the shop ("Create work order") on an accepted/completed estimate;
+-- accept itself does NOT create one. Filing to the Property Record (jobs) is
+-- unchanged: it still happens on accept.
 
 alter table companies add column if not exists work_order_seq int not null default 0;
 
@@ -12,13 +12,16 @@ create table if not exists work_orders (
   property_id text not null references properties(id) on delete cascade,
   proposal_id text not null references proposals(id) on delete cascade,
   number int not null,
-  assignee text,
-  assignee_member_id text references company_members(id) on delete set null,
+  -- The worker, by email (lowercased). Not required to be a company member.
+  assignee_email text
+    check (assignee_email is null or (assignee_email = lower(assignee_email) and assignee_email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$')),
   start_date date,
   end_date date,
   status text not null default 'scheduled'
     check (status in ('scheduled', 'in_progress', 'complete', 'cancelled')),
   notes text,
+  -- Contractor toggle: when true the worker-facing email shows line prices + total.
+  show_prices boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint work_orders_proposal_uniq unique (proposal_id),
