@@ -7,6 +7,8 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { unaccent } from "@electric-sql/pglite/contrib/unaccent";
 import "./ts-resolve.mjs";
 const { ensureWorkOrder } = await import("../src/lib/housefile/work-orders.ts");
 const {
@@ -40,7 +42,7 @@ function toSql(run) {
 }
 
 async function freshDb() {
-  const pg = new PGlite({ parsers: { 20: Number, 1082: (v) => v } });
+  const pg = new PGlite({ parsers: { 20: Number, 1082: (v) => v }, extensions: { pg_trgm, unaccent } });
   await pg.waitReady;
   const dir = join(root, "migrations");
   for (const name of (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort()) {
