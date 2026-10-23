@@ -15,6 +15,24 @@ import {
   type WorkOrderPatch,
   type WorkOrderPublicStatus as WorkOrderPublicStatusLite,
 } from "./work-orders";
+import {
+  addInvoiceNote,
+  ensureInvoiceForWorkOrder,
+  invoiceSeqLabel,
+  listInvoicesForProperty,
+  loadInvoice,
+  loadInvoiceForWorkOrder,
+  markInvoicePaid,
+  markInvoiceSent,
+  renderInvoiceText,
+  retractInvoicePayment,
+  updateDraftInvoice,
+  voidInvoice,
+  type Actor as InvoiceActor,
+  type InvoiceBundle,
+  type InvoicePatch,
+  type InvoiceSummary,
+} from "./invoices";
 import { LEGAL_EMAIL } from "@/lib/legal";
 import { MANAGE_INCLUDED } from "./pricing";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, parseBookPhoto, STARTER_BOOK, type PriceBookItem } from "./book";
@@ -41,7 +59,7 @@ import {
   type ProfileHat,
   type UserProfile,
 } from "./profile";
-import { normalizePaymentLink, shopPaymentLinkForWork } from "./payment";
+import { acceptPaymentLink, shopPaymentLinkForWork } from "./payment";
 import {
   addressKey,
   assertAddressAvailable,
@@ -1860,6 +1878,14 @@ export const updateCompany = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can change shop settings.");
+    // Validate before any write (AC 6.3): new or edited links must be https;
+    // an unchanged stored link (even http) is kept exactly as stored.
+    const paymentLink =
+      data.payment_link === undefined ? company.payment_link : acceptPaymentLink(data.payment_link, [company.payment_link], "Payment link 1");
+    const paintPaymentLink =
+      data.paint_payment_link === undefined
+        ? company.paint_payment_link
+        : acceptPaymentLink(data.paint_payment_link, [company.paint_payment_link], "Payment link 2");
     const name = data.name.trim() || company.name;
     let nextSlug = company.slug;
     if (name !== company.name || !company.slug) {
@@ -1917,8 +1943,8 @@ export const updateCompany = createServerFn({ method: "POST" })
           trades = ${nextTrades},
           slug = ${nextSlug},
           payment_terms = ${data.payment_terms === undefined ? company.payment_terms : (data.payment_terms ?? "").trim().slice(0, 80) || null},
-          payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)},
-          paint_payment_link = ${data.paint_payment_link === undefined ? company.paint_payment_link : normalizePaymentLink(data.paint_payment_link)}
+          payment_link = ${paymentLink},
+          paint_payment_link = ${paintPaymentLink}
       where id = ${company.id}
     `;
     if (data.trades !== undefined) {
@@ -2254,7 +2280,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     if (picked.length === 0 && allowed.size) picked.push([...allowed][0]!);
     const paymentLink = data.paymentLink === undefined
       ? shopPaymentLinkForWork(work?.id, company)
-      : normalizePaymentLink(data.paymentLink);
+      : acceptPaymentLink(data.paymentLink, [company.payment_link, company.paint_payment_link]);
     await sql`
       insert into proposals (
         id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, created_by, payment_link, sales_emails
@@ -2496,8 +2522,16 @@ export const updateProposalMeta = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company } = await requirePaidShop(sql, context.userId, session?.email);
-    const paymentLink =
-      data.paymentLink === undefined ? undefined : normalizePaymentLink(data.paymentLink);
+    let paymentLink: string | null | undefined;
+    if (data.paymentLink !== undefined) {
+      // Stored values for this estimate and its own shop are not edits (grandfathered).
+      const current = (
+        await sql<{ payment_link: string | null }>`
+          select payment_link from proposals where id = ${data.id} and company_id = ${company.id}
+        `
+      )[0];
+      paymentLink = acceptPaymentLink(data.paymentLink, [current?.payment_link, company.payment_link, company.paint_payment_link]);
+    }
     const salesEmails =
       data.salesEmails === undefined ? undefined : joinSalesEmails(data.salesEmails);
     if (data.coverPhoto !== undefined) {
@@ -7497,4 +7531,167 @@ export const updateWorkOrder = createServerFn({ method: "POST" })
       notify: sendAssignmentEmail,
     });
     return { ok: true as const };
+  });
+
+// ---------------------------------------------------------------------------
+// Invoices (Sprint 1 #5). Shop writes are scoped to the caller's company_id.
+// Homeowners and entitled PMs read through listPropertyInvoices / getInvoiceView.
+// No payment processing; "Mark paid" is a manual, append-only record.
+
+async function shopForInvoices(userId: string) {
+  const { sql, company, actor } = await shopForWorkOrders(userId);
+  return { sql, company, actor: { userId, label: actor } as InvoiceActor };
+}
+
+export const getInvoiceForWorkOrder = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((workOrderId: string) => workOrderId)
+  .handler(async ({ context, data: workOrderId }): Promise<InvoiceBundle | null> => {
+    const { sql, company } = await shopForInvoices(context.userId);
+    return loadInvoiceForWorkOrder(sql, company.id, workOrderId);
+  });
+
+export const createInvoiceFromWorkOrder = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { workOrderId: string; dueDate?: string | null }) => input)
+  .handler(async ({ context, data }): Promise<InvoiceBundle> => {
+    const { sql, company, actor } = await shopForInvoices(context.userId);
+    await withTransaction((tx) =>
+      ensureInvoiceForWorkOrder(tx, company.id, data.workOrderId, actor, { dueDate: data.dueDate ?? null }),
+    );
+    const bundle = await loadInvoiceForWorkOrder(sql, company.id, data.workOrderId);
+    if (!bundle) throw new Error("Invoice not found");
+    return bundle;
+  });
+
+export const updateInvoiceDraftFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; patch: InvoicePatch }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    await withTransaction((tx) => updateDraftInvoice(tx, company.id, data.invoiceId, data.patch, actor));
+    return { ok: true as const };
+  });
+
+/**
+ * Draft → Sent, then email the homeowner (if the record has an email) from the
+ * shop's normal sender. A mail failure does not undo the status change.
+ */
+export const sendInvoiceFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((invoiceId: string) => invoiceId)
+  .handler(async ({ context, data: invoiceId }) => {
+    const { sql, company, actor } = await shopForInvoices(context.userId);
+    const inv = await withTransaction((tx) => markInvoiceSent(tx, company.id, invoiceId, actor));
+    const bundle = await loadInvoice(sql, { kind: "shop", companyId: company.id }, inv.id);
+    const ctx = (
+      await sql<{
+        homeowner_email: string | null;
+        address_line: string | null;
+        invite_token: string | null;
+        proposal_link: string | null;
+        shop_link: string | null;
+        shop_email: string | null;
+      }>`
+        select p.homeowner_email, p.address_line, p.invite_token,
+          pr.payment_link as proposal_link, c.payment_link as shop_link, c.email as shop_email
+        from invoices i
+        join properties p on p.id = i.property_id
+        join proposals pr on pr.id = i.proposal_id and pr.company_id = i.company_id
+        join companies c on c.id = i.company_id
+        where i.id = ${inv.id} and i.company_id = ${company.id}
+        limit 1
+      `
+    )[0];
+    let emailed = false;
+    if (ctx?.homeowner_email) {
+      // Same single button as the invoice view (6.1 ruling / 6.2 resolution).
+      const payUrl = bundle.payButton?.href ?? null;
+      try {
+        const { deliverInvoiceEmail } = await import("./mail");
+        await deliverInvoiceEmail({
+          to: ctx.homeowner_email,
+          shopName: company.name,
+          shopReplyTo: ctx.shop_email,
+          invoiceId: inv.id,
+          subject: `Invoice ${invoiceSeqLabel(inv.seq)} from ${company.name}`,
+          text: renderInvoiceText({
+            shopName: company.name,
+            seq: inv.seq,
+            number: inv.number,
+            dueDate: inv.due_date,
+            amountDue: bundle.totals.amountDue,
+            payUrl,
+            propertyAddress: ctx.address_line ?? "",
+          }),
+        });
+        emailed = true;
+      } catch (error) {
+        await addInvoiceNote(sql, company.id, inv.id, actor, `Invoice email failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      }
+    }
+    return { ok: true as const, emailed };
+  });
+
+export const markInvoicePaidFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; amount?: number | null; method?: string | null; note?: string | null; paidOn?: string | null }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    const { invoice } = await withTransaction((tx) => markInvoicePaid(tx, company.id, data.invoiceId, actor, data));
+    return { ok: true as const, status: invoice.status };
+  });
+
+export const retractInvoicePaymentFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { paymentId: string; note?: string | null }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    const invoice = await withTransaction((tx) => retractInvoicePayment(tx, company.id, data.paymentId, actor, data.note));
+    return { ok: true as const, status: invoice.status };
+  });
+
+export const voidInvoiceFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; note?: string | null }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    await withTransaction((tx) => voidInvoice(tx, company.id, data.invoiceId, actor, data.note));
+    return { ok: true as const };
+  });
+
+export const addInvoiceNoteFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; note: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { sql, company, actor } = await shopForInvoices(context.userId);
+    await addInvoiceNote(sql, company.id, data.invoiceId, actor, data.note);
+    return { ok: true as const };
+  });
+
+/**
+ * Read-only invoice list for the homeowner (/home) or an entitled PM
+ * (portfolio file). Anyone else gets an empty list.
+ */
+export const listPropertyInvoices = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((propertyId: string) => propertyId)
+  .handler(async ({ context, data: propertyId }): Promise<InvoiceSummary[]> => {
+    const sql = await getSql();
+    const asOwner = await listInvoicesForProperty(sql, { kind: "homeowner", userId: context.userId }, propertyId);
+    if (asOwner.length) return asOwner;
+    return listInvoicesForProperty(sql, { kind: "pm", userId: context.userId }, propertyId);
+  });
+
+/** One invoice, read-only, for the homeowner or an entitled PM. */
+export const getInvoiceView = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((invoiceId: string) => invoiceId)
+  .handler(async ({ context, data: invoiceId }): Promise<InvoiceBundle> => {
+    const sql = await getSql();
+    try {
+      return await loadInvoice(sql, { kind: "homeowner", userId: context.userId }, invoiceId);
+    } catch {
+      return loadInvoice(sql, { kind: "pm", userId: context.userId }, invoiceId);
+    }
   });

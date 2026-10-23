@@ -222,3 +222,19 @@ export async function deliverWorkOrderAssignmentEmail(input: {
   const { sendWorkOrderAssignmentEmail } = await import("@/lib/auth/mail.server");
   await sendWorkOrderAssignmentEmail(input);
 }
+
+/**
+ * Invoice email (Sprint 1 #5). Body comes from renderInvoiceText (invoices.ts),
+ * which always carries the "Payments go directly to {Shop}" line.
+ */
+export async function deliverInvoiceEmail(input: {
+  to: string;
+  shopName: string;
+  shopReplyTo: string | null;
+  invoiceId: string;
+  subject: string;
+  text: string;
+}) {
+  const { sendInvoiceEmail } = await import("@/lib/auth/mail.server");
+  await sendInvoiceEmail(input);
+}
