@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
+import { HeaderSearch } from "@/components/header-search";
 import { AppNavLink, AuthSlot, PageFooter, PublicHeader, SignedInHeader } from "@/components/site-chrome";
 import { Mark } from "@/components/logo";
 import { PathSignInForm } from "@/components/path-sign-in";
@@ -50,6 +51,7 @@ function ManageFrame() {
             </AppNavLink>
             <AppNavLink to="/manage/estimates">Estimates</AppNavLink>
             <AppNavLink to="/manage/settings">Office</AppNavLink>
+            <HeaderSearch surface="manage" className="sm:w-56" />
             <Button asChild size="sm">
               <Link to="/manage/add">Add a property</Link>
             </Button>

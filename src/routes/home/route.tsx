@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { NamedShopInvite } from "@/components/named-shop-invite";
+import { HeaderSearch } from "@/components/header-search";
 import { AppNavLink, HomeownerCopyright, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
@@ -43,6 +44,7 @@ function HomeLayout() {
           </AppNavLink>
           <AppNavLink to="/home/settings">Settings</AppNavLink>
           <HouseInviteNav />
+          <HeaderSearch surface="home" className="sm:w-56" />
           <Button asChild size="sm">
             <Link to="/home/add">Add a property</Link>
           </Button>

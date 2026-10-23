@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
+import { HeaderSearch } from "@/components/header-search";
 import { AppNavLink, SignedInHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { justSignedOut } from "@/lib/auth/client";
@@ -111,6 +112,7 @@ function AppLayout() {
             </AppNavLink>
           </nav>
         )}
+        {!onboardPath && <HeaderSearch surface="shop" tenant={dash.data?.company?.id} className="order-last sm:order-none sm:ml-3" />}
         {!onboardPath && (
           <Button asChild size="sm" className="ml-auto sm:ml-3">
             <Link to="/app/new">Start a Quote</Link>

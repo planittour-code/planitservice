@@ -111,7 +111,12 @@ async function createPgliteSql(): Promise<Sql> {
   // data survives source edits (it resets on dev-server restart).
   globalRef.__pgliteInstance__ ??= (async () => {
     const { PGlite } = await import("@electric-sql/pglite");
+    // Search (migration 0058) needs pg_trgm + unaccent; PGLite ships them as
+    // contrib bundles that must be registered here before `create extension`.
+    const { pg_trgm } = await import("@electric-sql/pglite/contrib/pg_trgm");
+    const { unaccent } = await import("@electric-sql/pglite/contrib/unaccent");
     const pg = new PGlite({
+      extensions: { pg_trgm, unaccent },
       parsers: {
         [OID_INT8]: Number,
         [OID_DATE]: identity,
