@@ -1,5 +1,6 @@
 import { LEGAL_EMAIL, LEGAL_NAME, LEGAL_SITE } from "@/lib/legal";
 import { estimateEmailCopy, type EstimateEmailLine } from "@/lib/housefile/estimate-email";
+import { getResendJson, newIdempotencyKey, postResendEmail } from "@/lib/auth/resend-http";
 
 function env(key: string): string | undefined {
   const value = process.env[key]?.trim();
@@ -51,6 +52,8 @@ export async function sendResendEmail(input: {
   from?: string;
   attachments?: { filename: string; content: string }[];
   tags?: { name: string; value: string }[];
+  /** One key per send attempt; transient retries reuse it. */
+  idempotencyKey?: string;
 }): Promise<{ id: string | null }> {
   const key = resendKey();
   if (!key) {
@@ -61,13 +64,10 @@ export async function sendResendEmail(input: {
     return { id: null };
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  return postResendEmail({
+    key,
+    idempotencyKey: input.idempotencyKey ?? newIdempotencyKey("mail"),
+    payload: {
       from: input.from ?? fromAddress(),
       to: [input.to],
       reply_to: input.replyTo ?? LEGAL_EMAIL,
@@ -76,15 +76,8 @@ export async function sendResendEmail(input: {
       html: input.html,
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       ...(input.tags?.length ? { tags: input.tags } : {}),
-    }),
+    },
   });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    console.error(`[mail] Resend rejected send (${res.status}) ${detail}`);
-    throw new Error(`We could not send the email. Write ${LEGAL_EMAIL}.`);
-  }
-  const payload = (await res.json().catch(() => null)) as { id?: string } | null;
-  return { id: payload?.id?.trim() || null };
 }
 
 export async function sendSalesWelcomeEmail(data: {
@@ -164,6 +157,7 @@ export async function sendEstimateEmail(data: {
   items?: EstimateEmailLine[];
   salesReps?: { name: string; email?: string | null }[];
   tags?: { name: string; value: string }[];
+  idempotencyKey?: string;
 }): Promise<{ subject: string; text: string; html: string; resendId: string | null }> {
   const { subject, text, html } = estimateEmailCopy({
     name: data.name,
@@ -186,6 +180,7 @@ export async function sendEstimateEmail(data: {
     from: `${data.company} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
     replyTo: estimateReplyTo(data.replyToken),
     tags: data.tags,
+    idempotencyKey: data.idempotencyKey,
   });
   return { subject, text, html, resendId: sent.id };
 }
@@ -800,29 +795,22 @@ function parseResendEmail(raw: unknown): ResendSentEmail | null {
 export async function fetchSentEmail(emailId: string): Promise<ResendSentEmail | null> {
   const key = resendKey();
   if (!key) return null;
-  const res = await fetch(`https://api.resend.com/emails/${encodeURIComponent(emailId)}`, {
-    headers: { Authorization: `Bearer ${key}` },
+  const payload = await getResendJson({
+    key,
+    url: `https://api.resend.com/emails/${encodeURIComponent(emailId)}`,
+    label: "retrieve",
   });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    console.error(`[mail] Resend retrieve failed (${res.status}) ${detail}`);
-    return null;
-  }
-  return parseResendEmail(await res.json().catch(() => null));
+  return payload ? parseResendEmail(payload) : null;
 }
 
 export async function listSentEmails(limit = 100): Promise<ResendSentEmail[]> {
   const key = resendKey();
   if (!key) return [];
-  const res = await fetch(`https://api.resend.com/emails?limit=${Math.min(100, Math.max(1, limit))}`, {
-    headers: { Authorization: `Bearer ${key}` },
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    console.error(`[mail] Resend list failed (${res.status}) ${detail}`);
-    return [];
-  }
-  const payload = (await res.json().catch(() => null)) as { data?: unknown[] } | null;
+  const payload = (await getResendJson({
+    key,
+    url: `https://api.resend.com/emails?limit=${Math.min(100, Math.max(1, limit))}`,
+    label: "list",
+  })) as { data?: unknown[] } | null;
   return (payload?.data ?? []).map(parseResendEmail).filter((row): row is ResendSentEmail => Boolean(row));
 }
 

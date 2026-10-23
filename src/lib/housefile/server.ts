@@ -18,7 +18,6 @@ import {
 import {
   addInvoiceNote,
   ensureInvoiceForWorkOrder,
-  invoicePayUrl,
   invoiceSeqLabel,
   listInvoicesForProperty,
   loadInvoice,
@@ -60,7 +59,7 @@ import {
   type ProfileHat,
   type UserProfile,
 } from "./profile";
-import { normalizePaymentLink, shopPaymentLinkForWork } from "./payment";
+import { acceptPaymentLink, shopPaymentLinkForWork } from "./payment";
 import {
   addressKey,
   assertAddressAvailable,
@@ -140,6 +139,12 @@ import type {
   UserProfileRow,
 } from "./types";
 import { warrantyExpiry } from "./warranty";
+import {
+  assertEstimateSendable,
+  estimateIdempotencyScope,
+  parseEstimateSendInput,
+  type EstimateSendInput,
+} from "./estimate-send";
 import {
   houseMaintenanceStatus,
   isCadence,
@@ -1879,6 +1884,14 @@ export const updateCompany = createServerFn({ method: "POST" })
     const session = await getSessionUser();
     const { company, role } = await requirePaidShop(sql, context.userId, session?.email);
     if (role !== "owner") throw new Error("Only the owner can change shop settings.");
+    // Validate before any write (AC 6.3): new or edited links must be https;
+    // an unchanged stored link (even http) is kept exactly as stored.
+    const paymentLink =
+      data.payment_link === undefined ? company.payment_link : acceptPaymentLink(data.payment_link, [company.payment_link], "Payment link 1");
+    const paintPaymentLink =
+      data.paint_payment_link === undefined
+        ? company.paint_payment_link
+        : acceptPaymentLink(data.paint_payment_link, [company.paint_payment_link], "Payment link 2");
     const name = data.name.trim() || company.name;
     let nextSlug = company.slug;
     if (name !== company.name || !company.slug) {
@@ -1936,8 +1949,8 @@ export const updateCompany = createServerFn({ method: "POST" })
           trades = ${nextTrades},
           slug = ${nextSlug},
           payment_terms = ${data.payment_terms === undefined ? company.payment_terms : (data.payment_terms ?? "").trim().slice(0, 80) || null},
-          payment_link = ${data.payment_link === undefined ? company.payment_link : normalizePaymentLink(data.payment_link)},
-          paint_payment_link = ${data.paint_payment_link === undefined ? company.paint_payment_link : normalizePaymentLink(data.paint_payment_link)}
+          payment_link = ${paymentLink},
+          paint_payment_link = ${paintPaymentLink}
       where id = ${company.id}
     `;
     if (data.trades !== undefined) {
@@ -2273,7 +2286,7 @@ export const createProposalFromWizard = createServerFn({ method: "POST" })
     if (picked.length === 0 && allowed.size) picked.push([...allowed][0]!);
     const paymentLink = data.paymentLink === undefined
       ? shopPaymentLinkForWork(work?.id, company)
-      : normalizePaymentLink(data.paymentLink);
+      : acceptPaymentLink(data.paymentLink, [company.payment_link, company.paint_payment_link]);
     await sql`
       insert into proposals (
         id, company_id, property_id, template_id, share_token, title, status, cover_note, sent_at, created_by, payment_link, sales_emails
@@ -2515,8 +2528,16 @@ export const updateProposalMeta = createServerFn({ method: "POST" })
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
     const { company } = await requirePaidShop(sql, context.userId, session?.email);
-    const paymentLink =
-      data.paymentLink === undefined ? undefined : normalizePaymentLink(data.paymentLink);
+    let paymentLink: string | null | undefined;
+    if (data.paymentLink !== undefined) {
+      // Stored values for this estimate and its own shop are not edits (grandfathered).
+      const current = (
+        await sql<{ payment_link: string | null }>`
+          select payment_link from proposals where id = ${data.id} and company_id = ${company.id}
+        `
+      )[0];
+      paymentLink = acceptPaymentLink(data.paymentLink, [current?.payment_link, company.payment_link, company.paint_payment_link]);
+    }
     const salesEmails =
       data.salesEmails === undefined ? undefined : joinSalesEmails(data.salesEmails);
     if (data.coverPhoto !== undefined) {
@@ -4294,8 +4315,9 @@ export const approveProposal = createServerFn({ method: "POST" })
 
 export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((proposalId: string) => proposalId)
-  .handler(async ({ context, data: proposalId }) => {
+  .validator((input: EstimateSendInput) => parseEstimateSendInput(input))
+  .handler(async ({ context, data }) => {
+    const { proposalId, resend, attemptId } = data;
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
@@ -4305,13 +4327,13 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
     `;
     const proposal = rows[0];
     if (!proposal) throw new Error("Proposal not found");
-    if (proposal.status === "pending") {
-      throw new Error("The owner has to approve this quote before it can go to the homeowner.");
-    }
+    assertEstimateSendable(proposal.status, resend);
     const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0];
     if (!property) throw new Error("House not found");
+    const { sendFailureReason } = await import("@/lib/auth/resend-http");
     try {
       const { deliverEstimateEmail } = await import("./mail");
+      const { newIdempotencyKey } = await import("@/lib/auth/resend-http");
       const items = await sql<ProposalItem>`select * from proposal_items where proposal_id = ${proposal.id} order by sort_order`;
       const letter = await deliverEstimateEmail({
         property,
@@ -4319,11 +4341,18 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
         company,
         items,
         salesReps: await salesRepsForProposal(sql, proposal),
+        // One key per click: retries of this attempt reuse it, a deliberate re-send gets a new one.
+        idempotencyKey: newIdempotencyKey(estimateIdempotencyScope(proposal.id), attemptId),
       });
       await recordProposalSend(sql, proposal, items, letter);
     } catch (err) {
-      console.error("[mail] estimate send failed", err);
-      throw new Error(`Could not email the estimate. Write ${LEGAL_EMAIL}.`);
+      const message = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack : undefined;
+      console.error(
+        `[mail] estimate send failed proposal=${proposal.id} resend=${resend}: ${message}`,
+        stack ?? "",
+      );
+      throw new Error(`Could not email the estimate: ${sendFailureReason(err)}. Write ${LEGAL_EMAIL}.`);
     }
     await notifyEstimateReview(
       sql,
@@ -4336,7 +4365,7 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
       update proposals set status = ${"sent"}, sent_at = coalesce(sent_at, now()) where id = ${proposal.id}
     `;
     await sql`update properties set invite_status = ${"sent"} where id = ${property.id}`;
-    return { ok: true as const, emailed: property.homeowner_email };
+    return { ok: true as const, emailed: property.homeowner_email, resent: resend };
   });
 
 export const deleteProposal = createServerFn({ method: "POST" })
@@ -7590,14 +7619,8 @@ export const sendInvoiceFn = createServerFn({ method: "POST" })
     )[0];
     let emailed = false;
     if (ctx?.homeowner_email) {
-      const payUrl = invoicePayUrl({
-        proposalPaymentLink: ctx.proposal_link,
-        shopPaymentLink: ctx.shop_link,
-        invoiceNumber: inv.number,
-        amountDue: bundle.totals.amountDue,
-        inviteToken: ctx.invite_token,
-        propertyId: inv.property_id,
-      });
+      // Same single button as the invoice view (6.1 ruling / 6.2 resolution).
+      const payUrl = bundle.payButton?.href ?? null;
       try {
         const { deliverInvoiceEmail } = await import("./mail");
         await deliverInvoiceEmail({
