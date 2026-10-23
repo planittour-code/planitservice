@@ -8,6 +8,7 @@
     "rolldown": "1.2.7"
   },
   "scripts": {
+    "search:bench": "node scripts/bench-search.mjs",
     "dev": "vite dev --host 0.0.0.0 --port 8080",
     "build": "vite build && node scripts/check-ssr-modules.mjs && npm run db:migrate",
     "db:migrate": "node scripts/migrate.mjs",
@@ -17,7 +18,8 @@
     "test": "node --test 'scripts/**/*.test.mjs'",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "demo:seed-map10": "node scripts/seed-map10-demo.mjs"
+    "demo:seed-map10": "node scripts/seed-map10-demo.mjs",
+    "search:backfill": "node scripts/backfill-search.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
