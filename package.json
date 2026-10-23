@@ -8,6 +8,7 @@
     "rolldown": "1.2.7"
   },
   "scripts": {
+    "search:bench": "node scripts/bench-search.mjs",
     "dev": "vite dev --host 0.0.0.0 --port 8080",
     "build": "vite build && node scripts/check-ssr-modules.mjs && npm run db:migrate",
     "db:migrate": "node scripts/migrate.mjs",
