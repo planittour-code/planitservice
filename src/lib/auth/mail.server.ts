@@ -536,9 +536,6 @@ export async function sendAcceptedEstimateEmail(data: {
     `Hi ${first},`,
     "",
     `You accepted the estimate from ${data.company} for ${data.address}.`,
-    "",
-    `View your estimate: ${data.proposalUrl}`,
-    "",
     `Total: ${data.total}`,
     "",
     "Payment terms",
@@ -546,7 +543,9 @@ export async function sendAcceptedEstimateEmail(data: {
     ...data.schedule,
     ...payLines,
     "",
-    "Optional: a PDF copy of the signed estimate is attached for your records. You do not need to open it.",
+    `Open the accepted estimate: ${data.proposalUrl}`,
+    "",
+    "The signed estimate is attached as a PDF.",
     "",
     data.company,
   ].join("\n");
@@ -558,13 +557,12 @@ export async function sendAcceptedEstimateEmail(data: {
     : `<p>Ask ${escapeHtml(data.company)} how they take payment.</p>`;
   const html = `<p>Hi ${escapeHtml(first)},</p>
 <p>You accepted the estimate from ${escapeHtml(data.company)} for ${escapeHtml(data.address)}.</p>
-<p style="margin:24px 0"><a href="${escapeHtml(data.proposalUrl)}" style="display:inline-block;background:#111827;color:#ffffff;padding:14px 24px;border-radius:8px;font-weight:600;text-decoration:none">View your estimate</a></p>
-<p style="font-size:13px;color:#6b7280">Or open this link: ${escapeHtml(data.proposalUrl)}</p>
 <p><strong>Total ${escapeHtml(data.total)}</strong></p>
 <p><strong>Payment terms</strong><br>${escapeHtml(data.paymentTerms)}</p>
 <ul>${scheduleHtml}</ul>
 ${payHtml}
-<p style="font-size:13px;color:#6b7280">Optional: a PDF copy of the signed estimate is attached for your records. You do not need to open it to view your estimate.</p>
+<p><a href="${escapeHtml(data.proposalUrl)}">Open the accepted estimate</a></p>
+<p>The signed estimate is attached as a PDF.</p>
 <p>${escapeHtml(data.company)}</p>`;
 
   await sendResendEmail({
