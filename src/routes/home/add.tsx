@@ -54,10 +54,6 @@ function AddProperty() {
         ? PROPERTY_ANNUAL
         : PROPERTY_MONTHLY;
 
-  if ((houses.data?.houses.length ?? 0) > 0 && search.tier) {
-    return <Navigate to="/home" />;
-  }
-
   const save = useMutation({
     mutationFn: async () => {
       const created = await createHomeProperty({
@@ -88,6 +84,10 @@ function AddProperty() {
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not start checkout"),
   });
+
+  if ((houses.data?.houses.length ?? 0) > 0 && search.tier) {
+    return <Navigate to="/home" />;
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
