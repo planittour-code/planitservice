@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { InvoicePanel } from "@/components/invoice-panel";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -337,7 +336,6 @@ export function WorkOrderPanel({
           ))}
         </ol>
       </div>
-      {wo.status === "complete" ? <InvoicePanel workOrderId={wo.id} workOrderStatus={wo.status} /> : null}
     </section>
   );
 }
