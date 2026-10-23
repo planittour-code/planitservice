@@ -391,6 +391,34 @@ export async function sendWorkOrderAssignmentEmail(data: {
   });
 }
 
+export async function sendInvoiceEmail(data: {
+  to: string;
+  shopName: string;
+  shopReplyTo: string | null;
+  invoiceId: string;
+  subject: string;
+  text: string;
+}) {
+  const html = data.text
+    .split("\n")
+    .map((line) =>
+      line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"),
+    )
+    .join("<br>");
+  await sendResendEmail({
+    to: data.to,
+    subject: data.subject,
+    text: data.text,
+    html: `<p>${html}</p>`,
+    from: `${data.shopName} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: data.shopReplyTo || undefined,
+    tags: [
+      { name: "kind", value: "invoice" },
+      { name: "invoice_id", value: data.invoiceId },
+    ],
+  });
+}
+
 function icsEscape(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
 }
