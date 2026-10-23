@@ -207,7 +207,7 @@ export function HeaderSearch({
           className="h-8 w-full rounded-md border border-white/20 bg-white/10 px-2.5 text-sm text-secondary-foreground placeholder:text-secondary-foreground/60 focus:bg-white focus:text-foreground focus:outline-none"
         />
         {open && (
-          <div className="absolute right-0 top-9 z-50 flex w-[min(92vw,40rem)] overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
+          <div className="absolute right-0 top-9 z-[60] flex max-h-[min(70vh,32rem)] w-[min(calc(100vw-1.5rem),40rem)] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl ring-1 ring-black/5">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap gap-1 border-b p-2" role="radiogroup" aria-label="Filter by type">
                 {chips.map((c) => (
@@ -227,7 +227,7 @@ export function HeaderSearch({
                   </button>
                 ))}
               </div>
-              <Command.List className="max-h-80 overflow-y-auto p-1">
+              <Command.List className="max-h-[min(60vh,20rem)] overflow-y-auto overscroll-contain p-1">
                 {results.isError && (
                   <div className="px-2 py-3 text-sm text-muted-foreground">Search is unavailable right now.</div>
                 )}
@@ -267,7 +267,7 @@ export function HeaderSearch({
               </div>
             </div>
             {previewFor && (
-              <aside className="w-64 shrink-0 border-l bg-muted/30 p-3 text-sm" aria-label="Preview">
+              <aside className="hidden w-64 shrink-0 overflow-y-auto border-l border-border bg-muted sm:block p-3 text-sm" aria-label="Preview">
                 {preview.isPending && <div className="text-muted-foreground">Loading…</div>}
                 {preview.isError && <div className="text-muted-foreground">No preview.</div>}
                 {preview.data && <PreviewPanel p={preview.data.preview} />}
