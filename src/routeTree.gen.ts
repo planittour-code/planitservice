@@ -28,7 +28,6 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiCtaRouteImport } from './routes/api/cta'
 import { Route as ApiMapTileRouteImport } from './routes/api/map-tile'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
-import { Route as ApiSearchPreviewRouteImport } from './routes/api/search-preview'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBookRouteImport } from './routes/app/book'
 import { Route as AppCampaignRouteImport } from './routes/app/campaign'
@@ -163,11 +162,6 @@ const ApiMapTileRoute = ApiMapTileRouteImport.update({
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSearchPreviewRoute = ApiSearchPreviewRouteImport.update({
-  id: '/api/search-preview',
-  path: '/api/search-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -391,7 +385,6 @@ export interface FileRoutesByFullPath {
   '/api/cta': typeof ApiCtaRoute
   '/api/map-tile': typeof ApiMapTileRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/search-preview': typeof ApiSearchPreviewRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -450,7 +443,6 @@ export interface FileRoutesByTo {
   '/api/cta': typeof ApiCtaRoute
   '/api/map-tile': typeof ApiMapTileRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/search-preview': typeof ApiSearchPreviewRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -513,7 +505,6 @@ export interface FileRoutesById {
   '/api/cta': typeof ApiCtaRoute
   '/api/map-tile': typeof ApiMapTileRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/search-preview': typeof ApiSearchPreviewRoute
   '/app/book': typeof AppBookRoute
   '/app/campaign': typeof AppCampaignRoute
   '/app/customers': typeof AppCustomersRoute
@@ -577,7 +568,6 @@ export interface FileRouteTypes {
     | '/api/cta'
     | '/api/map-tile'
     | '/api/search'
-    | '/api/search-preview'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -636,7 +626,6 @@ export interface FileRouteTypes {
     | '/api/cta'
     | '/api/map-tile'
     | '/api/search'
-    | '/api/search-preview'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -698,7 +687,6 @@ export interface FileRouteTypes {
     | '/api/cta'
     | '/api/map-tile'
     | '/api/search'
-    | '/api/search-preview'
     | '/app/book'
     | '/app/campaign'
     | '/app/customers'
@@ -761,7 +749,6 @@ export interface RootRouteChildren {
   ApiCtaRoute: typeof ApiCtaRoute
   ApiMapTileRoute: typeof ApiMapTileRoute
   ApiSearchRoute: typeof ApiSearchRoute
-  ApiSearchPreviewRoute: typeof ApiSearchPreviewRoute
   BookAlbinRoute: typeof BookAlbinRoute
   ClaimTokenRoute: typeof ClaimTokenRoute
   HouseTokenRoute: typeof HouseTokenRoute
@@ -910,13 +897,6 @@ declare module '@tanstack/react-router' {
       path: '/api/search'
       fullPath: '/api/search'
       preLoaderRoute: typeof ApiSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/search-preview': {
-      id: '/api/search-preview'
-      path: '/api/search-preview'
-      fullPath: '/api/search-preview'
-      preLoaderRoute: typeof ApiSearchPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -1341,7 +1321,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCtaRoute: ApiCtaRoute,
   ApiMapTileRoute: ApiMapTileRoute,
   ApiSearchRoute: ApiSearchRoute,
-  ApiSearchPreviewRoute: ApiSearchPreviewRoute,
   BookAlbinRoute: BookAlbinRoute,
   ClaimTokenRoute: ClaimTokenRoute,
   HouseTokenRoute: HouseTokenRoute,
