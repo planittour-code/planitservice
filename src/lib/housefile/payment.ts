@@ -48,11 +48,55 @@ export function paymentSchedule(total: number, terms: string | null | undefined)
   ];
 }
 
+/** Bare host gets https://; anything with a scheme is left as typed. */
+function withScheme(raw: string) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+}
+
+/**
+ * Render-time payment link. http and https both render, byte-identical to what
+ * is stored, so links saved before the https rule keep their Pay button
+ * (grandfathered, never auto-upgraded). javascript:, data:, mailto: and any
+ * other scheme never render. Returns null when nothing usable is stored.
+ */
 export function normalizePaymentLink(value: string | null | undefined) {
   const raw = value?.trim() ?? "";
   if (!raw) return null;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return raw;
-  return `https://${raw}`;
+  const href = withScheme(raw);
+  try {
+    const url = new URL(href);
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || !url.hostname) return null;
+  } catch {
+    return null;
+  }
+  return href;
+}
+
+/** Client and server check for a NEW or edited link (AC 6.3): https only. */
+export function isHttpsPaymentLink(value: string | null | undefined) {
+  const href = normalizePaymentLink(value);
+  if (!href) return false;
+  const url = new URL(href);
+  return url.protocol === "https:" && url.hostname.includes(".");
+}
+
+/**
+ * Save-time validation (AC 6.3). Blank clears the link. A value equal to one
+ * already stored for this shop/estimate is not an edit, so it is kept exactly
+ * as stored even if it is http (no rewrite, no upgrade). Anything newly
+ * entered or edited must be https, else this throws before any write.
+ */
+export function acceptPaymentLink(
+  input: string | null | undefined,
+  stored: (string | null | undefined)[],
+  field = "Payment link",
+): string | null {
+  const raw = input?.trim() ?? "";
+  if (!raw) return null;
+  const same = stored.find((v) => v != null && v.trim() === raw);
+  if (same != null) return same;
+  if (!isHttpsPaymentLink(raw)) throw new Error(`${field} must be a valid https:// link`);
+  return withScheme(raw);
 }
 
 /** Alphabetic house code from the Property Record invite. MX Merchant invoice numbers stay numeric. */
@@ -125,11 +169,28 @@ export function mxPaymentUrl(
   return url.toString();
 }
 
-/** Gutters keep the shop payment link. Every other service uses the shop's paint payment link. */
+/**
+ * Per-shop routing by work type, using only that shop's own fields (AC 6.2/6.8):
+ * gutters -> payment_link; paint and everything else -> paint_payment_link ||
+ * payment_link. No shop-specific assumptions, no other company's link.
+ */
 export function shopPaymentLinkForWork(
   workId: string | null | undefined,
   shop: { payment_link?: string | null; paint_payment_link?: string | null },
 ) {
   if (workId === "gutters") return shop.payment_link ?? null;
   return shop.paint_payment_link || shop.payment_link || null;
+}
+
+/**
+ * AC 6.2 resolution for an invoice: the proposal's own payment_link (set from
+ * the same shop's settings), else the issuing shop's routing for the work type,
+ * else none. `shop` must be the invoice's own company row.
+ */
+export function resolveInvoicePaymentLink(input: {
+  proposalPaymentLink: string | null | undefined;
+  workId: string | null | undefined;
+  shop: { payment_link?: string | null; paint_payment_link?: string | null };
+}) {
+  return normalizePaymentLink(input.proposalPaymentLink || shopPaymentLinkForWork(input.workId, input.shop));
 }
