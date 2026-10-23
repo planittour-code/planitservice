@@ -122,6 +122,12 @@ import type {
 } from "./types";
 import { warrantyExpiry } from "./warranty";
 import {
+  assertEstimateSendable,
+  estimateIdempotencyScope,
+  parseEstimateSendInput,
+  type EstimateSendInput,
+} from "./estimate-send";
+import {
   houseMaintenanceStatus,
   isCadence,
   isUpcomingTask,
@@ -4275,8 +4281,9 @@ export const approveProposal = createServerFn({ method: "POST" })
 
 export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((proposalId: string) => proposalId)
-  .handler(async ({ context, data: proposalId }) => {
+  .validator((input: EstimateSendInput) => parseEstimateSendInput(input))
+  .handler(async ({ context, data }) => {
+    const { proposalId, resend, attemptId } = data;
     const sql = await getSql();
     const { getSessionUser } = await import("@/lib/auth/verify.server");
     const session = await getSessionUser();
@@ -4286,13 +4293,13 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
     `;
     const proposal = rows[0];
     if (!proposal) throw new Error("Proposal not found");
-    if (proposal.status === "pending") {
-      throw new Error("The owner has to approve this quote before it can go to the homeowner.");
-    }
+    assertEstimateSendable(proposal.status, resend);
     const property = (await sql<Property>`select * from properties where id = ${proposal.property_id}`)[0];
     if (!property) throw new Error("House not found");
+    const { sendFailureReason } = await import("@/lib/auth/resend-http");
     try {
       const { deliverEstimateEmail } = await import("./mail");
+      const { newIdempotencyKey } = await import("@/lib/auth/resend-http");
       const items = await sql<ProposalItem>`select * from proposal_items where proposal_id = ${proposal.id} order by sort_order`;
       const letter = await deliverEstimateEmail({
         property,
@@ -4300,11 +4307,18 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
         company,
         items,
         salesReps: await salesRepsForProposal(sql, proposal),
+        // One key per click: retries of this attempt reuse it, a deliberate re-send gets a new one.
+        idempotencyKey: newIdempotencyKey(estimateIdempotencyScope(proposal.id), attemptId),
       });
       await recordProposalSend(sql, proposal, items, letter);
     } catch (err) {
-      console.error("[mail] estimate send failed", err);
-      throw new Error(`Could not email the estimate. Write ${LEGAL_EMAIL}.`);
+      const message = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack : undefined;
+      console.error(
+        `[mail] estimate send failed proposal=${proposal.id} resend=${resend}: ${message}`,
+        stack ?? "",
+      );
+      throw new Error(`Could not email the estimate: ${sendFailureReason(err)}. Write ${LEGAL_EMAIL}.`);
     }
     await notifyEstimateReview(
       sql,
@@ -4317,7 +4331,7 @@ export const sendEstimateToHomeowner = createServerFn({ method: "POST" })
       update proposals set status = ${"sent"}, sent_at = coalesce(sent_at, now()) where id = ${proposal.id}
     `;
     await sql`update properties set invite_status = ${"sent"} where id = ${property.id}`;
-    return { ok: true as const, emailed: property.homeowner_email };
+    return { ok: true as const, emailed: property.homeowner_email, resent: resend };
   });
 
 export const deleteProposal = createServerFn({ method: "POST" })

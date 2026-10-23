@@ -733,16 +733,24 @@ function SoldHoldBar({
 function SendEstimateBar({
   proposalId,
   email,
+  alreadySent,
   onSent,
 }: {
   proposalId: string;
   email: string;
+  alreadySent: boolean;
   onSent: () => void;
 }) {
   const send = useMutation({
-    mutationFn: () => sendEstimateToHomeowner({ data: proposalId }),
+    // Fresh attemptId per click: a deliberate re-send gets a new Idempotency-Key.
+    mutationFn: () =>
+      sendEstimateToHomeowner({
+        data: { proposalId, resend: alreadySent, attemptId: crypto.randomUUID() },
+      }),
     onSuccess: (result) => {
-      toast.success(`Estimate emailed to ${result.emailed} and the office on this File`);
+      toast.success(
+        `Estimate ${result.resent ? "re-sent" : "emailed"} to ${result.emailed} and the office on this File`,
+      );
       onSent();
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not send"),
@@ -758,7 +766,7 @@ function SendEstimateBar({
         disabled={send.isPending}
         onClick={() => send.mutate()}
       >
-        {send.isPending ? "Sending…" : "Send estimate"}
+        {send.isPending ? "Sending…" : alreadySent ? "Re-send estimate" : "Send estimate"}
       </Button>
     </div>
   );
@@ -791,6 +799,7 @@ function ContractorNotesAndSend({
           <SendEstimateBar
             proposalId={proposal.id}
             email={property.homeowner_email}
+            alreadySent={proposal.status === "sent"}
             onSent={onChanged}
           />
         ) : null}
