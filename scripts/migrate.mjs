@@ -7,12 +7,24 @@
  * applied in one transaction and recorded in a `_migrations` table, so it runs
  * once and is safe to re-run.
  *
+ * Gated by scripts/migrate-gate.mjs: only runs when CONTEXT=production (Netlify
+ * production deploys), locally (CONTEXT unset and NETLIFY!=true), or with an
+ * explicit ALLOW_MIGRATE=1. Deploy previews and branch deploys skip, so an
+ * unmerged branch can never migrate the prod database.
+ *
  * No DATABASE_URL (local builds) -> skip. Do not treat PGLite as production.
  */
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
+import { migrateDecision } from "./migrate-gate.mjs";
+
+const decision = migrateDecision(process.env);
+if (!decision.run) {
+  console.log(`[migrate] ${decision.reason}`);
+  process.exit(0);
+}
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -65,7 +77,9 @@ async function main() {
       console.log(`[migrate] applied ${name}`);
       count += 1;
     }
-    console.log(count ? `[migrate] done — ${count} migration(s) applied.` : "[migrate] up to date.");
+    console.log(
+      count ? `[migrate] done — ${count} migration(s) applied.` : "[migrate] up to date.",
+    );
   } finally {
     client.release();
     await pool.end();
