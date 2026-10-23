@@ -465,7 +465,7 @@ function SettingsPage() {
           </p>
         </div>
         <div className="space-y-0.5">
-          <Label htmlFor="paint-pay">Painting Plus payment link</Label>
+          <Label htmlFor="paint-pay">{q.data?.company.name?.trim() || "Shop"} payment link</Label>
           <Input
             id="paint-pay"
             inputMode="url"
@@ -474,7 +474,7 @@ function SettingsPage() {
             onChange={(e) => setPaintPaymentLink(e.target.value)}
           />
           <p className="text-sm text-muted-foreground">
-            Used on every other selected service. Paint, decks, drainage, and the rest bill as Painting Plus.
+            Used for every service except gutters.
           </p>
         </div>
         <Button type="submit" disabled={save.isPending}>
