@@ -149,6 +149,23 @@ test("grandfathered: a stored http link still renders a Pay button, unchanged", 
   }
 });
 
+test("stored non-http links (javascript:, data:, mailto:) render no Pay button", async () => {
+  const { sql } = await freshDb();
+  const a = await seedShop(sql, "alpha");
+  for (const bad of ["javascript:alert(1)", "data:text/html,<b>x</b>", "mailto:pay@alpha.example"]) {
+    await setLinks(sql, a.id, { gutters: bad, paint: bad });
+    for (const tmpl of ["tmpl_gutter", "tmpl_ext_paint"]) {
+      const s = await sentInvoice(sql, a, `${bad} ${tmpl}`, tmpl);
+      assert.equal((await loadInvoice(sql, { kind: "shop", companyId: a.id }, s.invoice.id)).payButton, null, `${tmpl}: ${bad}`);
+      await sql`update properties set homeowner_user_id = 'ho_x' where id = ${s.propertyId}`;
+      const list = await listInvoicesForProperty(sql, { kind: "homeowner", userId: "ho_x" }, s.propertyId);
+      assert.equal(list[0].payButton, null, `homeowner list: ${bad}`);
+    }
+    const o = await sentInvoice(sql, a, `${bad} override`, "tmpl_gutter", bad);
+    assert.equal((await loadInvoice(sql, { kind: "shop", companyId: a.id }, o.invoice.id)).payButton, null, `proposal link: ${bad}`);
+  }
+});
+
 test("save: a NEW http link is rejected; an unchanged http link re-saved is accepted as stored", async () => {
   const OLD = "http://pay.alpha.example/legacy";
   // Exactly what updateCompany does for slot 1 / slot 2.
