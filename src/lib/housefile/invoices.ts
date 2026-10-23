@@ -17,14 +17,7 @@
  * tests can load it with plain Node.
  */
 import type { Sql } from "../db";
-import {
-  customerCode,
-  mxPaymentUrl,
-  normalizePaymentLink,
-  paymentInvoiceNumber,
-  resolveInvoicePaymentLink,
-} from "./payment";
-import { workForTemplate } from "./quote";
+import { customerCode, mxPaymentUrl, normalizePaymentLink, paymentInvoiceNumber } from "./payment";
 
 export const INVOICE_STATUSES = ["draft", "sent", "partially_paid", "paid", "void"] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
@@ -97,14 +90,6 @@ export type InvoiceEvent = {
 
 export type InvoiceTotals = { total: number; paid: number; amountDue: number };
 
-export type PayButton = {
-  /** "Pay {Shop} online" (Counsel 6.7). */
-  label: string;
-  href: string;
-  /** "Payments go directly to {Shop}..." shown under every button. */
-  disclaimer: string;
-};
-
 export type InvoiceBundle = {
   invoice: Invoice;
   shopName: string;
@@ -114,8 +99,6 @@ export type InvoiceBundle = {
   totals: InvoiceTotals;
   /** Display lines for the payment history ("Marked paid by {Shop} on {date}"). */
   history: string[];
-  /** The one Pay button (Sprint 1 #6, 6.1 ruling); null when no link resolves or nothing is due. */
-  payButton: PayButton | null;
 };
 
 /** Who is looking. The shop passes companyId; homeowner/PM pass userId. */
@@ -506,19 +489,24 @@ async function bundle(sql: Sql, invoice: Invoice, includeEvents: boolean): Promi
       `
     : [];
   const name = await shopName(sql, invoice.company_id);
-  const totals = invoiceTotals(items, payments);
   return {
     invoice,
     shopName: name,
     items,
     payments,
     events,
-    totals,
+    totals: invoiceTotals(items, payments),
     history: paymentHistoryLines(name, payments),
-    payButton: await payButtonFor(sql, invoice, name, totals.amountDue),
   };
 }
 
+/**
+ * May this viewer see this invoice? Shop: same company_id. Homeowner: owns the
+ * invoice's property row, or a row at the same address. PM: a paid Portfolio
+ * they own or are a member of contains that property row or a row at the same
+ * address (copied rows live on the viewer's own property row, never via the
+ * shop's company_id). Everyone else: no.
+ */
 /**
  * Rows the invoice is explicitly attached to: the issuing shop's row, plus
  * every File row that got a copy of the same accepted job (jobs.proposal_id,
@@ -591,7 +579,6 @@ export type InvoiceSummary = {
   due_date: string | null;
   total: number;
   amountDue: number;
-  payButton: PayButton | null;
 };
 
 /**
@@ -626,77 +613,9 @@ export async function listInvoicesForProperty(
       due_date: b.invoice.due_date,
       total: b.totals.total,
       amountDue: b.totals.amountDue,
-      payButton: b.payButton,
     });
   }
   return out;
-}
-
-// ---------------------------------------------------------------- pay buttons (#6)
-
-/**
- * Pure: the single Pay button for an invoice (6.1 ruling: one button). The
- * link is the AC 6.2 resolution (proposal link, else the issuing shop's
- * gutters/paint routing), always the issuing shop's own; MX links get the
- * plain amount due prefilled (no fee, 6.9). Only for sent / partially paid
- * invoices with something due (6.4).
- */
-export function invoicePayButton(input: {
-  status: InvoiceStatus;
-  shopName: string;
-  amountDue: number;
-  invoiceNumber: string;
-  propertyId: string;
-  inviteToken?: string | null;
-  routedLink: string | null;
-}): PayButton | null {
-  if (input.status !== "sent" && input.status !== "partially_paid") return null;
-  if (input.amountDue <= 0) return null;
-  const base = normalizePaymentLink(input.routedLink);
-  if (!base) return null;
-  const code = customerCode(input.inviteToken || input.propertyId);
-  const href = mxPaymentUrl(base, {
-    amount: input.amountDue,
-    invoiceNumber: input.invoiceNumber,
-    customerCode: code,
-    memo: `Customer ${code} · invoice ${input.invoiceNumber}`,
-  });
-  if (!href) return null;
-  return { label: payShopOnlineLabel(input.shopName), href, disclaimer: invoiceNoProcessingLine(input.shopName) };
-}
-
-async function payButtonFor(sql: Sql, invoice: Invoice, name: string, amountDue: number): Promise<PayButton | null> {
-  // Only the invoice's own proposal and own company row (AC 6.8).
-  const rows = await sql<{
-    proposal_link: string | null;
-    template_id: string | null;
-    payment_link: string | null;
-    paint_payment_link: string | null;
-    invite_token: string | null;
-  }>`
-    select pr.payment_link as proposal_link, pr.template_id, c.payment_link, c.paint_payment_link, p.invite_token
-    from invoices i
-    join proposals pr on pr.id = i.proposal_id and pr.company_id = i.company_id
-    join companies c on c.id = i.company_id
-    join properties p on p.id = i.property_id
-    where i.id = ${invoice.id}
-    limit 1
-  `;
-  const r = rows[0];
-  if (!r) return null;
-  return invoicePayButton({
-    status: invoice.status,
-    shopName: name,
-    amountDue,
-    invoiceNumber: invoice.number,
-    propertyId: invoice.property_id,
-    inviteToken: r.invite_token,
-    routedLink: resolveInvoicePaymentLink({
-      proposalPaymentLink: r.proposal_link,
-      workId: r.template_id ? workForTemplate(r.template_id)?.id : null,
-      shop: r,
-    }),
-  });
 }
 
 // ---------------------------------------------------------------- email / PDF text
