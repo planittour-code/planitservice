@@ -970,7 +970,9 @@ function NewQuote() {
                 <p className="text-sm text-muted-foreground">
                   {workId === "gutters"
                     ? "Gutters use the gutters payment link."
-                    : "This service bills as Painting Plus."}
+                    : dash.data?.company.name?.trim()
+                      ? `This service bills as ${dash.data.company.name.trim()}.`
+                      : null}
                 </p>
               </div>
               <SalesSeatPicker

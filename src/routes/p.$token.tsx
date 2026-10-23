@@ -6,6 +6,7 @@ import { Wordmark } from "@/components/logo";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { SampleLock } from "@/components/sample-lock";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkOrderStatusLine } from "@/components/work-order-panel";
 import { isSampleHouseToken, isSampleShopQuote } from "@/lib/housefile/sample";
 import { getProposalByToken } from "@/lib/housefile/server";
 
@@ -82,6 +83,11 @@ function PublicProposal() {
         company={bundle.company.name}
       />
       <main className="hf-rise mx-auto max-w-3xl px-4 py-6 pb-28 sm:px-5 sm:py-8 sm:pb-24">
+        {bundle.workOrderStatus ? (
+          <div className="mb-4">
+            <WorkOrderStatusLine workOrder={bundle.workOrderStatus} />
+          </div>
+        ) : null}
         {sample ? (
           <SampleLock to={isSampleShopQuote(token) ? "/shop/open" : "/homeowner"}>
             <ProposalDoc bundle={bundle} mode="homeowner" onChanged={() => q.refetch()} />

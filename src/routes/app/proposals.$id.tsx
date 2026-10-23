@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ProposalDoc } from "@/components/proposal-doc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkOrderPanel } from "@/components/work-order-panel";
 import { approveProposal, deleteProposal, getContractorProposal, listTeam } from "@/lib/housefile/server";
 
 export const Route = createFileRoute("/app/proposals/$id")({ component: ProposalPage });
@@ -93,6 +94,11 @@ function ProposalPage() {
           {remove.isPending ? "Deleting…" : "Delete estimate"}
         </Button>
       </div>
+      <WorkOrderPanel
+        proposalId={bundle.proposal.id}
+        proposalStatus={bundle.proposal.status}
+        onChanged={() => q.refetch()}
+      />
       <ProposalDoc
         bundle={bundle}
         mode="contractor"

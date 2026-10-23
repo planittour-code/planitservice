@@ -1,3 +1,4 @@
+import type { WorkOrderPublicStatus } from "./work-orders";
 export type Company = {
   id: string;
   user_id: string;
@@ -194,7 +195,11 @@ export type JobSpec = {
   warranty_expires: string | null;
 };
 
-export type JobWithSpecs = Job & { specs: JobSpec[] };
+export type JobWithSpecs = Job & {
+  specs: JobSpec[];
+  /** Read-only WO status for the File (no notes). Null for jobs without a WO. */
+  work_order?: WorkOrderPublicStatus | null;
+};
 
 export type WarrantyRecord = {
   id: string;
@@ -398,6 +403,7 @@ export type ProposalBundle = {
   salesRep: InvoiceSalesRep | null;
   salesReps: InvoiceSalesRep[];
   delivery?: ProposalDelivery;
+  workOrderStatus?: WorkOrderPublicStatus | null;
 };
 
 export type HomeownerHouse = PropertyListRow & {
