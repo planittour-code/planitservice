@@ -719,7 +719,7 @@ function NewQuote() {
             ? inviteQ.data.invite.title
             : work
               ? `${work.name} quote`
-              : "Start a Quote"}
+              : "New Contact"}
         </h1>
         {inviteQ.data ? (
           <section className="space-y-3 rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-border)]">

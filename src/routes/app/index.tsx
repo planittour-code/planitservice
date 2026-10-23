@@ -95,9 +95,9 @@ function ShopHome() {
 
       <section className="space-y-2">
         <div>
-          <h2 className="font-display text-lg font-medium">Start a Quote</h2>
+          <h2 className="font-display text-lg font-medium">New Contact</h2>
           <p className="text-sm text-muted-foreground">
-            Address and the ask first. Photos, measurements, then line items from Materials.
+            Add the address and what they need. Photos, measurements and line items from Materials come next.
           </p>
         </div>
         <Button asChild>
