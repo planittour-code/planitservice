@@ -15,6 +15,25 @@ import {
   type WorkOrderPatch,
   type WorkOrderPublicStatus as WorkOrderPublicStatusLite,
 } from "./work-orders";
+import {
+  addInvoiceNote,
+  ensureInvoiceForWorkOrder,
+  invoicePayUrl,
+  invoiceSeqLabel,
+  listInvoicesForProperty,
+  loadInvoice,
+  loadInvoiceForWorkOrder,
+  markInvoicePaid,
+  markInvoiceSent,
+  renderInvoiceText,
+  retractInvoicePayment,
+  updateDraftInvoice,
+  voidInvoice,
+  type Actor as InvoiceActor,
+  type InvoiceBundle,
+  type InvoicePatch,
+  type InvoiceSummary,
+} from "./invoices";
 import { LEGAL_EMAIL } from "@/lib/legal";
 import { MANAGE_INCLUDED } from "./pricing";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, parseBookPhoto, STARTER_BOOK, type PriceBookItem } from "./book";
@@ -7511,4 +7530,173 @@ export const updateWorkOrder = createServerFn({ method: "POST" })
       notify: sendAssignmentEmail,
     });
     return { ok: true as const };
+  });
+
+// ---------------------------------------------------------------------------
+// Invoices (Sprint 1 #5). Shop writes are scoped to the caller's company_id.
+// Homeowners and entitled PMs read through listPropertyInvoices / getInvoiceView.
+// No payment processing; "Mark paid" is a manual, append-only record.
+
+async function shopForInvoices(userId: string) {
+  const { sql, company, actor } = await shopForWorkOrders(userId);
+  return { sql, company, actor: { userId, label: actor } as InvoiceActor };
+}
+
+export const getInvoiceForWorkOrder = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((workOrderId: string) => workOrderId)
+  .handler(async ({ context, data: workOrderId }): Promise<InvoiceBundle | null> => {
+    const { sql, company } = await shopForInvoices(context.userId);
+    return loadInvoiceForWorkOrder(sql, company.id, workOrderId);
+  });
+
+export const createInvoiceFromWorkOrder = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { workOrderId: string; dueDate?: string | null }) => input)
+  .handler(async ({ context, data }): Promise<InvoiceBundle> => {
+    const { sql, company, actor } = await shopForInvoices(context.userId);
+    await withTransaction((tx) =>
+      ensureInvoiceForWorkOrder(tx, company.id, data.workOrderId, actor, { dueDate: data.dueDate ?? null }),
+    );
+    const bundle = await loadInvoiceForWorkOrder(sql, company.id, data.workOrderId);
+    if (!bundle) throw new Error("Invoice not found");
+    return bundle;
+  });
+
+export const updateInvoiceDraftFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; patch: InvoicePatch }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    await withTransaction((tx) => updateDraftInvoice(tx, company.id, data.invoiceId, data.patch, actor));
+    return { ok: true as const };
+  });
+
+/**
+ * Draft → Sent, then email the homeowner (if the record has an email) from the
+ * shop's normal sender. A mail failure does not undo the status change.
+ */
+export const sendInvoiceFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((invoiceId: string) => invoiceId)
+  .handler(async ({ context, data: invoiceId }) => {
+    const { sql, company, actor } = await shopForInvoices(context.userId);
+    const inv = await withTransaction((tx) => markInvoiceSent(tx, company.id, invoiceId, actor));
+    const bundle = await loadInvoice(sql, { kind: "shop", companyId: company.id }, inv.id);
+    const ctx = (
+      await sql<{
+        homeowner_email: string | null;
+        address_line: string | null;
+        invite_token: string | null;
+        proposal_link: string | null;
+        shop_link: string | null;
+        shop_email: string | null;
+      }>`
+        select p.homeowner_email, p.address_line, p.invite_token,
+          pr.payment_link as proposal_link, c.payment_link as shop_link, c.email as shop_email
+        from invoices i
+        join properties p on p.id = i.property_id
+        join proposals pr on pr.id = i.proposal_id and pr.company_id = i.company_id
+        join companies c on c.id = i.company_id
+        where i.id = ${inv.id} and i.company_id = ${company.id}
+        limit 1
+      `
+    )[0];
+    let emailed = false;
+    if (ctx?.homeowner_email) {
+      const payUrl = invoicePayUrl({
+        proposalPaymentLink: ctx.proposal_link,
+        shopPaymentLink: ctx.shop_link,
+        invoiceNumber: inv.number,
+        amountDue: bundle.totals.amountDue,
+        inviteToken: ctx.invite_token,
+        propertyId: inv.property_id,
+      });
+      try {
+        const { deliverInvoiceEmail } = await import("./mail");
+        await deliverInvoiceEmail({
+          to: ctx.homeowner_email,
+          shopName: company.name,
+          shopReplyTo: ctx.shop_email,
+          invoiceId: inv.id,
+          subject: `Invoice ${invoiceSeqLabel(inv.seq)} from ${company.name}`,
+          text: renderInvoiceText({
+            shopName: company.name,
+            seq: inv.seq,
+            number: inv.number,
+            dueDate: inv.due_date,
+            amountDue: bundle.totals.amountDue,
+            payUrl,
+            propertyAddress: ctx.address_line ?? "",
+          }),
+        });
+        emailed = true;
+      } catch (error) {
+        await addInvoiceNote(sql, company.id, inv.id, actor, `Invoice email failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      }
+    }
+    return { ok: true as const, emailed };
+  });
+
+export const markInvoicePaidFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; amount?: number | null; method?: string | null; note?: string | null; paidOn?: string | null }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    const { invoice } = await withTransaction((tx) => markInvoicePaid(tx, company.id, data.invoiceId, actor, data));
+    return { ok: true as const, status: invoice.status };
+  });
+
+export const retractInvoicePaymentFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { paymentId: string; note?: string | null }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    const invoice = await withTransaction((tx) => retractInvoicePayment(tx, company.id, data.paymentId, actor, data.note));
+    return { ok: true as const, status: invoice.status };
+  });
+
+export const voidInvoiceFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; note?: string | null }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForInvoices(context.userId);
+    await withTransaction((tx) => voidInvoice(tx, company.id, data.invoiceId, actor, data.note));
+    return { ok: true as const };
+  });
+
+export const addInvoiceNoteFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { invoiceId: string; note: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { sql, company, actor } = await shopForInvoices(context.userId);
+    await addInvoiceNote(sql, company.id, data.invoiceId, actor, data.note);
+    return { ok: true as const };
+  });
+
+/**
+ * Read-only invoice list for the homeowner (/home) or an entitled PM
+ * (portfolio file). Anyone else gets an empty list.
+ */
+export const listPropertyInvoices = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((propertyId: string) => propertyId)
+  .handler(async ({ context, data: propertyId }): Promise<InvoiceSummary[]> => {
+    const sql = await getSql();
+    const asOwner = await listInvoicesForProperty(sql, { kind: "homeowner", userId: context.userId }, propertyId);
+    if (asOwner.length) return asOwner;
+    return listInvoicesForProperty(sql, { kind: "pm", userId: context.userId }, propertyId);
+  });
+
+/** One invoice, read-only, for the homeowner or an entitled PM. */
+export const getInvoiceView = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((invoiceId: string) => invoiceId)
+  .handler(async ({ context, data: invoiceId }): Promise<InvoiceBundle> => {
+    const sql = await getSql();
+    try {
+      return await loadInvoice(sql, { kind: "homeowner", userId: context.userId }, invoiceId);
+    } catch {
+      return loadInvoice(sql, { kind: "pm", userId: context.userId }, invoiceId);
+    }
   });
