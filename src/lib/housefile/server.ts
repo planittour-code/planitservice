@@ -1,6 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware, optionalAuthMiddleware } from "@/lib/auth/middleware";
-import { dbSource, getSql, type Sql } from "@/lib/db";
+import { dbSource, getSql, withTransaction, type Sql } from "@/lib/db";
+import {
+  completeWorkOrderForProposal,
+  ensureWorkOrder,
+  loadWorkOrderForProposal,
+  setWorkOrderStatus,
+  syncWorkOrderStartFromProposal,
+  updateWorkOrderFields,
+  workOrderStatusForProposal,
+  type WorkOrderBundle,
+  normalizeAssigneeEmail,
+  type AssignmentNotifier,
+  type WorkOrderPatch,
+  type WorkOrderPublicStatus as WorkOrderPublicStatusLite,
+} from "./work-orders";
 import { LEGAL_EMAIL } from "@/lib/legal";
 import { MANAGE_INCLUDED } from "./pricing";
 import { applyPriceBook, assertBookPrices, catalogFor, hydrateBook, parseBookCsv, parseBookPhoto, STARTER_BOOK, type PriceBookItem } from "./book";
@@ -1044,10 +1058,30 @@ async function loadHouse(sql: Sql, property: Property): Promise<HouseFile> {
     });
     specsByJob.set(s.job_id, list);
   }
-  const jobsWith: JobWithSpecs[] = jobs.map((j) => ({
-    ...j,
-    specs: specsByJob.get(j.id) ?? [],
-  }));
+  // Status only (no notes/assignee): PM + homeowner read it on the File.
+  const woRows = await sql<{ proposal_id: string; number: number; status: string; start_date: string | null; end_date: string | null }>`
+    select w.proposal_id, w.number, w.status, w.start_date, w.end_date
+    from work_orders w
+    where w.proposal_id in (
+      select j.proposal_id from jobs j where j.property_id = ${property.id} and j.proposal_id is not null
+    )
+  `;
+  const woByProposal = new Map(woRows.map((w) => [w.proposal_id, w]));
+  const jobsWith: JobWithSpecs[] = jobs.map((j) => {
+    const w = j.proposal_id ? woByProposal.get(j.proposal_id) : undefined;
+    return {
+      ...j,
+      specs: specsByJob.get(j.id) ?? [],
+      work_order: w
+        ? {
+            number: num(w.number),
+            status: w.status as WorkOrderPublicStatusLite["status"],
+            start_date: w.start_date ? String(w.start_date).slice(0, 10) : null,
+            end_date: w.end_date ? String(w.end_date).slice(0, 10) : null,
+          }
+        : null,
+    };
+  });
   const warranties = await loadWarranties(sql, property.id);
   const proposals = await sql<ProposalListRow>`
     select pr.*, p.address_line, p.homeowner_name,
@@ -1371,6 +1405,7 @@ async function loadProposal(sql: Sql, proposal: Proposal): Promise<ProposalBundl
     salesRep: await salesRepForProposal(sql, proposal),
     salesReps: await salesRepsForProposal(sql, proposal),
     delivery: await loadProposalDelivery(sql, proposal, messages, hydrated),
+    workOrderStatus: await workOrderStatusForProposal(sql, proposal.id),
   };
 }
 
@@ -2628,8 +2663,17 @@ export const completeProposal = createServerFn({ method: "POST" })
     `;
     const proposal = rows[0];
     if (!proposal) throw new Error("Proposal not found");
-    await writeAcceptedWorkToFiles(sql, proposal);
-    await sql`update proposals set status = ${"completed"} where id = ${proposal.id}`;
+    if (proposal.status !== "accepted" && proposal.status !== "completed") {
+      throw new Error("Mark the job complete after the estimate is accepted.");
+    }
+    const actor = session?.email || company.name;
+    await withTransaction(async (tx) => {
+      // Idempotent: filing already happened on accept; this never adds a second row.
+      await writeAcceptedWorkToFiles(tx, proposal);
+      // One action: proposal -> completed and, if the shop opened one, WO -> complete.
+      await completeWorkOrderForProposal(tx, company.id, proposal.id, actor);
+      await tx`update proposals set status = ${"completed"} where id = ${proposal.id} and company_id = ${company.id}`;
+    });
     const written = await sql<{ id: string }>`
       select id from jobs
       where proposal_id = ${proposal.id} and property_id = ${proposal.property_id}
@@ -3339,6 +3383,13 @@ export const scheduleSoldEstimate = createServerFn({ method: "POST" })
       set scheduled_on = ${scheduledOn}::date, scheduled_note = ${note}
       where id = ${proposal.id}
     `;
+    await syncWorkOrderStartFromProposal(
+      sql,
+      company.id,
+      proposal.id,
+      scheduledOn,
+      session?.email || company.name,
+    );
     return { ok: true as const, scheduledOn, emailed: true };
   });
 
@@ -7359,3 +7410,91 @@ export const deleteWarrantyHome = createServerFn({ method: "POST" })
   });
 
 
+
+// ---------------------------------------------------------------------------
+// Work orders (Sprint 1 #4). Shop-only; every call is scoped to the caller's
+// company_id. PM/homeowner read status only through loadHouse/loadProposal.
+
+async function shopForWorkOrders(userId: string) {
+  const sql = await getSql();
+  const { getSessionUser } = await import("@/lib/auth/verify.server");
+  const session = await getSessionUser();
+  const { company } = await requirePaidShop(sql, userId, session?.email);
+  return { sql, company, actor: session?.email || company.name };
+}
+
+export const getWorkOrderForProposal = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((proposalId: string) => proposalId)
+  .handler(async ({ context, data: proposalId }): Promise<WorkOrderBundle | null> => {
+    const { sql, company } = await shopForWorkOrders(context.userId);
+    const owned = await sql<{ id: string }>`
+      select id from proposals where id = ${proposalId} and company_id = ${company.id} limit 1
+    `;
+    if (!owned[0]) throw new Error("Proposal not found");
+    return loadWorkOrderForProposal(sql, company.id, proposalId);
+  });
+
+/** Assignment email via the shop's normal sender (mail.ts). Plain info, no link. */
+const sendAssignmentEmail: AssignmentNotifier = async (email) => {
+  const { deliverWorkOrderAssignmentEmail } = await import("./mail");
+  await deliverWorkOrderAssignmentEmail(email);
+};
+
+/**
+ * "Create work order" (manual only, AC 4.1): idempotent, never makes a second
+ * WO for a proposal. Optional assignee/dates apply only when this call created
+ * the WO; a duplicate click returns the existing WO untouched.
+ */
+export const createWorkOrder = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { proposalId: string; patch?: Pick<WorkOrderPatch, "assigneeEmail" | "startDate" | "endDate"> }) => {
+    // Fail before anything is created.
+    if (input.patch?.assigneeEmail) normalizeAssigneeEmail(input.patch.assigneeEmail);
+    const { startDate, endDate } = input.patch ?? {};
+    if (startDate && endDate && endDate < startDate) throw new Error("End date is before the start date.");
+    return input;
+  })
+  .handler(async ({ context, data }): Promise<WorkOrderBundle> => {
+    const { sql, company, actor } = await shopForWorkOrders(context.userId);
+    const made = await withTransaction(async (tx) => {
+      const owned = await tx<{ id: string }>`
+        select id from proposals where id = ${data.proposalId} and company_id = ${company.id} limit 1
+      `;
+      if (!owned[0]) throw new Error("Proposal not found");
+      const ensured = await ensureWorkOrder(tx, data.proposalId, actor);
+      if (!ensured) throw new Error("Open a work order after the estimate is accepted.");
+      return ensured;
+    });
+    const p = data.patch;
+    if (made.created && p && (p.assigneeEmail || p.startDate || p.endDate)) {
+      await updateWorkOrderFields(sql, company.id, made.workOrder.id, p, actor, { notify: sendAssignmentEmail });
+    }
+    const bundle = await loadWorkOrderForProposal(sql, company.id, data.proposalId);
+    if (!bundle) throw new Error("Work order not found");
+    return bundle;
+  });
+
+export const updateWorkOrderStatus = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { workOrderId: string; status: string }) => input)
+  .handler(async ({ context, data }) => {
+    const { company, actor } = await shopForWorkOrders(context.userId);
+    const wo = await withTransaction((tx) =>
+      setWorkOrderStatus(tx, company.id, data.workOrderId, data.status, actor),
+    );
+    return { ok: true as const, status: wo.status };
+  });
+
+export const updateWorkOrder = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { workOrderId: string; patch: WorkOrderPatch }) => input)
+  .handler(async ({ context, data }) => {
+    const { sql, company, actor } = await shopForWorkOrders(context.userId);
+    // Not in a transaction: the assignment email is sent after the row saves,
+    // and a mail failure is logged without undoing the save (AC 4.3a).
+    await updateWorkOrderFields(sql, company.id, data.workOrderId, data.patch, actor, {
+      notify: sendAssignmentEmail,
+    });
+    return { ok: true as const };
+  });

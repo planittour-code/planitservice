@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { WorkOrderStatusLine } from "@/components/work-order-panel";
 import { Camera, ChevronDown, Copy, Mail } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -857,6 +858,11 @@ export function JobTimeline({
                   </div>
                   <time className="text-sm text-muted-foreground">{shortDate(job.completed_at)}</time>
                 </div>
+                {mode === "history" && job.work_order ? (
+                  <div className="mt-1">
+                    <WorkOrderStatusLine workOrder={job.work_order} />
+                  </div>
+                ) : null}
                 {mode === "history" && job.summary ? (
                   <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>
                 ) : null}

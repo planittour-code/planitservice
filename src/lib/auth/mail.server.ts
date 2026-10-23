@@ -368,6 +368,29 @@ export async function sendEstimateReviewEmail(data: {
   });
 }
 
+export async function sendWorkOrderAssignmentEmail(data: {
+  to: string;
+  shopName: string;
+  shopReplyTo: string | null;
+  workOrderId: string;
+  subject: string;
+  text: string;
+  html: string;
+}) {
+  await sendResendEmail({
+    to: data.to,
+    subject: data.subject,
+    text: data.text,
+    html: data.html,
+    from: `${data.shopName} via ${LEGAL_NAME} <noreply@${MAIL_DOMAIN}>`,
+    replyTo: data.shopReplyTo || undefined,
+    tags: [
+      { name: "kind", value: "work_order_assignment" },
+      { name: "work_order_id", value: data.workOrderId },
+    ],
+  });
+}
+
 function icsEscape(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
 }
