@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImage } from "@/lib/housefile/image";
-import { depositPercent, isHttpsPaymentLink, paymentTermLabel } from "@/lib/housefile/payment";
+import { depositPercent, paymentTermLabel } from "@/lib/housefile/payment";
 import { SEAT_MONTHLY, SHOP_MONTHLY, dollars } from "@/lib/housefile/pricing";
 import { parseTradeLogos, parseTradeTokens, shopLogoChoices, workTypesFor, type WorkType } from "@/lib/housefile/quote";
 import {
@@ -452,32 +452,29 @@ function SettingsPage() {
           </p>
         </div>
         <div className="space-y-0.5">
-          <Label htmlFor="pay">Payment link 1</Label>
+          <Label htmlFor="pay">Gutters payment link</Label>
           <Input
             id="pay"
             inputMode="url"
-            placeholder="https://pay.example.com/your-shop"
+            placeholder="https://pay.example.com/gutters"
             value={paymentLink}
             onChange={(e) => setPaymentLink(e.target.value)}
           />
-          <PayLinkHint value={paymentLink} saved={q.data?.company.payment_link} />
           <p className="text-sm text-muted-foreground">
-            Used on gutter estimates, and on every other service when payment link 2 is empty.
+            Used only on gutter estimates. Homeowners get this after they accept.
           </p>
         </div>
         <div className="space-y-0.5">
-          <Label htmlFor="paint-pay">Payment link 2</Label>
+          <Label htmlFor="paint-pay">{q.data?.company.name?.trim() || "Shop"} payment link</Label>
           <Input
             id="paint-pay"
             inputMode="url"
-            placeholder="https://pay.example.com/your-shop"
+            placeholder="https://pay.example.com/painting-plus"
             value={paintPaymentLink}
             onChange={(e) => setPaintPaymentLink(e.target.value)}
           />
-          <PayLinkHint value={paintPaymentLink} saved={q.data?.company.paint_payment_link} />
           <p className="text-sm text-muted-foreground">
-            Used for every service except gutters. Invoices show one &ldquo;Pay online&rdquo; button; payments go directly
-            to you and PlanitService does not process or hold them.
+            Used for every service except gutters.
           </p>
         </div>
         <Button type="submit" disabled={save.isPending}>
@@ -854,15 +851,4 @@ function TeamSection() {
       ) : null}
     </section>
   );
-}
-
-/**
- * Client hint for AC 6.3: a new or edited link must be https. The link already
- * saved is not an edit, so an older http link shows no warning (grandfathered).
- * The server enforces the same rule on save.
- */
-function PayLinkHint({ value, saved }: { value: string; saved: string | null | undefined }) {
-  const raw = value.trim();
-  if (!raw || raw === (saved ?? "").trim() || isHttpsPaymentLink(raw)) return null;
-  return <p className="text-sm text-destructive">Use an https:// link</p>;
 }
