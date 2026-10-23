@@ -43,6 +43,7 @@ export async function deliverEstimateEmail(input: {
   company: Pick<Company, "name" | "email" | "terms">;
   items: ProposalItem[];
   salesReps?: InvoiceSalesRep[];
+  idempotencyKey?: string;
 }): Promise<EstimateSendResult> {
   const { sendEstimateEmail } = await import("@/lib/auth/mail.server");
   const to = input.property.homeowner_email;
@@ -63,6 +64,7 @@ export async function deliverEstimateEmail(input: {
       { name: "kind", value: "estimate" },
       { name: "proposal_id", value: input.proposal.id },
     ],
+    idempotencyKey: input.idempotencyKey,
   });
   return { to, subject: sent.subject, html: sent.html, text: sent.text, resendId: sent.resendId };
 }
