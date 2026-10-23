@@ -92,7 +92,7 @@ function PropertiesPage() {
           </p>
         </div>
         <Button asChild>
-          <Link to="/app/new">Start a Quote</Link>
+          <Link to="/app/new">New Contact</Link>
         </Button>
       </div>
 
