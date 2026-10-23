@@ -1,4 +1,5 @@
 import { GUTTERS_PLUS_DRAINAGE_KIT } from "./kits";
+import { invoiceNoProcessingLine } from "./invoices";
 import { customerCode, depositPercent, paymentInvoiceNumber, paymentTermLabel } from "./payment";
 import type { HouseCompany, InvoiceSalesRep, Property, Proposal, ProposalItem } from "./types";
 
@@ -92,6 +93,7 @@ export function invoicePaymentCopy(input: {
     `Thank you for your business. Payment is ${due.toLowerCase()} (${terms}).`,
     portal,
     `Invoice # ${input.invoiceNo}.`,
+    invoiceNoProcessingLine(input.companyName),
   ].join(" ");
 }
 
