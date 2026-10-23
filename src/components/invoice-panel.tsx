@@ -16,6 +16,7 @@ import {
   type InvoiceItemInput,
   type InvoiceStatus,
   type InvoiceSummary,
+  type PayButton,
 } from "@/lib/housefile/invoices";
 import {
   addInvoiceNoteFn,
@@ -33,6 +34,27 @@ export function InvoiceBadge({ status, viewer = "shop" }: { status: InvoiceStatu
   const variant =
     status === "paid" ? "muted" : status === "void" ? "outline" : status === "partially_paid" ? "warning" : "default";
   return <Badge variant={variant}>{invoiceStatusLabel(status, viewer)}</Badge>;
+}
+
+/**
+ * The one Pay button (Sprint 1 #6): "Pay {Shop} online" + the direct-to-shop
+ * disclaimer. Opening it never changes status; the shop marks paid (5.3).
+ * Falls back to payment-terms text when no link resolves (6.4).
+ */
+export function PayButtonRow({ button, shopName }: { button: PayButton | null; shopName: string }) {
+  if (!button) {
+    return <p className="text-sm text-muted-foreground">Contact {shopName} for payment terms.</p>;
+  }
+  return (
+    <div className="space-y-1" data-testid="invoice-pay-button">
+      <Button asChild>
+        <a href={button.href} target="_blank" rel="noopener noreferrer">
+          {button.label}
+        </a>
+      </Button>
+      <p className="text-xs text-muted-foreground">{button.disclaimer}</p>
+    </div>
+  );
 }
 
 const fail = (error: unknown) => toast.error(error instanceof Error ? error.message : "Something went wrong");
@@ -264,7 +286,12 @@ export function InvoicePanel({ workOrderId, workOrderStatus }: { workOrderId: st
         </div>
       ) : null}
 
-      <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(bundle.shopName)}</p>
+      {inv.status === "sent" || inv.status === "partially_paid" ? (
+        <PayButtonRow button={bundle.payButton} shopName={bundle.shopName} />
+      ) : null}
+      {bundle.payButton ? null : (
+        <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(bundle.shopName)}</p>
+      )}
     </section>
   );
 }
@@ -294,7 +321,12 @@ export function PropertyInvoices({ propertyId, viewer }: { propertyId: string; v
               Total {money(r.total)} · Amount due {money(r.amountDue)}
               {r.due_date ? ` · Due ${shortDate(r.due_date)}` : ""}
             </p>
-            <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(r.shopName)}</p>
+            {r.status === "sent" || r.status === "partially_paid" ? (
+              <PayButtonRow button={r.payButton} shopName={r.shopName} />
+            ) : null}
+            {r.payButton ? null : (
+              <p className="text-xs text-muted-foreground">{invoiceNoProcessingLine(r.shopName)}</p>
+            )}
           </li>
         ))}
       </ul>
