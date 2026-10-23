@@ -204,3 +204,21 @@ export async function deliverAcceptedEstimateEmail(input: {
     pdf,
   });
 }
+
+/**
+ * Work order assignment (AC 4.3a). Rendered by work-orders.ts with no prices
+ * and no homeowner contact info; sent from the shop's normal sender with
+ * replies going to the shop.
+ */
+export async function deliverWorkOrderAssignmentEmail(input: {
+  to: string;
+  shopName: string;
+  shopReplyTo: string | null;
+  workOrderId: string;
+  subject: string;
+  text: string;
+  html: string;
+}) {
+  const { sendWorkOrderAssignmentEmail } = await import("@/lib/auth/mail.server");
+  await sendWorkOrderAssignmentEmail(input);
+}

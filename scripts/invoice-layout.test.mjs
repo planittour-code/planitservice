@@ -20,6 +20,6 @@ test("invoice number is last five of id, no customer data", () => {
   const no = id.replace(/-/g, "").slice(-5).toUpperCase();
   assert.equal(no, "21785");
   const banned = ["Kincaid", "Longcreek", "JobNimbus", "Powers Ferry", "Roderick"];
-  const layout = ["Invoice/Receipt", "Quality and Service", "Sales Representative", "Billing", "Payment Portal"];
+  const layout = ["Invoice/Receipt", "Quality and Service", "Sales Representative", "Billing", "Pay online"];
   for (const word of banned) assert.equal(layout.includes(word), false);
 });
